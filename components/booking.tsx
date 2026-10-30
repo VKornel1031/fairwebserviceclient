@@ -17,6 +17,7 @@ import {
   Info,
 } from "lucide-react";
 import { usePortal } from "./provider";
+import { isWorkshopRole } from "@/lib/reports";
 import { PageHeading, ServiceIcon } from "./ui";
 import { Field } from "./fields";
 import { calendarFile } from "@/lib/calendar";
@@ -77,7 +78,7 @@ export default function Booking() {
       const a = store.appointments.find(
         (a) =>
           a.id === editing &&
-          (a.owner === (user?.id || null) || user?.role === "staff"),
+          (a.owner === (user?.id || null) || isWorkshopRole(user?.role)),
       );
       if (a && !["cancelled", "completed", "progress"].includes(a.status)) {
         setEditId(a.id);

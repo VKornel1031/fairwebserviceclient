@@ -5,8 +5,9 @@ export type View =
   | "vehicles"
   | "account"
   | "partners"
-  | "workshop";
-export type Role = "customer" | "partner" | "staff";
+  | "workshop"
+  | "management";
+export type Role = "customer" | "partner" | "staff" | "manager";
 export type Profile = {
   name: string;
   email: string;
@@ -53,6 +54,15 @@ export type Store = {
   appointments: Appointment[];
   blockedDates: string[];
   companies: Record<string, { name: string; tax: string; city: string }>;
+};
+export const managerDemoUser: User = {
+  id: "demo-manager",
+  role: "manager",
+  name: "Fair vezető",
+  email: "vezeto@example.com",
+  phone: "+36 20 123 4567",
+  city: "Székesfehérvár",
+  reminders: true,
 };
 export const STORE_KEY = "fairauto-prototype-v1";
 export const SESSION_KEY = "fairauto-session-v1";
@@ -218,6 +228,7 @@ export function initialStore(): Store {
   return {
     version: 1,
     users: [
+      managerDemoUser,
       { ...contact, id: "demo-customer", role: "customer" },
       {
         ...contact,
@@ -308,7 +319,10 @@ export function readStore(): Store {
     !data.companies
   )
     throw new Error("A mentett demóadatok nem olvashatók.");
-  return data;
+  // Add the new demo role without replacing any existing profiles or bookings.
+  return data.users.some((user: User) => user.id === managerDemoUser.id)
+    ? data
+    : { ...data, users: [...data.users, managerDemoUser] };
 }
 export function writeStore(store: Store) {
   localStorage.setItem(STORE_KEY, JSON.stringify(store));

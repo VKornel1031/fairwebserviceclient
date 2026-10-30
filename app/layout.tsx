@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./portal-roles.css";
 export const metadata: Metadata = {
   title: "Fair Autószerviz · Ügyfélportál",
   description:

@@ -1,0 +1,117 @@
+"use client";
+import Link from "next/link";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  CalendarDays,
+  CarFront,
+  Plus,
+} from "lucide-react";
+import { usePortal } from "./provider";
+import { PageHeading } from "./ui";
+import { dateLabel, endTime, services, statusNames, today } from "@/lib/demo";
+
+export default function CustomerOverview() {
+  const { user, store } = usePortal();
+  const upcoming = store.appointments
+    .filter(
+      (a) =>
+        a.owner === (user?.id || null) &&
+        a.date >= today() &&
+        !["cancelled", "completed"].includes(a.status),
+    )
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
+  const cars = store.vehicles.filter((v) => v.owner === user?.id);
+  const car = cars.find((v) => v.isDefault) || cars[0];
+  return (
+    <div className="customer-overview">
+      <PageHeading
+        eyebrow="A TE SZERVIZED"
+        title={
+          user
+            ? `Szia, ${user.name.split(" ")[1] || user.name.split(" ")[0]}!`
+            : "Jó kezekben. Jó időben."
+        }
+        description="A következő időpontod és az autóid. Pont annyi, amire szükséged van."
+        action={
+          <Link href="/idopont" className="button">
+            <Plus size={16} /> Új időpontfoglalás
+          </Link>
+        }
+      />
+      <section className="customer-next" aria-labelledby="customer-next-title">
+        <div className="customer-card-heading">
+          <CalendarDays size={21} strokeWidth={1.4} />
+          <span className="eyebrow">KÖVETKEZŐ TALÁLKOZÁSUNK</span>
+        </div>
+        {upcoming ? (
+          <>
+            <div className="customer-appointment">
+              <div>
+                <h2 id="customer-next-title">
+                  {dateLabel(upcoming.date, { month: "long", day: "numeric" })}{" "}
+                  · {upcoming.time}
+                </h2>
+                <p>{services.find((s) => s.id === upcoming.service)?.name}</p>
+                <span className="muted">
+                  {upcoming.vehicle.make} {upcoming.vehicle.model} ·{" "}
+                  {upcoming.vehicle.plate}
+                </span>
+              </div>
+              <span className={`status status-${upcoming.status}`}>
+                <span />
+                {statusNames[upcoming.status]}
+              </span>
+            </div>
+            <div className="customer-next-footer">
+              <span>
+                {upcoming.time}–{endTime(upcoming.time, upcoming.duration)} ·
+                Balatoni út 8.
+              </span>
+              <Link href="/foglalasaim" className="text-link">
+                Részletek és módosítás <ArrowRight size={16} />
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 id="customer-next-title">
+              Amikor szükséged van ránk, itt vagyunk.
+            </h2>
+            <p className="customer-empty-copy">
+              Még nincs közelgő időpontod. Válassz szolgáltatást és egy neked
+              megfelelő napot.
+            </p>
+            <span className="customer-location">
+              Fair Autószerviz · Székesfehérvár, Balatoni út 8.
+            </span>
+          </>
+        )}
+      </section>
+      <section
+        className="customer-car-row"
+        aria-labelledby="customer-car-title"
+      >
+        <span className="customer-car-icon">
+          <CarFront size={26} strokeWidth={1.3} />
+        </span>
+        <div>
+          <h3 id="customer-car-title">
+            {car ? `${car.make} ${car.model}` : "Az autóid adatai, kéznél."}
+          </h3>
+          <p>
+            {car
+              ? `${car.plate} · ${car.year}${cars.length > 1 ? ` · +${cars.length - 1} további jármű` : ""}`
+              : user
+                ? "Mentsd el a járműved, és legközelebb kitöltjük helyetted."
+                : "Saját fiókkal elmentheted az autóid adatait."}
+          </p>
+        </div>
+        <Link href={user ? "/jarmuvek" : "/fiok"} className="text-link">
+          {user ? "Járművek kezelése" : "Fiókot hozok létre"}{" "}
+          <ArrowUpRight size={16} />
+        </Link>
+      </section>
+    </div>
+  );
+}

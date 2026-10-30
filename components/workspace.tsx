@@ -29,6 +29,7 @@ import { usePortal } from "./provider";
 import { Modal, PageHeading } from "./ui";
 import { Field, Empty } from "./fields";
 import { calendarFile } from "@/lib/calendar";
+import { downloadAppointments, isWorkshopRole } from "@/lib/reports";
 import {
   services,
   id,
@@ -417,9 +418,11 @@ function ProfileForm() {
           <p className="muted">
             {user!.role === "partner"
               ? "Céges partner"
-              : user!.role === "staff"
-                ? "Műhely munkatárs"
-                : "Magánügyfél"}
+              : user!.role === "manager"
+                ? "Tulajdonos / vezető"
+                : user!.role === "staff"
+                  ? "Műhely munkatárs"
+                  : "Magánügyfél"}
           </p>
           <div className="profile-stats">
             <span>
@@ -456,7 +459,14 @@ export function Vehicles({ embedded = false }: { embedded?: boolean }) {
     isDefault: false,
   });
   const [open, setOpen] = useState(false);
-  const cars = store.vehicles.filter((v) => v.owner === user?.id);
+  const [fleetQuery, setFleetQuery] = useState("");
+  const cars = store.vehicles.filter(
+    (v) =>
+      v.owner === user?.id &&
+      `${v.plate} ${v.make} ${v.model}`
+        .toLocaleLowerCase("hu")
+        .includes(fleetQuery.toLocaleLowerCase("hu")),
+  );
   function add() {
     setEditing(null);
     setForm({
@@ -464,7 +474,7 @@ export function Vehicles({ embedded = false }: { embedded?: boolean }) {
       make: "",
       model: "",
       year: "",
-      isDefault: cars.length === 0,
+      isDefault: !store.vehicles.some((v) => v.owner === user?.id),
     });
     setOpen(true);
   }
@@ -560,6 +570,17 @@ export function Vehicles({ embedded = false }: { embedded?: boolean }) {
           </button>
         </div>
       )}
+      {user.role === "partner" && (
+        <label className="search-input fleet-search">
+          <Search size={16} />
+          <input
+            aria-label="Céges járművek keresése"
+            value={fleetQuery}
+            onChange={(e) => setFleetQuery(e.target.value)}
+            placeholder="Rendszám, márka vagy modell"
+          />
+        </label>
+      )}
       {cars.length ? (
         <div className="vehicles-grid">
           {cars.map((v) => (
@@ -612,7 +633,11 @@ export function Vehicles({ embedded = false }: { embedded?: boolean }) {
       ) : (
         <Empty
           icon={<CarFront size={32} />}
-          title="Az első autód helye már megvan."
+          title={
+            fleetQuery
+              ? "Nincs ilyen jármű a flottában."
+              : "Az első autód helye már megvan."
+          }
           description="Add meg a rendszámot és az alapadatokat. Legközelebb már nem kell újra beírnod."
         >
           <button className="button" onClick={add}>
@@ -749,6 +774,7 @@ export function Appointments({ embedded = false }: { embedded?: boolean }) {
   const [detail, setDetail] = useState<string | null>(null);
   const [cancel, setCancel] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const own = store.appointments.filter((a) => a.owner === (user?.id || null));
   const list = own
     .filter((a) => {
@@ -756,6 +782,7 @@ export function Appointments({ embedded = false }: { embedded?: boolean }) {
         ["completed", "cancelled"].includes(a.status) || a.date < today();
       return (
         (filter === "all" || (filter === "past" ? past : !past)) &&
+        (statusFilter === "all" || a.status === statusFilter) &&
         `${a.vehicle.plate} ${a.vehicle.make} ${a.vehicle.model} ${a.id}`
           .toLowerCase()
           .includes(query.toLowerCase())
@@ -825,6 +852,37 @@ export function Appointments({ embedded = false }: { embedded?: boolean }) {
           />
         </label>
       </div>
+      {user?.role === "partner" && (
+        <div className="partner-report-tools">
+          <label>
+            Állapot
+            <select
+              aria-label="Céges foglalások állapota"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">Minden állapot</option>
+              {Object.entries(statusNames).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="muted small">
+            {list.length} találat · csak a saját céged foglalásai
+          </span>
+          <button
+            className="button button-outline"
+            disabled={!list.length}
+            onClick={() =>
+              downloadAppointments(list, "fairauto-ceges-foglalasok.csv")
+            }
+          >
+            <Download size={15} /> Foglalások exportálása
+          </button>
+        </div>
+      )}
       {list.length ? (
         <div className="appointment-list">
           {list.map((a) => (
@@ -1184,7 +1242,22 @@ export function Workshop() {
   const [filter, setFilter] = useState("day");
   const [selected, setSelected] = useState<string | null>(null);
   const [closure, setClosure] = useState(false);
-  if (user?.role !== "staff")
+  useEffect(() => {
+    if (!isWorkshopRole(user?.role)) return;
+    const params = new URLSearchParams(window.location.search);
+    const date = params.get("date");
+    if (
+      date &&
+      /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+      !Number.isNaN(new Date(`${date}T12:00:00`).getTime())
+    )
+      setDay(date);
+    if (params.get("filter") === "requests") setFilter("requests");
+    const appointment = params.get("appointment");
+    if (appointment && store.appointments.some((a) => a.id === appointment))
+      setSelected(appointment);
+  }, [user?.role]);
+  if (!isWorkshopRole(user?.role))
     return (
       <>
         <PageHeading

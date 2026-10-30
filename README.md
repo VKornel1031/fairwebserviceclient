@@ -22,13 +22,14 @@ No environment variables, API keys, PocketBase installation or homelab access ar
 
 ## Try the prototype
 
-The public welcome page is at `/`, with one main booking action, a short three-step explanation and compact account/partner links. The original customer dashboard is at `/attekintes`. Homepage account invitations open the registration tab directly.
+The public welcome page is at `/`, with one main booking action, a short three-step explanation and compact account/partner links. The dashboard at `/attekintes` adapts to the current role: a minimal personal overview, the partner fleet workspace, the staff calendar or management reports. Homepage account invitations open the registration tab directly.
 
 - **Guest:** choose a service, an available weekday/time, enter sample contact and vehicle details, review, and submit. View the resulting booking in **Foglalásaim**, download an `.ics` file, request a different time or cancel it.
 - **Personal account:** register in **Saját fiók**, edit contact details and reminder preferences, add/edit/delete vehicles, and choose a default vehicle. Subsequent bookings fill in those details. Sign out and sign back in with the credentials you created.
-- **Company account:** tick **Céges partnerként regisztrálok** when registering. In **Partnerközpont**, edit company details, manage a fleet and view company bookings. Each company account has separate vehicles and company details.
-- **Demo accounts:** the **Demó mód** button in the header lets you enter a sample customer, partner or staff account without a password. The sample partner includes two vehicles and one explicitly labelled sample appointment.
+- **Company account:** tick **Céges partnerként regisztrálok** when registering. In **Partnerközpont**, edit company details, manage a fleet and view company bookings. Each company account has separate vehicles and company details. Partners also get fleet search, booking status filters and CSV exports limited to their own company.
+- **Demo accounts:** the **Demó mód** button in the header lets you enter a sample customer, partner, staff or owner/manager account without a password. The sample partner includes two vehicles and one explicitly labelled sample appointment.
 - **Staff:** enter the **Műhely munkatárs** demo. Review all browser-local bookings, approve requests, start/complete work, reject/cancel a request and block/reopen dates. You can book as a guest, then switch to staff to approve that same request.
+- **Owner / manager:** choose **Tulajdonos / vezető** in the demo menu. `/vezetes` shows workshop-wide booking counts, upcoming workload, customer mix, 7/30-day filtered reports and CSV downloads, with links into the operational calendar. These are summaries of local records, not financial reports. Existing saved data is preserved when the new demo role is added.
 - **Theme:** the moon/sun button switches between persistent light and dark themes.
 
 ## What is real in the prototype
@@ -64,7 +65,7 @@ Browser tests use the system Chromium at `/usr/bin/chromium`. For a different in
 CHROMIUM_PATH=/path/to/chromium npm test
 ```
 
-The test runner starts the dev server if needed. Tests cover guest booking and persistence, calendar download, rescheduling/cancellation, registration/sign-in, profile autofill, vehicle management, separate company fleets, staff status transitions, closures, capacity rechecks, mobile navigation and theme persistence, plus homepage booking handoff, registration links and responsive navigation.
+The test runner starts the dev server if needed. Tests cover guest booking and persistence, calendar download, rescheduling/cancellation, registration/sign-in, profile autofill, vehicle management, separate company fleets, staff status transitions, closures, capacity rechecks, mobile navigation and theme persistence, plus homepage booking handoff, role-specific navigation, company-scoped exports, management reporting, saved-data compatibility and responsive navigation.
 
 ## Future PocketBase integration
 
