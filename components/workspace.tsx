@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -50,6 +50,10 @@ export function Account() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [business, setBusiness] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("mode") === "register")
+      setMode("register");
+  }, []);
   async function auth(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);

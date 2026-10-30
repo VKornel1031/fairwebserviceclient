@@ -22,6 +22,8 @@ No environment variables, API keys, PocketBase installation or homelab access ar
 
 ## Try the prototype
 
+The public welcome page is at `/`, with service introductions, a quick booking panel using local availability, guest/account/partner entry points and a short FAQ. The original customer dashboard is at `/attekintes`. Homepage account invitations open the registration tab directly.
+
 - **Guest:** choose a service, an available weekday/time, enter sample contact and vehicle details, review, and submit. View the resulting booking in **Foglalásaim**, download an `.ics` file, request a different time or cancel it.
 - **Personal account:** register in **Saját fiók**, edit contact details and reminder preferences, add/edit/delete vehicles, and choose a default vehicle. Subsequent bookings fill in those details. Sign out and sign back in with the credentials you created.
 - **Company account:** tick **Céges partnerként regisztrálok** when registering. In **Partnerközpont**, edit company details, manage a fleet and view company bookings. Each company account has separate vehicles and company details.
@@ -62,7 +64,7 @@ Browser tests use the system Chromium at `/usr/bin/chromium`. For a different in
 CHROMIUM_PATH=/path/to/chromium npm test
 ```
 
-The test runner starts the dev server if needed. Tests cover guest booking and persistence, calendar download, rescheduling/cancellation, registration/sign-in, profile autofill, vehicle management, separate company fleets, staff status transitions, closures, capacity rechecks, mobile navigation and theme persistence.
+The test runner starts the dev server if needed. Tests cover guest booking and persistence, calendar download, rescheduling/cancellation, registration/sign-in, profile autofill, vehicle management, separate company fleets, staff status transitions, closures, capacity rechecks, mobile navigation and theme persistence, plus homepage booking handoff, registration links and responsive navigation.
 
 ## Future PocketBase integration
 

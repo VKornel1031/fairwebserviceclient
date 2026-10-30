@@ -44,7 +44,12 @@ import {
   type View,
 } from "@/lib/demo";
 const nav = [
-  { view: "overview", href: "/", label: "Áttekintés", icon: LayoutDashboard },
+  {
+    view: "overview",
+    href: "/attekintes",
+    label: "Áttekintés",
+    icon: LayoutDashboard,
+  },
   {
     view: "booking",
     href: "/idopont",
@@ -101,7 +106,7 @@ function Shell({ view }: { view: View }) {
         <Link
           href="/"
           className="brand"
-          aria-label="Fair Autószerviz – áttekintés"
+          aria-label="Fair Autószerviz – főoldal"
         >
           <img src="/images/fair-logo.png" alt="Fair Autószerviz Fehérvár" />
           <span>ÜGYFÉLPORTÁL</span>
@@ -174,7 +179,7 @@ function Shell({ view }: { view: View }) {
             target="_blank"
             rel="noreferrer"
           >
-            Vissza a főoldalra <ArrowUpRight size={15} />
+            A szerviz weboldala <ArrowUpRight size={15} />
           </a>
         </div>
       </aside>
@@ -304,7 +309,7 @@ function Shell({ view }: { view: View }) {
                     ? "/muhely"
                     : r.role === "partner"
                       ? "/partnerek"
-                      : "/"
+                      : "/attekintes"
                 }
                 key={r.role}
                 className="demo-option"

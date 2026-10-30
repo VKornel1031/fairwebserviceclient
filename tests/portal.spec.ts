@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-async function ready(page: Page, path = "/") {
+async function ready(page: Page, path = "/attekintes") {
   await page.goto(path);
   await expect(page.getByText("A műhely ajtaja nyílik…")).toHaveCount(0);
 }
