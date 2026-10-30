@@ -4,6 +4,8 @@ import { Modal } from "./ui";
 import CustomerOverview from "./customer-overview";
 import Management from "./management";
 import Link from "next/link";
+import LegalLinks from "./legal-links";
+import { site, address } from "@/content/site";
 import {
   ArrowUpRight,
   LayoutDashboard,
@@ -184,9 +186,9 @@ function Shell({ view }: { view: View }) {
         <Link
           href="/"
           className="brand"
-          aria-label="Fair Autószerviz – főoldal"
+          aria-label={`${site.shortName} – főoldal`}
         >
-          <img src="/images/fair-logo.png" alt="Fair Autószerviz Fehérvár" />
+          <img src={site.logo} alt={site.name} />
           <span>{workspaceName.toLocaleUpperCase("hu")}</span>
         </Link>
         <button
@@ -230,13 +232,13 @@ function Shell({ view }: { view: View }) {
           </Link>
         </nav>
         <div className="sidebar-bottom">
-          <a className="sidebar-contact" href="tel:+36204055958">
+          <a className="sidebar-contact" href={site.contact.phoneHref}>
             <Phone size={15} />
-            <span>+36 20 405 5958</span>
+            <span>{site.contact.phone}</span>
           </a>
           <a
             className="main-site"
-            href="https://fairautoweb.vercel.app/"
+            href={site.mainWebsite}
             target="_blank"
             rel="noreferrer"
           >
@@ -329,13 +331,16 @@ function Shell({ view }: { view: View }) {
           )}
         </main>
         <footer className="app-footer">
-          <span>© {new Date().getFullYear()} Fair Autószerviz Fehérvár</span>
+          <span>
+            © {new Date().getFullYear()} {site.name}
+          </span>
           <span>
             <span className="footer-dot" /> Minden kilométeren számíthatsz ránk.
           </span>
           <button onClick={() => setHelp(true)}>
-            Kapcsolat és adatkezelés <ArrowUpRight size={12} />
+            Kapcsolat <ArrowUpRight size={12} />
           </button>
+          <LegalLinks />
         </footer>
       </div>
       {demoOpen && (
@@ -419,18 +424,18 @@ function Shell({ view }: { view: View }) {
           close={() => setHelp(false)}
         >
           <div className="help-content">
-            <p className="muted">Fair Autószerviz Fehérvár</p>
-            <a href="tel:+36204055958">
-              <Phone size={18} /> +36 20 405 5958
+            <p className="muted">{site.name}</p>
+            <a href={site.contact.phoneHref}>
+              <Phone size={18} /> {site.contact.phone}
             </a>
-            <a href="mailto:kborsos@fairauto.eu">
-              <Mail size={18} /> kborsos@fairauto.eu
+            <a href={`mailto:${site.contact.email}`}>
+              <Mail size={18} /> {site.contact.email}
             </a>
             <p>
-              <MapPin size={18} /> 8000 Székesfehérvár, Balatoni út 8.
+              <MapPin size={18} /> {address}
             </p>
             <p>
-              <Clock3 size={18} /> Hétfő–péntek · 06:00–17:00
+              <Clock3 size={18} /> {site.hours.long}
             </p>
             <div className="info-box">
               <strong>A prototípus adatkezelése</strong>

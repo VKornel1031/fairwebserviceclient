@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import LegalLinks from "./legal-links";
+import { site, locationLabel } from "@/content/site";
 import { ArrowUpRight, Moon, Sun } from "lucide-react";
 import { Provider, usePortal } from "./provider";
 
@@ -40,14 +42,9 @@ function Welcome() {
           <Link
             href="/"
             className="home-brand"
-            aria-label="Fair Autószerviz – főoldal"
+            aria-label={`${site.shortName} – főoldal`}
           >
-            <img
-              src="/images/fair-logo.png"
-              alt="Fair Autószerviz Fehérvár"
-              width={144}
-              height={64}
-            />
+            <img src={site.logo} alt={site.name} width={144} height={64} />
           </Link>
           <nav className="home-nav" aria-label="Főoldal navigáció">
             <a href="#hogyan-mukodik" className="home-how-link">
@@ -71,7 +68,10 @@ function Welcome() {
             className="home-hero home-container"
             aria-labelledby="home-title"
           >
-            <p className="home-overline">FAIR AUTÓSZERVIZ · SZÉKESFEHÉRVÁR</p>
+            <p className="home-overline">
+              {site.shortName.toLocaleUpperCase("hu")} ·{" "}
+              {site.city.toLocaleUpperCase("hu")}
+            </p>
             <h1 id="home-title">
               Jó kezekben.
               <br />
@@ -139,9 +139,9 @@ function Welcome() {
       <footer className="home-footer">
         <div className="home-container">
           <div className="home-footer-top">
-            <span>Fair Autószerviz Fehérvár</span>
+            <span>{site.name}</span>
             <p>
-              Székesfehérvár, Balatoni út 8. <span>·</span> H–P 06:00–17:00
+              {locationLabel} <span>·</span> {site.hours.short}
             </p>
           </div>
           <div className="home-footer-links">
@@ -151,10 +151,11 @@ function Welcome() {
               </Link>
               <Link href="/partnerek">Céges partnerek</Link>
             </nav>
-            <a href="tel:+36204055958">
-              +36 20 405 5958 <ArrowUpRight size={13} />
+            <a href={site.contact.phoneHref}>
+              {site.contact.phone} <ArrowUpRight size={13} />
             </a>
           </div>
+          <LegalLinks />
           <p className="home-demo-note">
             Bemutató oldal · A foglalások ebben a böngészőben tárolódnak. Valódi
             időpontkérés vagy e-mail-küldés nem történik.

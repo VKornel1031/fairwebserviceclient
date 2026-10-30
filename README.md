@@ -67,6 +67,14 @@ CHROMIUM_PATH=/path/to/chromium npm test
 
 The test runner starts the dev server if needed. Tests cover guest booking and persistence, calendar download, rescheduling/cancellation, registration/sign-in, profile autofill, vehicle management, separate company fleets, staff status transitions, closures, capacity rechecks, mobile navigation and theme persistence, plus homepage booking handoff, role-specific navigation, company-scoped exports, management reporting, saved-data compatibility and responsive navigation.
 
+## Editable site content and legal pages
+
+Public business/contact details, service definitions and demo booking defaults live in [`content/site.ts`](./content/site.ts). Legal page copy lives in [`content/legal.ts`](./content/legal.ts). The public homepage and portal footers link to the privacy notice, terms, storage notice and imprint, all with matching light/dark styling. These are clearly marked draft templates for the current local demo; missing official company details remain explicit placeholders.
+
+Hungarian editing guide: [`docs/CONTENT_EDITING.md`](./docs/CONTENT_EDITING.md).
+
+PocketBase account setup, fields, tested API rules, verification and SMTP guidance: [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md). The collection rules were verified separately against PocketBase 0.40.6; the frontend is still in demo mode and has no live PocketBase connection.
+
 ## Future PocketBase integration
 
 PocketBase on the homelab will manage SQLite internally. The local storage boundary is in `lib/demo.ts` and `components/provider.tsx`; it is the replacement point for the PocketBase client and backend operations.

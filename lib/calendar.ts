@@ -1,3 +1,4 @@
+import { site, address } from "@/content/site";
 import { services, endTime, type Appointment } from "./demo";
 export function calendarFile(a: Appointment) {
   const esc = (s: string) =>
@@ -18,10 +19,10 @@ export function calendarFile(a: Appointment) {
       .toISOString()
       .replace(/[-:]/g, "")
       .replace(/\.\d{3}/, "")}`,
-    `DTSTART;TZID=Europe/Budapest:${stamp(a.time)}`,
-    `DTEND;TZID=Europe/Budapest:${stamp(endTime(a.time, a.duration))}`,
-    `SUMMARY:${esc("DEMÓ · Fair Autószerviz – " + services.find((s) => s.id === a.service)?.short)}`,
-    "LOCATION:8000 Székesfehérvár\, Balatoni út 8.",
+    `DTSTART;TZID=${site.booking.timeZone}:${stamp(a.time)}`,
+    `DTEND;TZID=${site.booking.timeZone}:${stamp(endTime(a.time, a.duration))}`,
+    `SUMMARY:${esc(`DEMÓ · ${site.shortName} – ` + services.find((s) => s.id === a.service)?.short)}`,
+    `LOCATION:${esc(address)}`,
     `DESCRIPTION:${esc("Helyi prototípus foglalás – nem valódi időpont. Azonosító: " + a.id)}`,
     "STATUS:TENTATIVE",
     "END:VEVENT",

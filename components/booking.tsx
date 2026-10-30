@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { site, locationLabel } from "@/content/site";
 import {
   ArrowLeft,
   ArrowRight,
@@ -98,7 +99,7 @@ export default function Booking() {
       d &&
       /^\d{4}-\d{2}-\d{2}$/.test(d) &&
       d >= today() &&
-      d <= addDays(today(), 90)
+      d <= addDays(today(), site.booking.horizonDays)
     ) {
       setDay(d);
       setMonth(d.slice(0, 7));
@@ -397,7 +398,10 @@ export default function Booking() {
                     <button
                       className="icon-button"
                       aria-label="Következő hónap"
-                      disabled={month >= addDays(today(), 90).slice(0, 7)}
+                      disabled={
+                        month >=
+                        addDays(today(), site.booking.horizonDays).slice(0, 7)
+                      }
                       onClick={() => shiftMonth(1)}
                     >
                       <ChevronRight size={18} />
@@ -416,7 +420,7 @@ export default function Booking() {
                   {Array.from({ length: daysInMonth }, (_, i) => {
                     const d = `${month}-${String(i + 1).padStart(2, "0")}`;
                     const enabled =
-                      d <= addDays(today(), 90) &&
+                      d <= addDays(today(), site.booking.horizonDays) &&
                       times.some((t) =>
                         available(store, d, t, duration, editId || undefined),
                       );
@@ -743,6 +747,20 @@ export default function Booking() {
                   a böngészőben tárolódnak. Mintaadatokat használok.
                 </span>
               </label>
+              <p className="form-legal-note">
+                Kapcsolódó dokumentumok:{" "}
+                <Link
+                  href="/adatkezelesi-tajekoztato"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Adatkezelési Tájékoztató
+                </Link>{" "}
+                ·{" "}
+                <Link href="/aszf" target="_blank" rel="noreferrer">
+                  ÁSZF
+                </Link>
+              </p>
               <div className="panel-actions">
                 <button
                   type="button"
@@ -806,8 +824,8 @@ export default function Booking() {
             <div className="summary-location">
               <MapPin size={16} />
               <span>
-                Fair Autószerviz Fehérvár
-                <small>Balatoni út 8., Székesfehérvár</small>
+                {site.name}
+                <small>{locationLabel}</small>
               </span>
             </div>
           </div>

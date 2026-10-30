@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { site, locationLabel } from "@/content/site";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -66,7 +67,7 @@ export default function CustomerOverview() {
             <div className="customer-next-footer">
               <span>
                 {upcoming.time}–{endTime(upcoming.time, upcoming.duration)} ·
-                Balatoni út 8.
+                {site.contact.street}
               </span>
               <Link href="/foglalasaim" className="text-link">
                 Részletek és módosítás <ArrowRight size={16} />
@@ -83,7 +84,7 @@ export default function CustomerOverview() {
               megfelelő napot.
             </p>
             <span className="customer-location">
-              Fair Autószerviz · Székesfehérvár, Balatoni út 8.
+              {site.shortName} · {locationLabel}
             </span>
           </>
         )}

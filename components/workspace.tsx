@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { site } from "@/content/site";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -254,6 +255,19 @@ export function Account() {
                 <ArrowRight size={17} />
               </button>
             </form>
+            <p className="form-legal-note">
+              <Link
+                href="/adatkezelesi-tajekoztato"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Adatkezelési Tájékoztató
+              </Link>{" "}
+              ·{" "}
+              <Link href="/aszf" target="_blank" rel="noreferrer">
+                ÁSZF
+              </Link>
+            </p>
             <div className="auth-divider">
               <span>vagy próbáld ki rögtön</span>
             </div>
@@ -904,7 +918,7 @@ export function Appointments({ embedded = false }: { embedded?: boolean }) {
                 </p>
                 <span className="muted small">
                   <Clock3 size={13} /> {a.time} – {endTime(a.time, a.duration)}{" "}
-                  · Balatoni út 8.
+                  · {site.contact.street}
                 </span>
               </div>
               <button
@@ -974,7 +988,7 @@ export function Appointments({ embedded = false }: { embedded?: boolean }) {
               <div>
                 <small>Település</small>
                 <strong>{selected.contact.city}</strong>
-                <span>Helyszín: Balatoni út 8.</span>
+                <span>Helyszín: {site.contact.street}</span>
               </div>
             </div>
             {selected.note && <div className="hint-box">{selected.note}</div>}
@@ -1346,10 +1360,12 @@ export function Workshop() {
         <div>
           <span>Demókapacitás</span>
           <strong>
-            02
+            {site.booking.capacity.toString().padStart(2, "0")}
             <Wrench size={24} />
           </strong>
-          <small>Egyszerre két időpont · H–P 06–17</small>
+          <small>
+            Egyszerre {site.booking.capacity} időpont · {site.hours.short}
+          </small>
         </div>
       </div>
       <div className="list-toolbar">

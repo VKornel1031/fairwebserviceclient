@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { site } from "@/content/site";
 import "./globals.css";
+import "./legal-links.css";
 import "./portal-roles.css";
 export const metadata: Metadata = {
-  title: "Fair Autószerviz · Ügyfélportál",
-  description:
-    "Időpontfoglalás, saját járművek és céges flottakezelés. Fair Autószerviz Fehérvár – működő demó.",
+  title: `${site.shortName} · Ügyfélportál`,
+  description: `Időpontfoglalás, saját járművek és céges flottakezelés. ${site.name} – működő demó.`,
 };
 export default function RootLayout({
   children,

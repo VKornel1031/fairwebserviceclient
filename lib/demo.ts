@@ -1,3 +1,4 @@
+import { site, serviceOptions } from "@/content/site";
 export type View =
   | "overview"
   | "booking"
@@ -66,53 +67,7 @@ export const managerDemoUser: User = {
 };
 export const STORE_KEY = "fairauto-prototype-v1";
 export const SESSION_KEY = "fairauto-session-v1";
-export const services = [
-  {
-    id: "maintenance",
-    name: "Karbantartás és javítás",
-    short: "Karbantartás",
-    description: "Olajcsere, időszakos szerviz, megelőző gondoskodás.",
-    duration: 90,
-    icon: "wrench",
-    tag: "A mindennapok biztonsága",
-  },
-  {
-    id: "inspection",
-    name: "Műszaki vizsga",
-    short: "Műszaki vizsga",
-    description: "Felkészítés és helyszíni vizsgáztatás, egy helyen.",
-    duration: 60,
-    icon: "shield",
-    tag: "Nyugodtan tovább",
-  },
-  {
-    id: "diagnostics",
-    name: "Diagnosztika",
-    short: "Diagnosztika",
-    description: "Pontos hibafeltárás korszerű diagnosztikai eszközökkel.",
-    duration: 60,
-    icon: "scan",
-    tag: "Tisztán látni",
-  },
-  {
-    id: "tyres",
-    name: "Gumi- és futóműszerviz",
-    short: "Gumi és futómű",
-    description: "Szezonális gumicsere, centrírozás és futóműellenőrzés.",
-    duration: 60,
-    icon: "wheel",
-    tag: "Biztos úttartás",
-  },
-  {
-    id: "other",
-    name: "Egyéb szervizigény",
-    short: "Egyéb szerviz",
-    description: "Mondd el, miben segíthetünk az autóddal kapcsolatban.",
-    duration: 60,
-    icon: "wrench",
-    tag: "Beszéljük meg",
-  },
-];
+export const services = serviceOptions;
 export const statusNames: Record<Status, string> = {
   requested: "Visszaigazolásra vár",
   confirmed: "Visszaigazolva",
@@ -120,22 +75,18 @@ export const statusNames: Record<Status, string> = {
   completed: "Elkészült",
   cancelled: "Lemondva",
 };
-export const times = [
-  "06:00",
-  "07:00",
-  "08:00",
-  "09:00",
-  "10:00",
-  "11:00",
-  "12:00",
-  "13:00",
-  "14:00",
-  "15:00",
-  "16:00",
-];
+export const times = Array.from(
+  {
+    length: Math.ceil(
+      (minutes(site.booking.closesAt) - minutes(site.booking.opensAt)) /
+        site.booking.slotMinutes,
+    ),
+  },
+  (_, index) => endTime(site.booking.opensAt, index * site.booking.slotMinutes),
+);
 export function today() {
   return new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Europe/Budapest",
+    timeZone: site.booking.timeZone,
   }).format(new Date());
 }
 export function addDays(day: string, count: number) {
@@ -148,8 +99,13 @@ export function weekday(day: string) {
 }
 export function nextBusinessDay(offset = 1) {
   let d = addDays(today(), offset);
-  while ([0, 6].includes(weekday(d))) d = addDays(d, 1);
-  return d;
+  for (let checked = 0; checked < 7; checked++) {
+    if (!site.booking.closedWeekdays.includes(weekday(d))) return d;
+    d = addDays(d, 1);
+  }
+  throw new Error(
+    "A foglalási beállításokban legalább egy nyitott nap szükséges.",
+  );
 }
 export function dateLabel(
   day: string,
@@ -178,21 +134,23 @@ export function available(
 ) {
   if (
     day < today() ||
-    [0, 6].includes(weekday(day)) ||
+    site.booking.closedWeekdays.includes(weekday(day)) ||
     store.blockedDates.includes(day) ||
-    minutes(time) + duration > 17 * 60
+    day > addDays(today(), site.booking.horizonDays) ||
+    minutes(time) < minutes(site.booking.opensAt) ||
+    minutes(time) + duration > minutes(site.booking.closesAt)
   )
     return false;
   if (day === today()) {
     const now = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Europe/Budapest",
+      timeZone: site.booking.timeZone,
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     }).format(new Date());
     if (time <= now) return false;
   }
-  // Prototype capacity: two concurrent appointments. Replaced by a server transaction with PocketBase.
+  // Configured demo capacity. Replace with a server transaction when PocketBase booking is integrated.
   const overlapping = store.appointments.filter(
     (a) =>
       a.id !== exclude &&
@@ -211,7 +169,7 @@ export function available(
     (p) =>
       overlapping.filter(
         (a) => minutes(a.time) <= p && minutes(a.time) + a.duration > p,
-      ).length < 2,
+      ).length < site.booking.capacity,
   );
 }
 export function id(prefix = "FA") {

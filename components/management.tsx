@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { site } from "@/content/site";
 import {
   ArrowUpRight,
   CalendarDays,
@@ -20,6 +21,7 @@ import {
   statusNames,
   today,
   weekday,
+  minutes as clockMinutes,
 } from "@/lib/demo";
 import { downloadAppointments } from "@/lib/reports";
 
@@ -34,7 +36,7 @@ export default function Management() {
         <PageHeading
           eyebrow="VEZETŐI ÁTTEKINTÉS"
           title="A műhely egésze, egy helyen."
-          description="Összesített nézet a Fair Autószerviz tulajdonosainak és vezetőinek."
+          description={`Összesített nézet a ${site.shortName} tulajdonosainak és vezetőinek.`}
         />
         <Empty
           icon={<BarChart3 size={32} />}
@@ -72,11 +74,19 @@ export default function Management() {
     addDays(start, i),
   ).filter(
     (day) =>
-      ![0, 6].includes(weekday(day)) && !store.blockedDates.includes(day),
+      !site.booking.closedWeekdays.includes(weekday(day)) &&
+      !store.blockedDates.includes(day),
   ).length;
   const minutes = active.reduce((n, a) => n + a.duration, 0);
   const utilization = workingDays
-    ? Math.round((minutes / (workingDays * 11 * 60 * 2)) * 100)
+    ? Math.round(
+        (minutes /
+          (workingDays *
+            (clockMinutes(site.booking.closesAt) -
+              clockMinutes(site.booking.opensAt)) *
+            site.booking.capacity)) *
+          100,
+      )
     : null;
   const types = [
     {
@@ -92,7 +102,7 @@ export default function Management() {
   return (
     <div className="management-overview">
       <PageHeading
-        eyebrow="FAIR AUTÓSZERVIZ · VEZETŐI NÉZET"
+        eyebrow={`${site.shortName.toLocaleUpperCase("hu")} · VEZETŐI NÉZET`}
         title="A részletekből teljes kép."
         description="Műhelyszintű foglalások, terhelés és ügyfélösszetétel."
         action={
@@ -153,7 +163,9 @@ export default function Management() {
             {utilization === null ? "—" : `${utilization}%`}
             <BarChart3 size={21} />
           </strong>
-          <small>Két párhuzamos időpont · H–P 06–17</small>
+          <small>
+            {site.booking.capacity} párhuzamos időpont · {site.hours.short}
+          </small>
         </article>
       </div>
       <div className="management-charts">
@@ -168,7 +180,7 @@ export default function Management() {
                 (a) => a.date === day && a.status !== "cancelled",
               ).length;
               const closed =
-                [0, 6].includes(weekday(day)) ||
+                site.booking.closedWeekdays.includes(weekday(day)) ||
                 store.blockedDates.includes(day);
               return (
                 <Link
