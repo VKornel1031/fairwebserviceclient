@@ -22,7 +22,7 @@ No environment variables, API keys, PocketBase installation or homelab access ar
 
 ## Try the prototype
 
-The public welcome page is at `/`, with service introductions, a quick booking panel using local availability, guest/account/partner entry points and a short FAQ. The original customer dashboard is at `/attekintes`. Homepage account invitations open the registration tab directly.
+The public welcome page is at `/`, with one main booking action, a short three-step explanation and compact account/partner links. The original customer dashboard is at `/attekintes`. Homepage account invitations open the registration tab directly.
 
 - **Guest:** choose a service, an available weekday/time, enter sample contact and vehicle details, review, and submit. View the resulting booking in **Foglalásaim**, download an `.ics` file, request a different time or cancel it.
 - **Personal account:** register in **Saját fiók**, edit contact details and reminder preferences, add/edit/delete vehicles, and choose a default vehicle. Subsequent bookings fill in those details. Sign out and sign back in with the credentials you created.
