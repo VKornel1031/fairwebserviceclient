@@ -2,7 +2,7 @@
 
 Ez az útmutató a Fair Autószerviz portál **következő, éles fiókkezelési lépéséhez** készült. A frontend jelenleg továbbra is helyi demóadatokat használ: egy PocketBase-példány beállítása önmagában még nem kapcsolja át a weboldalt.
 
-Az alábbi collection- és jogosultsági beállításokat PocketBase **0.40.6** alatt, elkülönített helyi adatbázison ellenőriztük. Más verziónál a mezők és menüpontok eltérhetnek; először tesztkörnyezetben alkalmazd a saját verziódhoz illő beállításokat. A homelabodat és a valódi SMTP-küldést nem teszteltük.
+Az alábbi collection- és jogosultsági beállításokat a felhasználó által használt PocketBase **0.26.3** alatt, elkülönített helyi adatbázison ellenőriztük. Más verziónál a mezők és menüpontok eltérhetnek; először tesztkörnyezetben alkalmazd a saját verziódhoz illő beállításokat. A homelabodat és a valódi SMTP-küldést nem teszteltük.
 
 ## 1. Mi szükséges a homelabon?
 
@@ -68,8 +68,10 @@ A `users` collection API Rules részében:
 **Update rule**:
 
 ```text
-@request.auth.id != "" && id = @request.auth.id && @request.body.role:changed = false && @request.body.verified:changed = false
+@request.auth.id != "" && id = @request.auth.id && @request.body.role:isset = false && @request.body.verified:isset = false
 ```
+
+A 0.26.3-as verziónál a fenti `:isset` vizsgálatot használd. A profilszerkesztési kérésből a `role` és `verified` mezőket teljesen ki kell hagyni; még a változatlan értéküket se küldje vissza a frontend. A korábbi, újabb verzióra írt `:changed` szabály ezen a verzión a rendes profilmódosítást is letiltja.
 
 **Delete rule**: maradjon **Locked / null** az induló verzióban. Az adatok törlésének folyamatát külön kell megvalósítani, beleértve a kapcsolódó foglalásokat és a kötelező megőrzéseket. A zárolt törlés nem váltja ki az érintetti kérelmek kezelését.
 
@@ -163,6 +165,6 @@ A bekötéshez a következő nem titkos információk elegendők az induláshoz:
 - A superuser adatai nem jelennek meg a frontendcsomagban vagy hálózati kérésben.
 - A backupból végzett visszaállítást külön is kipróbáltad.
 
-Az elkülönített helyi ellenőrzésben a regisztráció, megerősítés előtti belépés tiltása, saját profil módosítása, jogosultságemelés tiltása, másik fiók olvasásának/módosításának tiltása és a zárolt törlés működött. Az admin által beállított `verified` érték utáni belépést teszteltük; tényleges levélküldést nem.
+Az elkülönített 0.26.3-as helyi ellenőrzésben a regisztráció, megerősítés előtti belépés tiltása, saját profil módosítása, jogosultságemelés tiltása (a szerepkörmező módosítóival is), másik fiók olvasásának/módosításának tiltása és a zárolt törlés működött. Az admin által beállított `verified` érték utáni belépést teszteltük; tényleges levélküldést nem.
 
-Hivatalos források: [Hitelesítés](https://pocketbase.io/docs/authentication/), [API-szabályok](https://pocketbase.io/docs/api-rules-and-filters/), [Records API](https://pocketbase.io/docs/api-records/), [Éles üzemeltetés](https://pocketbase.io/docs/going-to-production/), [PocketBase 0.40.6](https://github.com/pocketbase/pocketbase/releases/tag/v0.40.6).
+Hivatalos források: [Hitelesítés](https://pocketbase.io/docs/authentication/), [API-szabályok](https://pocketbase.io/docs/api-rules-and-filters/), [Records API](https://pocketbase.io/docs/api-records/), [Éles üzemeltetés](https://pocketbase.io/docs/going-to-production/), [PocketBase 0.26.3](https://github.com/pocketbase/pocketbase/releases/tag/v0.26.3).

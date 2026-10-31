@@ -85,7 +85,7 @@ Hungarian legal preparation and source review: [`docs/HUNGARIAN_LEGAL_READINESS.
 
 Hungarian editing guide: [`docs/CONTENT_EDITING.md`](./docs/CONTENT_EDITING.md).
 
-PocketBase account setup, fields, tested API rules, verification and SMTP guidance: [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md). The collection rules were verified separately against PocketBase 0.40.6; the frontend is still in demo mode and has no live PocketBase connection.
+PocketBase account setup, fields, tested API rules, verification and SMTP guidance: [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md). The collection rules were verified separately against the user's PocketBase version, 0.26.3; the frontend is still in demo mode and has no live PocketBase connection.
 
 ## Local account rules
 
