@@ -16,7 +16,7 @@ A nyitvatartási feliratokat kézzel igazítsd a foglalási órákhoz. A `closed
 
 ## `content/legal.ts` – a jogi oldalak szövege
 
-A négy dokumentum minden bekezdése, felsorolása és adatblokkja itt található. A szöveget a jelenlegi helyi demóhoz igazítottuk; az éles PocketBase-fiókkezelést még nem állítja működőnek.
+Az alapdokumentumok minden bekezdése, felsorolása és adatblokkja itt található. A fogyasztói tájékoztató külön a `content/consumer.ts`, a letölthető nyilatkozatok szövege a `content/consumer-forms.ts` fájlban szerkeszthető. A szöveget a jelenlegi helyi demóhoz igazítottuk; az éles PocketBase-fiókkezelést még nem állítja működőnek.
 
 Útvonalak:
 
@@ -24,6 +24,7 @@ A négy dokumentum minden bekezdése, felsorolása és adatblokkja itt találhat
 - `/aszf`
 - `/suti-tajekoztato`
 - `/impresszum`
+- `/fogyasztoi-tajekoztato`
 
 A közös megjelenés az `app/(legal)/[document]/page.tsx` és `app/(legal)/legal.css` fájlokban van. A `components/legal-links.tsx` kezeli a közös lábléclinkeket; ezek a főoldalon és minden portáloldalon megjelennek. A regisztráció és foglalás áttekintése is hivatkozik az adatkezelési és ÁSZF-oldalakra.
 
@@ -31,8 +32,10 @@ A közös megjelenés az `app/(legal)/[document]/page.tsx` és `app/(legal)/lega
 
 A `site.legal` üres mezőibe a saját hiteles cégadatokat írd: székhely, cégjegyzékszám, adószám, nyilvántartó hatóság, képviselő és a tényleges tárhelyszolgáltató. A műhely címe nem automatikusan a cég székhelye.
 
-A jogi szöveghez a tényleges adatfolyamokat, célonkénti jogalapokat, megőrzést, szolgáltatókat, fogyasztói feltételeket és panaszkezelést is pontosítani kell. A `site.legal.isDraft` csak az ellenőrzés után legyen `false`; ez a kapcsoló a mintajelölést rejti el, önmagában nem teszi élessé vagy jogilag kész állapotúvá a szolgáltatást. Frissítéskor a `updatedAt` dátumot is módosítsd.
+A jogi szöveghez a tényleges adatfolyamokat, célonkénti jogalapokat, megőrzést, szolgáltatókat, fogyasztói feltételeket és panaszkezelést is pontosítani kell. A `site.legal.isDraft` csak az ellenőrzés után legyen `false`; a mintajelölés csak a hiányzó adatok és felülvizsgálatok rendezése után tűnhet el. A kapcsoló nem teszi élessé vagy jogilag kész állapotúvá a szolgáltatást. Érdemi szövegváltoztatáskor a `version` értéket és az `updatedAt` dátumot is módosítsd. A korábbi éles verziókat változatlanul meg kell őrizni; a jelenlegi demó letöltése mindig az aktuális szöveget mutatja.
 
-A jelenlegi Google Fonts-kapcsolat szerepel a tájékoztatóban. Analitika, marketingeszköz, beágyazás vagy új auth-tárolás bevezetésekor az érintett dokumentumot is frissítsd. A prototípushoz nem adtunk általános, nem működő sütibannert.
+A betűkészleteket helyben szolgáljuk ki; nincs Google Fonts-lekérés a látogató böngészőjéből. Analitika, marketingeszköz, beágyazás vagy új auth-tárolás bevezetésekor az érintett dokumentumot is frissítsd. A prototípushoz nem adtunk általános, nem működő sütibannert.
 
 PocketBase-fiókkezelés előkészítése: [POCKETBASE_SETUP.md](./POCKETBASE_SETUP.md).
+
+Magyar jogi felkészülési útmutató és források: [HUNGARIAN_LEGAL_READINESS.md](./HUNGARIAN_LEGAL_READINESS.md). Kitöltési ellenőrzés: `npm run legal:check`.

@@ -39,13 +39,13 @@ A Collections alatt keresd meg az alap `users` auth collectiont. Ha még nincs i
 
 A rendszermezőket (`id`, `email`, `password`, `verified`, `emailVisibility`, dátumok stb.) PocketBase kezeli. Ne készíts saját `passwordHash`, `salt` vagy jelszót tároló text mezőt.
 
-| Egyedi mező | Típus  | Beállítás                                                          |
-| ----------- | ------ | ------------------------------------------------------------------ |
-| `name`      | Text   | Kötelező; min. 2, max. 100 karakter; teljes név                    |
-| `phone`     | Text   | Nem kötelező; max. 25 karakter                                     |
-| `city`      | Text   | Nem kötelező; max. 100 karakter                                    |
-| `reminders` | Bool   | Értesítési preferencia; nem marketing-hozzájárulás                 |
-| `role`      | Select | Kötelező, egy választás; `customer`, `partner`, `staff`, `manager` |
+| Egyedi mező | Típus  | Beállítás                                                                       |
+| ----------- | ------ | ------------------------------------------------------------------------------- |
+| `name`      | Text   | Kötelező; min. 2, max. 100 karakter; teljes név                                 |
+| `phone`     | Text   | Nem kötelező; max. 25 karakter                                                  |
+| `city`      | Text   | Nem kötelező; max. 100 karakter                                                 |
+| `reminders` | Bool   | Értesítési preferencia; nem marketing-hozzájárulás                              |
+| `role`      | Select | Kötelező, egy választás; `customer`, `partner`, `reception`, `manager`, `admin` |
 
 Ha a `name` mező már létezik, annak beállításait módosítsd, ne készíts második, azonos nevű mezőt. A telefon és település regisztrációkor még lehet üres; az időpontkéréskor a frontend és a későbbi backend kötelezővé teheti őket.
 
@@ -77,7 +77,9 @@ A `users` collection API Rules részében:
 
 PocketBase-ben a **Locked / null** és az **üres szabály** különböző: az üres szabály nyilvános hozzáférést enged. A zárolt műveleteknél ne töröld egyszerűen a szabály szövegét.
 
-Ezekkel a beállításokkal a felhasználó csak saját profilját olvashatja és módosíthatja; nem sorolhatja fel mások adatait, és nem adhat magának partner-, munkatársi vagy vezetői szerepet. A listázási szabály szűrőként is működik: tiltott adatoknál üres listát is kaphatsz, nem feltétlenül HTTP-hibát.
+Ezekkel a beállításokkal a felhasználó csak saját profilját olvashatja és módosíthatja; nem sorolhatja fel mások adatait, és nem adhat magának partner-, munkafelvevői, vezetői vagy adminisztrátori szerepet. A listázási szabály szűrőként is működik: tiltott adatoknál üres listát is kaphatsz, nem feltétlenül HTTP-hibát.
+
+Az itt megadott sajátprofil-szabályok önmagukban nem biztosítanak adminisztrátori fióklistázást vagy mások módosítását. A demó `/admin` műveletei helyi adatokon működnek; az éles adminisztrációhoz külön, szerver által ellenőrzött szabályok vagy végpontok szükségesek. Az alkalmazás `admin` szerepe sem PocketBase-superuser.
 
 ## 5. Hitelesítés és szerepkörök
 
@@ -95,7 +97,7 @@ verified = true
 
 A regisztrációs kérésben **mindig `role: "customer"`** szerepeljen. A céges regisztráció később partnerigény lehet, amelyet admin hagy jóvá. A jelenlegi demó automatikus partnerjogosultságát és szabad szerepkörváltóját **nem szabad átvinni az éles authfolyamatba**.
 
-Partner-, staff- és manager-szerepet kezdetben kizárólag te adj a PocketBase adminfelületén, ellenőrzés után. Az appbeli `manager` szerep nem PocketBase superuser. A `role` értéke önmagában más collectionhöz sem ad hozzáférést: azokhoz később külön szabályok kellenek.
+Partner-, reception-, manager- és admin-szerepet kizárólag ellenőrzött adminisztrációval adj. A munkafelvevő az időpontokat és az ügyfélfogadást kezeli; a műhelyfolyamatok és a riportok a vezetőhöz tartoznak. Az admin minden munkaterülethez hozzáfér, és a fiókokat is kezeli. Az appbeli `manager` szerep nem PocketBase superuser. A `role` értéke önmagában más collectionhöz sem ad hozzáférést: azokhoz később külön szabályok kellenek.
 
 A `verified = true` miatt a felhasználó regisztráció után a megerősítésig nem tud jelszóval belépni. Az első tesztfióknál az adminfelületen átállíthatod a `verified` mezőt, hogy ellenőrizd a profilfolyamatot; ez **nem helyettesíti az éles e-mailes megerősítést**.
 
@@ -152,7 +154,7 @@ A bekötéshez a következő nem titkos információk elegendők az induláshoz:
 
 ## 8. Átadási ellenőrzés
 
-- Vendég létrehozhat `customer` fiókot, de `partner`/`staff`/`manager` szerepet vagy `verified: true` értéket nem küldhet be.
+- Vendég létrehozhat `customer` fiókot, de `partner`/`reception`/`manager`/`admin` szerepet vagy `verified: true` értéket nem küldhet be.
 - Nem megerősített fiók nem léphet be; a kiküldött megerősítőlink működik.
 - A megerősített felhasználó be tud lépni, saját adatait módosíthatja, másét nem.
 - Saját szerepkörét és a `verified` állapotot sem módosíthatja.

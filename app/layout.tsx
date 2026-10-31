@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { site } from "@/content/site";
 import "./globals.css";
+import "./fonts.css";
 import "./legal-links.css";
 import "./portal-roles.css";
 export const metadata: Metadata = {
@@ -13,16 +14,6 @@ export default function RootLayout({
   return (
     <html lang="hu" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;650;700&family=Outfit:wght@400;450;500;550;600;650;700&display=swap"
-          rel="stylesheet"
-        />
         <script
           dangerouslySetInnerHTML={{
             __html: `try{document.documentElement.dataset.theme=localStorage.getItem('fairauto-theme')||'light'}catch{}`,

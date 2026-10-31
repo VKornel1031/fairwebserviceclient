@@ -79,7 +79,9 @@ test("legal pages use configured company details, contents navigation and persis
   }
   await page.goto("/adatkezelesi-tajekoztato");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.locator(".legal-article")).toContainText("Google Fonts");
+  await expect(page.locator(".legal-article")).toContainText(
+    "helyben szolgálja ki",
+  );
   await expect(page.locator(".legal-article")).toContainText("PocketBase");
   await page.goto("/nem-letezo-jogi-oldal");
   await expect(page.getByText("This page could not be found.")).toBeVisible();

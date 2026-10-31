@@ -58,6 +58,7 @@ function Welcome() {
               className="home-theme"
               onClick={toggleTheme}
               aria-label={dark ? "Világos téma" : "Sötét téma"}
+              title="A témaválasztást ebben a böngészőben megjegyezzük."
             >
               {dark ? <Sun size={17} /> : <Moon size={17} />}
             </button>
@@ -167,7 +168,7 @@ function Welcome() {
 }
 export default function Home() {
   return (
-    <Provider>
+    <Provider initializeDemo={false}>
       <Welcome />
     </Provider>
   );

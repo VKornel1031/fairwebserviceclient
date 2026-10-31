@@ -1,11 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+import { site } from "../content/site";
 async function ready(page: Page, path = "/attekintes") {
   await page.goto(path);
   await expect(page.getByText("A műhely ajtaja nyílik…")).toHaveCount(0);
 }
 async function demo(
   page: Page,
-  role: "Magánügyfél" | "Céges partner" | "Műhely munkatárs",
+  role: "Magánügyfél" | "Céges partner" | "Tulajdonos / vezető",
 ) {
   await page.getByRole("button", { name: "Demó mód" }).click();
   await page.getByRole("link", { name: new RegExp(role) }).click();
@@ -43,11 +44,25 @@ test("guest booking persists, downloads a calendar file, reschedules and cancels
   await expect(
     page.getByRole("heading", { name: "Minden a helyén?" }),
   ).toBeVisible();
+  await expect(page.locator("form .info-box")).toContainText(
+    site.booking.requestNotice,
+  );
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Időpontkérés elküldése" }).click();
   await expect(
     page.getByRole("heading", { name: "Köszönjük a bizalmat!" }),
   ).toBeVisible();
+  const request = await page.evaluate(() =>
+    JSON.parse(
+      localStorage.getItem("fairauto-prototype-v1")!,
+    ).appointments.find(
+      (appointment: { contact: { email: string } }) =>
+        appointment.contact.email === "teszt@example.com",
+    ),
+  );
+  expect(request.status).toBe("requested");
+  expect(request.legalAcknowledgement.termsVersion).toBe(site.legal.version);
+  expect(request.legalAcknowledgement.mode).toBe("demo");
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Naptárba mentés" }).click();
   expect((await download).suggestedFilename()).toMatch(/^FA-.*\.ics$/);
@@ -194,7 +209,7 @@ test("partner vehicle deep-link selects that specific fleet vehicle", async ({
   await expect(page.getByLabel("Rendszám")).toHaveValue("FLT-102");
   await expect(page.getByLabel("Modell")).toHaveValue("Transit");
 });
-test("staff processes a guest request through completion and blocks a day", async ({
+test("owner processes a guest request through completion and blocks a day", async ({
   page,
 }) => {
   await ready(page, "/idopont?service=diagnostics");
@@ -207,7 +222,10 @@ test("staff processes a guest request through completion and blocks a day", asyn
   await expect(
     page.getByRole("heading", { name: "Köszönjük a bizalmat!" }),
   ).toBeVisible();
-  await demo(page, "Műhely munkatárs");
+  await demo(page, "Tulajdonos / vezető");
+  await page
+    .getByRole("link", { name: "Műhely és naptár", exact: true })
+    .click();
   await page.getByRole("button", { name: /Kérések/ }).click();
   await page
     .locator(".staff-table tbody tr")

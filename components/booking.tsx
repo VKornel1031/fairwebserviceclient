@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { legalAcknowledgement } from "@/lib/legal";
 import { site, locationLabel } from "@/content/site";
 import {
   ArrowLeft,
@@ -18,7 +19,7 @@ import {
   Info,
 } from "lucide-react";
 import { usePortal } from "./provider";
-import { isWorkshopRole } from "@/lib/reports";
+import { canCoordinateAppointments } from "@/lib/permissions";
 import { PageHeading, ServiceIcon } from "./ui";
 import { Field } from "./fields";
 import { calendarFile } from "@/lib/calendar";
@@ -45,12 +46,13 @@ const blankContact: Profile = {
 const blankCar = { plate: "", make: "", model: "", year: "" };
 export default function Booking() {
   const { store, user, mutate } = usePortal();
+  const coordinator = canCoordinateAppointments(user?.role);
   const [step, setStep] = useState(0);
   const [serviceId, setService] = useState("");
   const [day, setDay] = useState("");
   const [time, setTime] = useState("");
   const [contact, setContact] = useState<Profile>(
-    user
+    user && !coordinator
       ? {
           name: user.name,
           email: user.email,
@@ -68,7 +70,9 @@ export default function Booking() {
   const [success, setSuccess] = useState<Appointment | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const ownCars = store.vehicles.filter((v) => v.owner === user?.id);
+  const ownCars = coordinator
+    ? []
+    : store.vehicles.filter((v) => v.owner === user?.id);
   const service = services.find((s) => s.id === serviceId);
   const duration = service?.duration || 60;
   const [month, setMonth] = useState(() => nextBusinessDay().slice(0, 7));
@@ -78,8 +82,7 @@ export default function Booking() {
     if (editing) {
       const a = store.appointments.find(
         (a) =>
-          a.id === editing &&
-          (a.owner === (user?.id || null) || isWorkshopRole(user?.role)),
+          a.id === editing && (a.owner === (user?.id || null) || coordinator),
       );
       if (a && !["cancelled", "completed", "progress"].includes(a.status)) {
         setEditId(a.id);
@@ -168,7 +171,11 @@ export default function Booking() {
           );
         result = {
           id: editId || id(),
-          owner: existing?.owner ?? user?.id ?? null,
+          owner: existing
+            ? existing.owner
+            : coordinator
+              ? null
+              : (user?.id ?? null),
           organization: existing?.organization ?? user?.role === "partner",
           service: serviceId,
           date: day,
@@ -189,6 +196,7 @@ export default function Booking() {
           note: note.trim(),
           status: "requested",
           created: existing?.created || new Date().toISOString(),
+          legalAcknowledgement: legalAcknowledgement(),
         };
         return {
           ...s,
@@ -241,9 +249,11 @@ export default function Booking() {
           </div>
           <span className="eyebrow">KÉRÉS RÖGZÍTVE</span>
           <h2>
-            {editId
-              ? "Az új időpontodat rögzítettük."
-              : "Köszönjük a bizalmat!"}
+            {coordinator
+              ? "Az ügyfél időpontkérését rögzítettük."
+              : editId
+                ? "Az új időpontodat rögzítettük."
+                : "Köszönjük a bizalmat!"}
           </h2>
           <p className="muted">
             A foglalás visszaigazolásra vár. A prototípus nem küld e-mailt és
@@ -278,8 +288,18 @@ export default function Booking() {
             </p>
           </div>
           <div className="button-row">
-            <Link href="/foglalasaim" className="button">
-              Foglalásaim megtekintése <ArrowRight size={17} />
+            <Link
+              href={
+                coordinator
+                  ? `${user?.role === "reception" ? "/munkafelvetel" : "/muhely"}?appointment=${encodeURIComponent(success.id)}`
+                  : "/foglalasaim"
+              }
+              className="button"
+            >
+              {coordinator
+                ? "Időpontkezelés megnyitása"
+                : "Foglalásaim megtekintése"}{" "}
+              <ArrowRight size={17} />
             </Link>
             <button
               className="button button-outline"
@@ -303,27 +323,40 @@ export default function Booking() {
     <>
       <PageHeading
         eyebrow="EGYSZERŰEN, A SAJÁT TEMPÓDBAN"
-        title={editId ? "Válassz új időpontot." : "Találjunk időt az autódra."}
-        description="Néhány adat, egy jó időpont. A többit személyesen egyeztetjük."
+        title={
+          editId
+            ? "Válassz új időpontot."
+            : coordinator
+              ? "Időpont felvétele ügyfélnek."
+              : "Találjunk időt az autódra."
+        }
+        description={
+          coordinator
+            ? "Add meg az ügyfél és a jármű adatait. A munka tartalmát és a végleges árat külön egyeztetitek."
+            : "Néhány adat, egy jó időpont. A többit személyesen egyeztetjük."
+        }
       />
       <div className="booking-progress" aria-label="Foglalási lépések">
-        {["Szolgáltatás", "Időpont", "Adataid", "Áttekintés"].map(
-          (label, i) => (
-            <button
-              key={label}
-              disabled={i > step}
-              onClick={() => {
-                setStep(i);
-                setError("");
-              }}
-              className={`${i === step ? "current" : ""} ${i < step ? "done" : ""}`}
-              aria-current={i === step ? "step" : undefined}
-            >
-              <span>{i < step ? <Check size={14} /> : i + 1}</span>
-              {label}
-            </button>
-          ),
-        )}
+        {[
+          "Szolgáltatás",
+          "Időpont",
+          coordinator ? "Ügyfél adatai" : "Adataid",
+          "Áttekintés",
+        ].map((label, i) => (
+          <button
+            key={label}
+            disabled={i > step}
+            onClick={() => {
+              setStep(i);
+              setError("");
+            }}
+            className={`${i === step ? "current" : ""} ${i < step ? "done" : ""}`}
+            aria-current={i === step ? "step" : undefined}
+          >
+            <span>{i < step ? <Check size={14} /> : i + 1}</span>
+            {label}
+          </button>
+        ))}
       </div>
       <div className="booking-layout">
         <section className="booking-panel">
@@ -731,8 +764,8 @@ export default function Booking() {
               <div className="info-box">
                 <Info size={18} />
                 <p>
-                  Az időpont a műhely jóváhagyása után válik véglegessé. Ez a
-                  demó nem küld valódi foglalást vagy e-mailt.
+                  {site.booking.requestNotice} Ez a demó nem küld valódi
+                  foglalást vagy e-mailt.
                 </p>
               </div>
               <label className="checkbox-label">
@@ -744,7 +777,8 @@ export default function Booking() {
                 />
                 <span>
                   Megértettem, hogy ez egy helyi prototípus, és az adataim ebben
-                  a böngészőben tárolódnak. Mintaadatokat használok.
+                  a böngészőben tárolódnak. Mintaadatokat használok. Elfogadom a
+                  demó használatára vonatkozó ÁSZF-et.
                 </span>
               </label>
               <p className="form-legal-note">

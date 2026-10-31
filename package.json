@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "legal:check": "node --experimental-strip-types scripts/check-legal.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

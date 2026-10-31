@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { legalAcknowledgement } from "@/lib/legal";
 import { site } from "@/content/site";
 import {
   ArrowRight,
@@ -25,12 +26,18 @@ import {
   X,
   Mail,
   SlidersHorizontal,
+  ClipboardList,
 } from "lucide-react";
 import { usePortal } from "./provider";
 import { Modal, PageHeading } from "./ui";
 import { Field, Empty } from "./fields";
 import { calendarFile } from "@/lib/calendar";
-import { downloadAppointments, isWorkshopRole } from "@/lib/reports";
+import { downloadAppointments } from "@/lib/reports";
+import {
+  canManageWorkshop,
+  canCoordinateAppointments,
+  roleLabels,
+} from "@/lib/permissions";
 import {
   services,
   id,
@@ -65,6 +72,12 @@ export function Account() {
     const password = String(form.get("password"));
     try {
       if (mode === "register") {
+        if (form.get("acceptTerms") !== "on") {
+          setError(
+            "A regisztrációhoz fogadd el a demó használati feltételeit.",
+          );
+          return;
+        }
         const salt = crypto.randomUUID();
         const hash = await passwordDigest(password, salt);
         const uid = id("USR");
@@ -85,6 +98,7 @@ export function Account() {
                 city: "",
                 reminders: true,
                 role: business ? "partner" : "customer",
+                legalAcknowledgement: legalAcknowledgement(),
                 passwordHash: hash,
                 salt,
               },
@@ -229,10 +243,11 @@ export function Account() {
                     />
                   )}
                   <label className="checkbox-label">
-                    <input type="checkbox" required />
+                    <input type="checkbox" name="acceptTerms" required />
                     <span>
                       Megértettem, hogy ez egy helyi demó. A fiókom és adataim
-                      csak ebben a böngészőben érhetők el.
+                      csak ebben a böngészőben érhetők el. Elfogadom a demó
+                      használatára vonatkozó ÁSZF-et.
                     </span>
                   </label>
                 </>
@@ -429,15 +444,7 @@ function ProfileForm() {
               .join("")}
           </span>
           <h3>{user!.name}</h3>
-          <p className="muted">
-            {user!.role === "partner"
-              ? "Céges partner"
-              : user!.role === "manager"
-                ? "Tulajdonos / vezető"
-                : user!.role === "staff"
-                  ? "Műhely munkatárs"
-                  : "Magánügyfél"}
-          </p>
+          <p className="muted">{roleLabels[user!.role]}</p>
           <div className="profile-stats">
             <span>
               <strong>
@@ -1191,9 +1198,9 @@ export function Partners() {
       </div>
       {tab === "fleet" ? <Vehicles embedded /> : <Appointments embedded />}
       <p className="demo-footnote">
-        A prototípusban minden céges fióknak saját flottája van. Munkatársak
-        meghívása és többfelhasználós céges jogosultságok a
-        PocketBase-integráció részeként készülnek el.
+        A demóban minden céges fióknak saját flottája és egy kapcsolattartója
+        van. Több munkatárs közös hozzáférése egy későbbi változatban lesz
+        elérhető.
       </p>
       {settings && (
         <Modal title="Céges adatok" close={() => setSettings(false)}>
@@ -1251,13 +1258,23 @@ export function Partners() {
 }
 
 export function Workshop() {
+  return <AppointmentDesk />;
+}
+export function Reception() {
+  return <AppointmentDesk reception />;
+}
+function AppointmentDesk({ reception = false }: { reception?: boolean }) {
   const { user, store, demo, mutate, notify } = usePortal();
+  const permitted = reception
+    ? canCoordinateAppointments(user?.role)
+    : canManageWorkshop(user?.role);
+  const operational = !reception && canManageWorkshop(user?.role);
   const [day, setDay] = useState(nextBusinessDay);
   const [filter, setFilter] = useState("day");
   const [selected, setSelected] = useState<string | null>(null);
   const [closure, setClosure] = useState(false);
   useEffect(() => {
-    if (!isWorkshopRole(user?.role)) return;
+    if (!permitted) return;
     const params = new URLSearchParams(window.location.search);
     const date = params.get("date");
     if (
@@ -1270,23 +1287,47 @@ export function Workshop() {
     const appointment = params.get("appointment");
     if (appointment && store.appointments.some((a) => a.id === appointment))
       setSelected(appointment);
-  }, [user?.role]);
-  if (!isWorkshopRole(user?.role))
+  }, [user?.role, reception]);
+  if (!permitted)
     return (
       <>
         <PageHeading
-          eyebrow="MŰHELY"
+          eyebrow={reception ? "MUNKAFELVÉTEL" : "MŰHELY"}
           title="A szerviz napja, átláthatóan."
-          description="Munkatársi nézet a foglalások jóváhagyásához és a napi munkához."
+          description={
+            reception
+              ? "Ügyfélfogadás, időpontkérések és napi egyeztetések."
+              : "Vezetői nézet a foglalások jóváhagyásához és a napi munkához."
+          }
         />
         <Empty
-          icon={<Wrench size={32} />}
-          title="Nézz be a műhelybe."
-          description="A demó munkatársi nézetében kipróbálhatod a foglalások kezelését. Ez nem éles adminisztrációs jogosultság."
+          icon={reception ? <ClipboardList size={32} /> : <Wrench size={32} />}
+          title={
+            reception
+              ? "Itt kezdődik az ügyfélfogadás."
+              : "Ez a vezetői műhelynézet."
+          }
+          description={
+            reception
+              ? "A munkafelvevői demóban kipróbálhatod a kérések jóváhagyását, az időpontegyeztetést és az ügyféladatok kezelését."
+              : "A munkafelvevői feladatokat a Munkafelvétel oldalon találod. A műhelyfolyamatok és a zárvatartás kezelése a vezetői nézethez tartozik."
+          }
         >
-          <button className="button" onClick={() => demo("staff")}>
-            Munkatársi demó megnyitása <ArrowRight size={17} />
-          </button>
+          {user?.role === "reception" ? (
+            <Link className="button" href="/munkafelvetel">
+              Munkafelvétel megnyitása <ArrowRight size={17} />
+            </Link>
+          ) : (
+            <button
+              className="button"
+              onClick={() => demo(reception ? "reception" : "manager")}
+            >
+              {reception
+                ? "Munkafelvevői demó megnyitása"
+                : "Vezetői demó megnyitása"}{" "}
+              <ArrowRight size={17} />
+            </button>
+          )}
         </Empty>
       </>
     );
@@ -1304,8 +1345,8 @@ export function Workshop() {
   function status(next: Status) {
     const allowed: Record<Status, Status[]> = {
       requested: ["confirmed", "cancelled"],
-      confirmed: ["progress", "cancelled"],
-      progress: ["completed"],
+      confirmed: operational ? ["progress", "cancelled"] : ["cancelled"],
+      progress: operational ? ["completed"] : [],
       completed: [],
       cancelled: [],
     };
@@ -1325,16 +1366,28 @@ export function Workshop() {
   return (
     <>
       <PageHeading
-        eyebrow="MUNKATÁRSI DEMÓNÉZET"
-        title="Jó munkát, jó napot!"
-        description="Időpontok, jóváhagyások és műhelyfeladatok egy helyen."
+        eyebrow={reception ? "MUNKAFELVEVŐI MUNKATÉR" : "MŰHELY ÉS NAPTÁR"}
+        title={
+          reception ? "Munkafelvétel, egyszerűen." : "Jó munkát, jó napot!"
+        }
+        description={
+          reception
+            ? "Beérkező kérések, ügyféladatok és napi időpontegyeztetés."
+            : "Időpontok, jóváhagyások és műhelyfeladatok egy helyen."
+        }
         action={
-          <button
-            className="button button-outline"
-            onClick={() => setClosure(true)}
-          >
-            <SlidersHorizontal size={16} /> Zárvatartás kezelése
-          </button>
+          reception ? (
+            <Link className="button" href="/idopont">
+              Új időpont felvétele <Plus size={17} />
+            </Link>
+          ) : (
+            <button
+              className="button button-outline"
+              onClick={() => setClosure(true)}
+            >
+              <SlidersHorizontal size={16} /> Zárvatartás kezelése
+            </button>
+          )
         }
       />
       <div className="stats-grid">
@@ -1358,13 +1411,22 @@ export function Workshop() {
           <small>{dateLabel(day)}</small>
         </div>
         <div>
-          <span>Demókapacitás</span>
+          <span>{reception ? "Visszaigazolt időpontok" : "Demókapacitás"}</span>
           <strong>
-            {site.booking.capacity.toString().padStart(2, "0")}
-            <Wrench size={24} />
+            {(reception
+              ? store.appointments.filter(
+                  (a) => a.date === day && a.status === "confirmed",
+                ).length
+              : site.booking.capacity
+            )
+              .toString()
+              .padStart(2, "0")}
+            {reception ? <Check size={24} /> : <Wrench size={24} />}
           </strong>
           <small>
-            Egyszerre {site.booking.capacity} időpont · {site.hours.short}
+            {reception
+              ? "Érkezésre váró ügyfelek a kiválasztott napon"
+              : `Egyszerre ${site.booking.capacity} időpont · ${site.hours.short}`}
           </small>
         </div>
       </div>
@@ -1416,7 +1478,7 @@ export function Workshop() {
       </div>
       {store.blockedDates.includes(day) && filter === "day" && (
         <div className="info-box">
-          Ezt a napot lezártad új foglalások előtt. A korábbi időpontok
+          Ez a nap új foglalások előtt le van zárva. A korábbi időpontok
           változatlanul megmaradnak.
         </div>
       )}
@@ -1513,8 +1575,12 @@ export function Workshop() {
               </div>
               <div>
                 <small>Elérhetőség</small>
-                <strong>{a.contact.phone}</strong>
-                <span>{a.contact.email}</span>
+                <strong>
+                  <a href={`tel:${a.contact.phone.replace(/[^+\d]/g, "")}`}>
+                    {a.contact.phone}
+                  </a>
+                </strong>
+                <a href={`mailto:${a.contact.email}`}>{a.contact.email}</a>
                 <span>{a.contact.city}</span>
               </div>
               <div>
@@ -1536,15 +1602,23 @@ export function Workshop() {
                   <Check size={17} /> Visszaigazolás
                 </button>
               )}
-              {a.status === "confirmed" && (
+              {operational && a.status === "confirmed" && (
                 <button className="button" onClick={() => status("progress")}>
                   <Wrench size={17} /> Munka indítása
                 </button>
               )}
-              {a.status === "progress" && (
+              {operational && a.status === "progress" && (
                 <button className="button" onClick={() => status("completed")}>
                   <Check size={17} /> Elkészült
                 </button>
+              )}
+              {["requested", "confirmed"].includes(a.status) && (
+                <Link
+                  className="button button-outline"
+                  href={`/idopont?edit=${encodeURIComponent(a.id)}`}
+                >
+                  Új időpont egyeztetése <CalendarDays size={17} />
+                </Link>
               )}
               {["requested", "confirmed"].includes(a.status) && (
                 <button
@@ -1562,7 +1636,7 @@ export function Workshop() {
           </div>
         </Modal>
       )}
-      {closure && (
+      {operational && closure && (
         <Modal title="Zárvatartás kezelése" close={() => setClosure(false)}>
           <div className="modal-form">
             <p className="muted">

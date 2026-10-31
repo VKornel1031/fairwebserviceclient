@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import { Modal } from "./ui";
 import CustomerOverview from "./customer-overview";
 import Management from "./management";
+import Administration from "./administration";
+import { canAdminister, canViewReports, roleLabels } from "@/lib/permissions";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import LegalLinks from "./legal-links";
 import { site, address } from "@/content/site";
 import {
@@ -27,6 +30,8 @@ import {
   Phone,
   BarChart3,
   Mail,
+  RotateCcw,
+  ClipboardList,
 } from "lucide-react";
 import { Provider, usePortal } from "./provider";
 import Booking from "./booking";
@@ -35,6 +40,7 @@ import {
   Vehicles,
   Partners,
   Workshop,
+  Reception,
   Appointments,
 } from "./workspace";
 import type { View } from "@/lib/demo";
@@ -67,32 +73,56 @@ const names: Record<View, string> = {
   account: "Saját fiók",
   partners: "Partnerközpont",
   workshop: "Műhely",
+  reception: "Munkafelvétel",
+  admin: "Fiókkezelés",
   management: "Vezetői áttekintés",
 };
 function Shell({ view }: { view: View }) {
-  const { user, store, ready, session, demo } = usePortal();
-  const management = user?.role === "manager";
-  const staff = user?.role === "staff";
+  const { user, store, ready, session, demo, resetDemo } = usePortal();
+  const router = useRouter();
+  const admin = canAdminister(user?.role);
+  const management = canViewReports(user?.role);
+  const reception = user?.role === "reception";
   const partner = user?.role === "partner";
   const activeView =
     view === "overview"
-      ? management
-        ? "management"
-        : staff
-          ? "workshop"
-          : partner
-            ? "partners"
-            : "overview"
+      ? admin
+        ? "admin"
+        : management
+          ? "management"
+          : reception
+            ? "reception"
+            : partner
+              ? "partners"
+              : "overview"
       : view;
-  const workspaceName = management
-    ? "Vezetői munkatér"
-    : staff
-      ? "Műhely"
-      : partner
-        ? "Partnerközpont"
-        : "Ügyfélportál";
+  const workspaceName = admin
+    ? "Adminisztráció"
+    : management
+      ? "Vezetői munkatér"
+      : reception
+        ? "Munkafelvevői munkatér"
+        : partner
+          ? "Partnerközpont"
+          : "Ügyfélportál";
   const mainNav = management
     ? [
+        ...(admin
+          ? [
+              {
+                view: "admin",
+                href: "/admin",
+                label: "Fiókkezelés",
+                icon: UserRound,
+              },
+              {
+                view: "reception",
+                href: "/munkafelvetel",
+                label: "Munkafelvétel",
+                icon: ClipboardList,
+              },
+            ]
+          : []),
         {
           view: "management",
           href: "/vezetes",
@@ -112,18 +142,18 @@ function Shell({ view }: { view: View }) {
           icon: CalendarDays,
         },
       ]
-    : staff
+    : reception
       ? [
           {
-            view: "workshop",
-            href: "/muhely",
-            label: "Műhely és naptár",
-            icon: Wrench,
+            view: "reception",
+            href: "/munkafelvetel",
+            label: "Munkafelvétel",
+            icon: ClipboardList,
           },
           {
             view: "booking",
             href: "/idopont",
-            label: "Új időpont",
+            label: "Új időpont felvétele",
             icon: CalendarDays,
           },
         ]
@@ -158,6 +188,7 @@ function Shell({ view }: { view: View }) {
   const [menu, setMenu] = useState(false);
   const [help, setHelp] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const [dark, setDark] = useState(false);
   useEffect(
     () => setDark(document.documentElement.dataset.theme === "dark"),
@@ -199,11 +230,13 @@ function Shell({ view }: { view: View }) {
           <X />
         </button>
         <div className="sidebar-label">
-          {management || staff
+          {management
             ? "MŰHELYIRÁNYÍTÁS"
-            : partner
-              ? "A CÉGED SZERVIZE"
-              : "A TE SZERVIZED"}
+            : reception
+              ? "ÜGYFÉLFOGADÁS"
+              : partner
+                ? "A CÉGED SZERVIZE"
+                : "A TE SZERVIZED"}
         </div>
         <nav aria-label="Fő navigáció">
           {mainNav.map((n) => (
@@ -293,17 +326,7 @@ function Shell({ view }: { view: View }) {
               </span>
               <span className="user-menu-text">
                 {user ? user.name : "Vendég"}
-                <small>
-                  {user?.role === "partner"
-                    ? "Céges partner"
-                    : user?.role === "manager"
-                      ? "Tulajdonos / vezető"
-                      : user?.role === "staff"
-                        ? "Munkatárs"
-                        : user
-                          ? "Saját fiók"
-                          : "Bejelentkezés"}
-                </small>
+                <small>{user ? roleLabels[user.role] : "Bejelentkezés"}</small>
               </span>
               <ChevronDown size={14} />
             </Link>
@@ -312,6 +335,8 @@ function Shell({ view }: { view: View }) {
         <main id="main" className="main">
           {!ready ? (
             <div className="loading">A műhely ajtaja nyílik…</div>
+          ) : activeView === "admin" ? (
+            <Administration />
           ) : activeView === "management" ? (
             <Management />
           ) : activeView === "overview" ? (
@@ -326,6 +351,8 @@ function Shell({ view }: { view: View }) {
             <Appointments />
           ) : activeView === "partners" ? (
             <Partners />
+          ) : activeView === "reception" ? (
+            <Reception />
           ) : (
             <Workshop />
           )}
@@ -346,9 +373,9 @@ function Shell({ view }: { view: View }) {
       {demoOpen && (
         <Modal title="Próbáld ki a portált" close={() => setDemoOpen(false)}>
           <p className="muted modal-intro">
-            Ez egy működő, böngészőben tárolt prototípus. Nincs valódi foglalás,
-            e-mail-küldés vagy homelab-kapcsolat. Kérjük, mintaadatokat
-            használj.
+            Válassz egy nézetet, és próbáld ki az időpontkérést az ügyféltől a
+            műhelyig. A demó ebben a böngészőben ment; valódi foglalást és
+            e-mailt nem küld. Kérjük, mintaadatokat használj.
           </p>
           <div className="demo-options">
             {(
@@ -366,44 +393,56 @@ function Shell({ view }: { view: View }) {
                   icon: Building2,
                 },
                 {
+                  role: "reception",
+                  label: "Munkafelvevő",
+                  desc: "Ügyfélfogadás, időpontok és beérkező kérések kezelése.",
+                  icon: ClipboardList,
+                },
+                {
                   role: "manager",
                   label: "Tulajdonos / vezető",
-                  desc: "Műhelyszintű riportok, terhelés és összesítések.",
+                  desc: "Naptár, foglalások kezelése és műhelyszintű riportok.",
                   icon: BarChart3,
                 },
                 {
-                  role: "staff",
-                  label: "Műhely munkatárs",
-                  desc: "Naptár, jóváhagyás és nyitvatartás.",
-                  icon: Wrench,
+                  role: "admin",
+                  label: "Adminisztrátor",
+                  desc: "Fiókkezelés, jogosultságok és hozzáférés minden munkatérhez.",
+                  icon: UserRound,
                 },
               ] as const
-            ).map((r) => (
-              <Link
-                href={
-                  r.role === "manager"
-                    ? "/vezetes"
-                    : r.role === "staff"
-                      ? "/muhely"
-                      : r.role === "partner"
-                        ? "/partnerek"
-                        : "/attekintes"
-                }
-                key={r.role}
-                className="demo-option"
-                onClick={() => {
-                  demo(r.role);
-                  setDemoOpen(false);
-                }}
-              >
-                <r.icon size={23} />
-                <span>
-                  <strong>{r.label}</strong>
-                  <small>{r.desc}</small>
-                </span>
-                <ArrowUpRight size={19} />
-              </Link>
-            ))}
+            )
+              .filter((r) =>
+                store.users.some((account) => account.role === r.role),
+              )
+              .map((r) => (
+                <Link
+                  href={
+                    r.role === "admin"
+                      ? "/admin"
+                      : r.role === "manager"
+                        ? "/vezetes"
+                        : r.role === "reception"
+                          ? "/munkafelvetel"
+                          : r.role === "partner"
+                            ? "/partnerek"
+                            : "/attekintes"
+                  }
+                  key={r.role}
+                  className="demo-option"
+                  onClick={() => {
+                    demo(r.role);
+                    setDemoOpen(false);
+                  }}
+                >
+                  <r.icon size={23} />
+                  <span>
+                    <strong>{r.label}</strong>
+                    <small>{r.desc}</small>
+                  </span>
+                  <ArrowUpRight size={19} />
+                </Link>
+              ))}
           </div>
           {user && (
             <button
@@ -416,6 +455,48 @@ function Shell({ view }: { view: View }) {
               <LogOut size={16} /> Folytatás vendégként
             </button>
           )}
+          <div className="demo-reset">
+            <button
+              className="text-button"
+              onClick={() => {
+                setDemoOpen(false);
+                setResetOpen(true);
+              }}
+            >
+              <RotateCcw size={15} /> Demó újrakezdése
+            </button>
+          </div>
+        </Modal>
+      )}
+      {resetOpen && (
+        <Modal title="Újrakezded a demót?" close={() => setResetOpen(false)}>
+          <div className="modal-form">
+            <p className="muted">
+              Ebben a böngészőben töröljük a létrehozott demófiókokat, a mentett
+              járműveket, foglalásokat és zárvatartásokat, majd visszaállítjuk
+              az eredeti mintaadatokat. Kijelentkezel a jelenlegi fiókból. A
+              témabeállításod megmarad.
+            </p>
+            <div className="panel-actions">
+              <button
+                className="text-button"
+                onClick={() => setResetOpen(false)}
+              >
+                Mégse
+              </button>
+              <button
+                className="button danger"
+                onClick={() => {
+                  if (resetDemo()) {
+                    setResetOpen(false);
+                    router.replace("/attekintes");
+                  }
+                }}
+              >
+                Mintaadatok visszaállítása <RotateCcw size={16} />
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
       {help && (

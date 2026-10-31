@@ -11,6 +11,7 @@ export default function ThemeToggle() {
     <button
       className="icon-button legal-theme"
       aria-label={dark ? "Világos téma" : "Sötét téma"}
+      title="A témaválasztást ebben a böngészőben megjegyezzük."
       onClick={() => {
         const next = !dark;
         setDark(next);

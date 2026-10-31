@@ -2023,7 +2023,8 @@ select {
   font-size: 12px;
   font-weight: 500;
 }
-.detail-grid span {
+.detail-grid span,
+.detail-grid > div > a {
   font-size: 10px;
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -2266,6 +2267,10 @@ select {
 }
 .modal-logout {
   margin: 0 25px 25px;
+}
+.demo-reset {
+  border-top: 1px solid var(--line);
+  padding: 18px 25px;
 }
 .demo-options {
   padding: 22px 25px;

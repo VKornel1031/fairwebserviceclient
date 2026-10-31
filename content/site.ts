@@ -23,9 +23,14 @@ export const site = {
     capacity: 2,
     horizonDays: 90,
     timeZone: "Europe/Budapest",
+    requestNotice:
+      "Az időpontkérés nem jelent javítási megrendelést. A munka tartalmát és a végleges árat a műhellyel külön egyeztetitek.",
   },
   legal: {
     updatedAt: "2026-10-30",
+    version: "2026-10-30.2-draft",
+    // A jelenlegi folyamat időpontkérés; online javítási szerződést/fizetést nem valósít meg.
+    bookingModel: "appointment-request",
     // Maradjon true a tényleges működéshez igazítás és ellenőrzés befejezéséig.
     isDraft: true,
     companyName: "FAIR AUTÓSZERVÍZ FEHÉRVÁR Kft.",
@@ -37,6 +42,31 @@ export const site = {
     representative: "",
     hostingProvider: "",
     hostingAddress: "",
+    hostingEmail: "",
+    complaintsAddress: "",
+    complaintsEmail: "kborsos@fairauto.eu",
+    conciliationSubmission: "not-confirmed",
+    regulatedServiceDisclosure: "",
+    codeOfConduct: "",
+    pricingDisclosure: "",
+    // Szolgáltatónkénti adatkezelési célok, jogalapok, megőrzés és továbbítás élesítéskor.
+    productionDataProcessing: "",
+    productionRetention: "",
+    reviews: {
+      companyDetails: false,
+      businessModelAndTerms: false,
+      privacyAndProcessors: false,
+      accessibilityScope: false,
+    },
+    // Ellenőrizve a testület saját kapcsolatoldalán: 2026-10-30.
+    conciliation: {
+      name: "Fejér Vármegyei Békéltető Testület",
+      address: "8000 Székesfehérvár, Hosszúsétatér 4–6.",
+      postalAddress: "8050 Székesfehérvár, Pf. 357.",
+      phone: "+36 22 510-310",
+      email: "bekeltetes@fmkik.hu",
+      website: "https://www.bekeltetesfejer.hu/kapcsolat/",
+    },
     privacyEmail: "kborsos@fairauto.eu",
   },
 };
@@ -97,4 +127,5 @@ export const legalNavigation = [
   { slug: "aszf", label: "ÁSZF" },
   { slug: "suti-tajekoztato", label: "Süti- és tárhelytájékoztató" },
   { slug: "impresszum", label: "Impresszum" },
+  { slug: "fogyasztoi-tajekoztato", label: "Fogyasztói tájékoztató" },
 ];

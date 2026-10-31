@@ -1,8 +1,4 @@
-import { services, statusNames, type Appointment, type Role } from "./demo";
-
-export function isWorkshopRole(role?: Role) {
-  return role === "staff" || role === "manager";
-}
+import { services, statusNames, type Appointment } from "./demo";
 
 export function downloadAppointments(rows: Appointment[], filename: string) {
   // Quote every field and neutralize spreadsheet formulas from user-entered values.

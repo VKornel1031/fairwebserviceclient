@@ -6,6 +6,7 @@ import { legalDocuments } from "@/content/legal";
 import { site } from "@/content/site";
 import LegalLinks from "@/components/legal-links";
 import ThemeToggle from "@/components/theme-toggle";
+import { legalSetupIssues } from "@/lib/legal";
 
 export function generateStaticParams() {
   return legalDocuments.map((doc) => ({ document: doc.slug }));
@@ -31,6 +32,7 @@ export default async function LegalPage({
   const { document } = await params;
   const doc = legalDocuments.find((d) => d.slug === document);
   if (!doc) notFound();
+  const draft = legalSetupIssues().length > 0;
   const updated = new Date(
     `${site.legal.updatedAt}T12:00:00`,
   ).toLocaleDateString("hu-HU", {
@@ -72,12 +74,10 @@ export default async function LegalPage({
             <span>
               Frissítve: <time dateTime={site.legal.updatedAt}>{updated}</time>
             </span>
-            {site.legal.isDraft && (
-              <span className="legal-draft">Szerkeszthető minta</span>
-            )}
+            {draft && <span className="legal-draft">Szerkeszthető minta</span>}
           </div>
         </div>
-        {site.legal.isDraft && (
+        {draft && (
           <p className="legal-draft-note">
             Ez a szöveg a jelenlegi demó működését írja le. Az éles használathoz
             a hiányzó cégadatokat és a tényleges szolgáltatás feltételeit ki
@@ -105,6 +105,15 @@ export default async function LegalPage({
               <FileText size={22} strokeWidth={1.3} />
               <h2>{doc.title}</h2>
             </div>
+            {doc.slug === "aszf" && (
+              <a
+                className="legal-download"
+                href="/dokumentumok/aszf.txt"
+                download
+              >
+                ÁSZF letöltése szöveges fájlként <ArrowUpRight size={14} />
+              </a>
+            )}
             {doc.sections.map((section, i) => (
               <section
                 key={section.id}
@@ -132,6 +141,31 @@ export default async function LegalPage({
                   <ul>
                     {section.items.map((item) => (
                       <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+                {section.links && (
+                  <ul className="legal-section-links">
+                    {section.links.map((link) => (
+                      <li key={link.href}>
+                        <a
+                          href={link.href}
+                          download={link.download || undefined}
+                          target={
+                            link.href.startsWith("https://")
+                              ? "_blank"
+                              : undefined
+                          }
+                          rel={
+                            link.href.startsWith("https://")
+                              ? "noreferrer"
+                              : undefined
+                          }
+                        >
+                          {link.label}
+                          <ArrowUpRight size={13} />
+                        </a>
+                      </li>
                     ))}
                   </ul>
                 )}

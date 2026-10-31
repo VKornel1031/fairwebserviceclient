@@ -24,13 +24,14 @@ import {
   minutes as clockMinutes,
 } from "@/lib/demo";
 import { downloadAppointments } from "@/lib/reports";
+import { canViewReports } from "@/lib/permissions";
 
 export default function Management() {
   const { user, store, demo } = usePortal();
   const [period, setPeriod] = useState("7");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
-  if (user?.role !== "manager")
+  if (!canViewReports(user?.role))
     return (
       <>
         <PageHeading

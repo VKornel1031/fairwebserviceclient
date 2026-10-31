@@ -11,9 +11,7 @@ async function enter(page: Page, name: string) {
         ? "/partnerek$"
         : name === "Tulajdonos / vezető"
           ? "/vezetes$"
-          : name === "Műhely munkatárs"
-            ? "/muhely$"
-            : "/attekintes$",
+          : "/attekintes$",
     ),
   );
 }
@@ -144,7 +142,7 @@ test("management reports filter, export and open the selected workshop appointme
   ).toBeVisible();
 });
 
-test("management demo works with older saved data and keeps existing records", async ({
+test("legacy staff sessions move to reception and preserve saved records", async ({
   page,
 }) => {
   await page.goto("/attekintes");
@@ -152,39 +150,86 @@ test("management demo works with older saved data and keeps existing records", a
   await page.getByRole("link", { name: /^Magánügyfél/ }).click();
   await page.evaluate(() => {
     const s = JSON.parse(localStorage.getItem("fairauto-prototype-v1")!);
-    s.users = s.users.filter((u: { id: string }) => u.id !== "demo-manager");
+    s.users = s.users.filter(
+      (u: { id: string }) =>
+        !["demo-manager", "demo-reception", "demo-admin"].includes(u.id),
+    );
+    delete s.rolesRevision;
+    s.users.push({
+      ...s.users[0],
+      id: "demo-staff",
+      role: "staff",
+      name: "Korábbi szerelő",
+    });
     s.vehicles.push({
       ...s.vehicles[0],
       id: "preserved-car",
+      owner: "demo-staff",
       plate: "KEEP-123",
     });
+    s.appointments.push({
+      ...s.appointments[0],
+      id: "FA-PRESERVED",
+      owner: "demo-staff",
+      note: "Megőrzendő megjegyzés",
+    });
     localStorage.setItem("fairauto-prototype-v1", JSON.stringify(s));
+    localStorage.setItem("fairauto-session-v1", "demo-staff");
   });
   await page.reload();
-  await page.getByRole("button", { name: "Demó mód" }).click();
-  await page.getByRole("link", { name: /^Tulajdonos \/ vezető/ }).click();
-  await expect(page.locator(".management-overview")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Munkafelvétel, egyszerűen." }),
+  ).toBeVisible();
+  const saved = await page.evaluate(() => ({
+    store: JSON.parse(localStorage.getItem("fairauto-prototype-v1")!),
+    session: localStorage.getItem("fairauto-session-v1"),
+  }));
+  expect(saved.session).toBe("demo-reception");
   expect(
-    await page.evaluate(() =>
-      JSON.parse(localStorage.getItem("fairauto-prototype-v1")!).vehicles.some(
-        (v: { plate: string }) => v.plate === "KEEP-123",
-      ),
-    ),
-  ).toBe(true);
+    saved.store.users.map((user: { role: string }) => user.role),
+  ).not.toContain("staff");
+  expect(saved.store.users).toHaveLength(5);
+  expect(saved.store.vehicles).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: "preserved-car",
+        owner: "demo-reception",
+        plate: "KEEP-123",
+      }),
+    ]),
+  );
+  expect(saved.store.appointments).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: "FA-PRESERVED",
+        owner: "demo-reception",
+        note: "Megőrzendő megjegyzés",
+      }),
+      expect.objectContaining({ id: "FA-MINTA01", owner: "demo-partner" }),
+    ]),
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Munkafelvétel, egyszerűen." }),
+  ).toBeVisible();
 });
 
-test("staff stays operational while management and partner workspaces fit mobile", async ({
+test("owner controls the workshop and the remaining workspaces fit mobile", async ({
   page,
 }) => {
-  await enter(page, "Műhely munkatárs");
+  await enter(page, "Tulajdonos / vezető");
+  await page
+    .getByRole("link", { name: "Műhely és naptár", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Zárvatartás kezelése" }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Vezetői áttekintés", exact: true }),
-  ).toHaveCount(0);
-  await page.getByRole("button", { name: "Demó mód" }).click();
-  await page.getByRole("link", { name: /^Tulajdonos \/ vezető/ }).click();
+  ).toBeVisible();
+  await page
+    .getByRole("link", { name: "Vezetői áttekintés", exact: true })
+    .click();
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(
@@ -201,4 +246,71 @@ test("staff stays operational while management and partner workspaces fit mobile
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+});
+
+test("demo menu has five profiles and resetting requires confirmation", async ({
+  page,
+}) => {
+  await enter(page, "Céges partner");
+  await page.getByRole("button", { name: "Sötét téma" }).click();
+  await page.evaluate(() => {
+    const store = JSON.parse(localStorage.getItem("fairauto-prototype-v1")!);
+    store.vehicles.push({
+      ...store.vehicles[0],
+      id: "test-car",
+      plate: "RESET-123",
+    });
+    store.users.push({
+      ...store.users[0],
+      id: "test-account",
+      email: "reset@example.com",
+    });
+    store.appointments.push({ ...store.appointments[0], id: "FA-RESET" });
+    store.blockedDates.push("2099-01-05");
+    localStorage.setItem("fairauto-prototype-v1", JSON.stringify(store));
+    localStorage.setItem("unrelated-setting", "keep");
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Demó mód" }).click();
+  const profiles = page.locator(".demo-options .demo-option");
+  await expect(profiles).toHaveCount(5);
+  await expect(profiles).toContainText([
+    "Magánügyfél",
+    "Céges partner",
+    "Munkafelvevő",
+    "Tulajdonos / vezető",
+    "Adminisztrátor",
+  ]);
+  await page.getByRole("button", { name: "Demó újrakezdése" }).click();
+  await page.getByRole("button", { name: "Mégse" }).click();
+  expect(
+    await page.evaluate(() => localStorage.getItem("fairauto-prototype-v1")),
+  ).toContain("RESET-123");
+  await page.getByRole("button", { name: "Demó mód" }).click();
+  await page.getByRole("button", { name: "Demó újrakezdése" }).click();
+  await page
+    .getByRole("button", { name: "Mintaadatok visszaállítása" })
+    .click();
+  await expect(page).toHaveURL(/\/attekintes$/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const saved = await page.evaluate(() => ({
+    store: JSON.parse(localStorage.getItem("fairauto-prototype-v1")!),
+    session: localStorage.getItem("fairauto-session-v1"),
+    theme: localStorage.getItem("fairauto-theme"),
+    unrelated: localStorage.getItem("unrelated-setting"),
+  }));
+  expect(saved.store.users).toHaveLength(5);
+  expect(saved.store.vehicles).toHaveLength(3);
+  expect(saved.store.appointments.map((a: { id: string }) => a.id)).toEqual([
+    "FA-MINTA01",
+  ]);
+  expect(saved.store.blockedDates).toEqual([]);
+  expect(saved.session).toBeNull();
+  expect(saved.theme).toBe("dark");
+  expect(saved.unrelated).toBe("keep");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("button", { name: "Demó mód" }).click();
+  await page.getByRole("link", { name: /^Tulajdonos \/ vezető/ }).click();
+  await expect(page.locator(".management-overview")).toBeVisible();
 });

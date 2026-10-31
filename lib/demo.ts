@@ -1,3 +1,4 @@
+import type { LegalAcknowledgement } from "./legal";
 import { site, serviceOptions } from "@/content/site";
 export type View =
   | "overview"
@@ -7,8 +8,10 @@ export type View =
   | "account"
   | "partners"
   | "workshop"
+  | "reception"
+  | "admin"
   | "management";
-export type Role = "customer" | "partner" | "staff" | "manager";
+export type Role = "customer" | "partner" | "reception" | "manager" | "admin";
 export type Profile = {
   name: string;
   email: string;
@@ -21,6 +24,7 @@ export type User = Profile & {
   role: Role;
   passwordHash?: string;
   salt?: string;
+  legalAcknowledgement?: LegalAcknowledgement;
 };
 export type Vehicle = {
   id: string;
@@ -47,9 +51,11 @@ export type Appointment = {
   status: Status;
   created: string;
   demo?: boolean;
+  legalAcknowledgement?: LegalAcknowledgement;
 };
 export type Store = {
   version: 1;
+  rolesRevision?: 2;
   users: User[];
   vehicles: Vehicle[];
   appointments: Appointment[];
@@ -64,6 +70,24 @@ export const managerDemoUser: User = {
   phone: "+36 20 123 4567",
   city: "Székesfehérvár",
   reminders: true,
+};
+export const receptionDemoUser: User = {
+  id: "demo-reception",
+  role: "reception",
+  name: "Fair munkafelvevő",
+  email: "munkafelvetel@example.com",
+  phone: "+36 20 123 4567",
+  city: "Székesfehérvár",
+  reminders: false,
+};
+export const adminDemoUser: User = {
+  id: "demo-admin",
+  role: "admin",
+  name: "Fair admin",
+  email: "admin@example.com",
+  phone: "+36 20 123 4567",
+  city: "Székesfehérvár",
+  reminders: false,
 };
 export const STORE_KEY = "fairauto-prototype-v1";
 export const SESSION_KEY = "fairauto-session-v1";
@@ -185,8 +209,11 @@ export function initialStore(): Store {
   };
   return {
     version: 1,
+    rolesRevision: 2,
     users: [
       managerDemoUser,
+      receptionDemoUser,
+      adminDemoUser,
       { ...contact, id: "demo-customer", role: "customer" },
       {
         ...contact,
@@ -194,13 +221,6 @@ export function initialStore(): Store {
         role: "partner",
         name: "Nagy Anna",
         email: "partner@example.com",
-      },
-      {
-        ...contact,
-        id: "demo-staff",
-        role: "staff",
-        name: "Fair munkatárs",
-        email: "muhely@example.com",
       },
     ],
     vehicles: [
@@ -277,10 +297,41 @@ export function readStore(): Store {
     !data.companies
   )
     throw new Error("A mentett demóadatok nem olvashatók.");
-  // Add the new demo role without replacing any existing profiles or bookings.
-  return data.users.some((user: User) => user.id === managerDemoUser.id)
-    ? data
-    : { ...data, users: [...data.users, managerDemoUser] };
+  // Existing staff saves become reception profiles; appointment snapshots stay intact.
+  const legacyUsers = data.users as (Omit<User, "role"> & {
+    role: Role | "staff";
+  })[];
+  const legacyDemo = legacyUsers.find((user) => user.id === "demo-staff");
+  const users: User[] = legacyUsers
+    .filter((user) => user.id !== "demo-staff")
+    .map((user) => ({
+      ...user,
+      role: user.role === "staff" ? "reception" : user.role,
+    }));
+  if (data.rolesRevision !== 2) {
+    for (const sample of [managerDemoUser, receptionDemoUser, adminDemoUser])
+      if (!users.some((user) => user.id === sample.id))
+        users.push(
+          sample.role === "reception"
+            ? { ...sample, ...legacyDemo, id: sample.id, role: "reception" }
+            : sample,
+        );
+  }
+  return {
+    ...data,
+    rolesRevision: 2,
+    users,
+    vehicles: data.vehicles.map((vehicle: Vehicle) =>
+      vehicle.owner === "demo-staff"
+        ? { ...vehicle, owner: receptionDemoUser.id }
+        : vehicle,
+    ),
+    appointments: data.appointments.map((appointment: Appointment) =>
+      appointment.owner === "demo-staff"
+        ? { ...appointment, owner: receptionDemoUser.id }
+        : appointment,
+    ),
+  };
 }
 export function writeStore(store: Store) {
   localStorage.setItem(STORE_KEY, JSON.stringify(store));
