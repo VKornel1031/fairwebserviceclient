@@ -102,3 +102,13 @@ Kijelentkezés a jelen böngésző sütijét törli, nem von vissza egy már ell
 A homelabon látott 0.26.3 régi: későbbi biztonsági javítások hiányoznak belőle, például a [GHSA-84vh-m24q-wjjx](https://github.com/pocketbase/pocketbase/security/advisories/GHSA-84vh-m24q-wjjx), javítva 0.39.7-ben. Cégszintű nyilvános használat előtt mentés és próbavisszaállítás után frissíts támogatott, javított PocketBase-verzióra, és azon is ellenőrizd a migrációt és a folyamatokat. A jelen integráció nem jelenti a teljes rendszer üzemeltetési vagy jogi készre jelentését.
 
 Az adatkezelési és ÁSZF-fájlokat frissítettük a valódi fiókokra. A hiányzó hivatalos cégadatokat, megőrzést, adatfeldolgozókat és érintetti folyamatokat az üzemeltetőnek kell kitöltenie: `content/site.ts`, `content/legal.ts`, `docs/HUNGARIAN_LEGAL_READINESS.md`.
+
+## 7. Mit jelent a PocketBase beépített SMTP-beállítása?
+
+PocketBase tartalmaz levelezési klienst és levélsablonokat, de nem biztosít saját, internetes kézbesítést végző SMTP-szolgáltatást. A **Settings → Mail settings / SMTP** részben meglévő postafiók SMTP-kiszolgálója, helyi levelezőszerver vagy külső SMTP-szolgáltató adható meg. Szolgáltatótól függően ingyenes keret vagy meglévő előfizetéshez tartozó SMTP-hozzáférés is használható; az aktuális feltételeket ellenőrizd.
+
+A beállításhoz szervercím, port/TLS mód, SMTP-felhasználó és jelszó, valamint feladó név és e-mail-cím szükséges. Ezeket közvetlenül a PocketBase adminfelületén add meg, ne a frontendben, GitHubon vagy a csevegésben. A szolgáltató által kért DNS-hitelesítést (például SPF/DKIM) is be kell állítani.
+
+Alapértelmezésben PocketBase a Unix `sendmail` parancsot is használhatja. Ez nem jelent automatikusan működő vagy megbízható kézbesítést egy CasaOS/Docker homelabon. A hivatalos [üzemeltetési útmutató](https://pocketbase.io/docs/going-to-production/#use-smtp-mail-server) SMTP-szolgáltatást javasol éles levelezéshez.
+
+Az SMTP beállítása önmagában nem kapcsolja be a weboldal ellenőrző vagy jelszó-visszaállító folyamatait: ezek a felhasználó kérésére jelenleg ki vannak kapcsolva. A mostani regisztráció és belépés levelezés nélkül működik. A későbbi emailes folyamatokat külön kell bekötni és tesztelni.

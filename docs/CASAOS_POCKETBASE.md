@@ -17,19 +17,39 @@ sudo mkdir -p /DATA/AppData/pocketbase/pb_migrations
 sudo mkdir -p /DATA/AppData/pocketbase/pb_hooks
 ```
 
-A repóban lévő két fájlt másold ide, vagy töltsd le közvetlenül a saját GitHub-repódból:
+A repó **privát**. A bejelentkezés nélküli `raw.githubusercontent.com` letöltés ezért 404-et adhat akkor is, ha a fájl létezik. A korábbi `curl` parancsokhoz GitHub-hitelesítés kellett volna; a repót nem szükséges nyilvánossá tenni.
+
+A legegyszerűbb böngészős lehetőség: saját GitHub-fiókodba belépve töltsd le a `pocketbase/pb_migrations/1793404800_account_management.js` és a `pocketbase/pb_hooks/account.pb.js` fájlt, majd a CasaOS fájlkezelőjével másold őket a megfelelő host mappákba.
+
+Terminálból használhatod a hivatalos GitHub CLI-t. Debianon:
 
 ```sh
-sudo curl --fail --show-error --location \
-  https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_migrations/1793404800_account_management.js \
-  -o /DATA/AppData/pocketbase/pb_migrations/1793404800_account_management.js
+sudo apt update
+sudo apt install gh
 
-sudo curl --fail --show-error --location \
-  https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/account.pb.js \
-  -o /DATA/AppData/pocketbase/pb_hooks/account.pb.js
+gh auth login --hostname github.com --git-protocol https --web
 ```
 
-Ha valamelyik letöltés hibát jelez, az újraindítás előtt javítsd; ne használj hiányos fájlt. Ezek saját repóból származó, felülvizsgálható szöveges fájlok, nem jelszavak vagy API-kulcsok. Ne másold a `scripts/test-pocketbase.py` tesztadat-generátort a homelabra.
+A böngészős bejelentkezést a saját gépeden fejezd be a terminálon megjelenő útmutatóval. A `gh` parancsot **kodi felhasználóként, sudo nélkül** futtasd; a `sudo gh` másik felhasználó hitelesítését használná. Jelszót, belépési kódot vagy tokent ne küldj csevegésben. Ez GitHub-hozzáférés a privát fájlokhoz; a webalkalmazáshoz továbbra sem kell PocketBase API-kulcs.
+
+Ezután töltsd le előbb a saját felhasználói mappádba. Csak akkor telepítjük őket, ha mindkét letöltés sikeres:
+
+```sh
+mkdir -p ~/fairauto-pb-setup
+
+gh api -H 'Accept: application/vnd.github.raw+json' \
+  'repos/VKornel1031/fairwebserviceclient/contents/pocketbase/pb_migrations/1793404800_account_management.js?ref=main' \
+  > ~/fairauto-pb-setup/1793404800_account_management.js &&
+gh api -H 'Accept: application/vnd.github.raw+json' \
+  'repos/VKornel1031/fairwebserviceclient/contents/pocketbase/pb_hooks/account.pb.js?ref=main' \
+  > ~/fairauto-pb-setup/account.pb.js &&
+sudo install -m 0644 ~/fairauto-pb-setup/1793404800_account_management.js \
+  /DATA/AppData/pocketbase/pb_migrations/1793404800_account_management.js &&
+sudo install -m 0644 ~/fairauto-pb-setup/account.pb.js \
+  /DATA/AppData/pocketbase/pb_hooks/account.pb.js
+```
+
+Ha valamelyik lépés hibát jelez, állj meg az újraindítás előtt. Siker esetén az `install` nem feltétlenül ír ki semmit. A mappák létrehozása és a sikertelen korábbi 404-es letöltés önmagában nem módosította az adatbázist. Ne másold a `scripts/test-pocketbase.py` tesztadat-generátort a homelabra.
 
 ## 3. Kötetmappák a CasaOS app beállításaiban
 
