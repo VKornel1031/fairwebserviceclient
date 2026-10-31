@@ -3730,3 +3730,83 @@ select {
     animation: none !important;
   }
 }
+
+/* Account management follows the portal's existing panel and form styling. */
+.account-sections {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.account-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.account-details {
+  margin-top: 20px;
+}
+.account-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding-block: 8px;
+}
+.account-details > form,
+.account-details > .form-grid {
+  margin-top: 20px;
+}
+.account-details > form + form {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.account-search {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.account-search .field {
+  flex: 1;
+  min-width: 0;
+}
+.account-table-wrap {
+  position: relative;
+  overflow-x: auto;
+}
+.account-table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+}
+.account-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.account-table th,
+.account-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.account-table td {
+  font-size: 13px;
+}
+.account-table small {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.account-scope {
+  margin-bottom: 24px;
+}
+.account-scope p {
+  margin-block: 6px;
+}
+@media (max-width: 600px) {
+  .account-search {
+    flex-wrap: wrap;
+  }
+  .account-table {
+    min-width: 560px;
+  }
+}

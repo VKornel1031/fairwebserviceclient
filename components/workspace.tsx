@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { legalAcknowledgement } from "@/lib/legal";
 import { site } from "@/content/site";
 import {
   ArrowRight,
@@ -9,14 +8,12 @@ import {
   Plus,
   CarFront,
   CalendarDays,
-  UserRound,
   Building2,
   Wrench,
   Check,
   Pencil,
   Trash2,
   Star,
-  LogOut,
   Download,
   Clock3,
   ChevronLeft,
@@ -24,7 +21,6 @@ import {
   Search,
   ShieldCheck,
   X,
-  Mail,
   SlidersHorizontal,
   ClipboardList,
 } from "lucide-react";
@@ -38,12 +34,10 @@ import { downloadAppointments } from "@/lib/reports";
 import {
   canManageWorkshop,
   canCoordinateAppointments,
-  roleLabels,
 } from "@/lib/permissions";
 import {
   services,
   id,
-  passwordDigest,
   statusNames,
   dateLabel,
   today,
@@ -52,423 +46,9 @@ import {
   endTime,
   type Vehicle,
   type Status,
-  type Profile,
 } from "@/lib/demo";
 
-export function Account() {
-  const { user, store, mutate, session, notify, demo } = usePortal();
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [business, setBusiness] = useState(false);
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("mode") === "register")
-      setMode("register");
-  }, []);
-  async function auth(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    const form = new FormData(e.currentTarget);
-    const email = String(form.get("email")).trim().toLowerCase();
-    const password = String(form.get("password"));
-    try {
-      if (mode === "register") {
-        if (form.get("acceptTerms") !== "on") {
-          setError(
-            "A regisztrációhoz fogadd el a demó használati feltételeit.",
-          );
-          return;
-        }
-        const salt = crypto.randomUUID();
-        const hash = await passwordDigest(password, salt);
-        const uid = id("USR");
-        const ok = mutate((s) => {
-          if (s.users.some((u) => u.email.toLowerCase() === email))
-            throw new Error(
-              "Ez az e-mail-cím már szerepel a helyi demóban. Jelentkezz be.",
-            );
-          return {
-            ...s,
-            users: [
-              ...s.users,
-              {
-                id: uid,
-                name: String(form.get("name")).trim(),
-                email,
-                phone: "",
-                city: "",
-                reminders: true,
-                role: business ? "partner" : "customer",
-                legalAcknowledgement: legalAcknowledgement(),
-                passwordHash: hash,
-                salt,
-              },
-            ],
-            companies: business
-              ? {
-                  ...s.companies,
-                  [uid]: {
-                    name: String(form.get("company")).trim(),
-                    tax: "",
-                    city: "",
-                  },
-                }
-              : s.companies,
-          };
-        });
-        if (ok) {
-          session(uid);
-          notify(
-            "A helyi demófiókod elkészült. Most elmentheted az adataidat.",
-          );
-        }
-      } else {
-        const candidate = store.users.find(
-          (u) => u.email.toLowerCase() === email && u.passwordHash,
-        );
-        if (
-          !candidate?.salt ||
-          (await passwordDigest(password, candidate.salt)) !==
-            candidate.passwordHash
-        ) {
-          setError(
-            "Hibás e-mail-cím vagy jelszó. A mintafiókokat a demógombbal nyithatod meg.",
-          );
-          return;
-        }
-        session(candidate.id);
-        notify("Sikeres bejelentkezés. Jó újra itt!");
-      }
-    } catch {
-      setError(
-        "A fiókművelet nem sikerült. Használj HTTPS-t vagy localhostot, és engedélyezd a helyi tárhelyet.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-  if (!user)
-    return (
-      <>
-        <PageHeading
-          eyebrow="A KÖVETKEZŐ FOGLALÁS MÁR EGYSZERŰBB LESZ"
-          title="Saját hely az autós ügyeidnek."
-          description="Mentsd el az adataidat, kezeld a járműveidet, és tartsd kézben az időpontjaidat."
-        />
-        <div className="auth-layout">
-          <section className="panel auth-panel">
-            <div className="tabs">
-              <button
-                className={mode === "login" ? "active" : ""}
-                onClick={() => {
-                  setMode("login");
-                  setError("");
-                }}
-              >
-                Bejelentkezés
-              </button>
-              <button
-                className={mode === "register" ? "active" : ""}
-                onClick={() => {
-                  setMode("register");
-                  setError("");
-                }}
-              >
-                Fiók létrehozása
-              </button>
-            </div>
-            <h2>
-              {mode === "login"
-                ? "Jó újra találkozni."
-                : "Ismerjük meg egymást."}
-            </h2>
-            <p className="muted">
-              {mode === "login"
-                ? "Lépj be a böngészőben létrehozott demófiókodba."
-                : "Helyi demófiók, valódi személyes adatok nélkül."}
-            </p>
-            <form onSubmit={auth} className="stack-form">
-              {mode === "register" && (
-                <Field
-                  name="name"
-                  label="Teljes név"
-                  autoComplete="name"
-                  required
-                  maxLength={100}
-                  pattern=".*\S.*"
-                  placeholder="Kovács Péter"
-                />
-              )}
-              <Field
-                name="email"
-                label="E-mail-cím"
-                required
-                type="email"
-                autoComplete="email"
-                maxLength={150}
-                placeholder="peter@example.com"
-              />
-              <Field
-                name="password"
-                label="Jelszó"
-                type="password"
-                autoComplete={
-                  mode === "login" ? "current-password" : "new-password"
-                }
-                minLength={8}
-                maxLength={128}
-                required
-                hint={
-                  mode === "register"
-                    ? "Legalább 8 karakter. Ne használj máshol is használt jelszót."
-                    : undefined
-                }
-              />
-              {mode === "register" && (
-                <>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={business}
-                      onChange={(e) => setBusiness(e.target.checked)}
-                    />
-                    <span>Céges partnerként regisztrálok</span>
-                  </label>
-                  {business && (
-                    <Field
-                      name="company"
-                      label="Cégnév"
-                      required
-                      maxLength={120}
-                      pattern=".*\S.*"
-                    />
-                  )}
-                  <label className="checkbox-label">
-                    <input type="checkbox" name="acceptTerms" required />
-                    <span>
-                      Megértettem, hogy ez egy helyi demó. A fiókom és adataim
-                      csak ebben a böngészőben érhetők el. Elfogadom a demó
-                      használatára vonatkozó ÁSZF-et.
-                    </span>
-                  </label>
-                </>
-              )}
-              {error && (
-                <p role="alert" className="form-error">
-                  {error}
-                </p>
-              )}
-              <button
-                type="submit"
-                className="button full-width"
-                disabled={busy}
-              >
-                {busy
-                  ? "Egy pillanat…"
-                  : mode === "login"
-                    ? "Bejelentkezés"
-                    : "Demófiók létrehozása"}{" "}
-                <ArrowRight size={17} />
-              </button>
-            </form>
-            <p className="form-legal-note">
-              <Link
-                href="/adatkezelesi-tajekoztato"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Adatkezelési Tájékoztató
-              </Link>{" "}
-              ·{" "}
-              <Link href="/aszf" target="_blank" rel="noreferrer">
-                ÁSZF
-              </Link>
-            </p>
-            <div className="auth-divider">
-              <span>vagy próbáld ki rögtön</span>
-            </div>
-            <button
-              className="button button-outline full-width"
-              onClick={() => demo("customer")}
-            >
-              <UserRound size={17} /> Magánügyfél demófiók
-            </button>
-            <p className="demo-footnote">
-              Nincs e-mail-ellenőrzés vagy jelszó-visszaállító levél a demóban.
-              A helyi fiók nem kapcsolódik éles rendszerhez.
-            </p>
-          </section>
-          <div className="auth-promo">
-            <img src="/images/workshop.jpg" alt="Szervizműhely" />
-            <div>
-              <ShieldCheck size={34} strokeWidth={1.3} />
-              <h2>
-                Az autódról gondoskodunk.
-                <br />A részleteket megjegyezzük.
-              </h2>
-              <p>
-                Mentett járművek. Átlátható foglalások.
-                <br />
-                Kevesebb adatbevitel, minden alkalommal.
-              </p>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  return <ProfileForm key={user.id} />;
-}
-function ProfileForm() {
-  const { user, store, mutate, session, notify } = usePortal();
-  const [profile, setProfile] = useState<Profile>({ ...user! });
-  function save(e: FormEvent) {
-    e.preventDefault();
-    const ok = mutate((s) => {
-      if (
-        s.users.some(
-          (u) =>
-            u.id !== user!.id &&
-            u.email.toLowerCase() === profile.email.trim().toLowerCase(),
-        )
-      )
-        throw new Error("Ez az e-mail-cím már foglalt a demóban.");
-      return {
-        ...s,
-        users: s.users.map((u) =>
-          u.id === user!.id
-            ? {
-                ...u,
-                ...profile,
-                name: profile.name.trim(),
-                email: profile.email.trim().toLowerCase(),
-                city: profile.city.trim(),
-              }
-            : u,
-        ),
-      };
-    });
-    if (ok) notify("A személyes adataidat elmentettük.");
-  }
-  return (
-    <>
-      <PageHeading
-        eyebrow="SAJÁT FIÓK"
-        title="A részletek, amik számítanak."
-        description="Ezeket az adatokat töltjük ki helyetted a következő foglaláskor."
-        action={
-          <button
-            className="button button-outline"
-            onClick={() => {
-              session(null);
-              notify(
-                "Kijelentkeztél. A mentett adataid megmaradnak ebben a böngészőben.",
-              );
-            }}
-          >
-            <LogOut size={16} /> Kijelentkezés
-          </button>
-        }
-      />
-      <div className="profile-layout">
-        <form className="panel" onSubmit={save}>
-          <div className="panel-title">
-            <h2>Személyes adatok</h2>
-            <p>A módosítások a korábbi foglalásaid adatait nem írják át.</p>
-          </div>
-          <div className="form-grid">
-            <Field
-              label="Teljes név"
-              required
-              maxLength={100}
-              pattern=".*\S.*"
-              value={profile.name}
-              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-            />
-            <Field
-              label="E-mail-cím"
-              required
-              type="email"
-              maxLength={150}
-              value={profile.email}
-              onChange={(e) =>
-                setProfile({ ...profile, email: e.target.value })
-              }
-            />
-            <Field
-              label="Mobiltelefonszám"
-              type="tel"
-              pattern="[+0-9 \(\)\-]{7,25}"
-              value={profile.phone}
-              onChange={(e) =>
-                setProfile({ ...profile, phone: e.target.value })
-              }
-            />
-            <Field
-              label="Település"
-              maxLength={100}
-              value={profile.city}
-              onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-            />
-          </div>
-          <div className="form-section-title">
-            <Mail size={18} />
-            <h3>Értesítési beállítások</h3>
-          </div>
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={profile.reminders}
-              onChange={(e) =>
-                setProfile({ ...profile, reminders: e.target.checked })
-              }
-            />
-            <span>
-              Kérek e-mail-emlékeztetőt a foglalásaim előtt.
-              <small className="block muted">
-                A preferenciát mentjük; a prototípus nem küld levelet.
-              </small>
-            </span>
-          </label>
-          <div className="panel-actions">
-            <span />
-            <button className="button" type="submit">
-              Változtatások mentése <Check size={17} />
-            </button>
-          </div>
-        </form>
-        <aside className="profile-aside">
-          <span className="large-avatar">
-            {user!.name
-              .split(" ")
-              .map((s) => s[0])
-              .slice(0, 2)
-              .join("")}
-          </span>
-          <h3>{user!.name}</h3>
-          <p className="muted">{roleLabels[user!.role]}</p>
-          <div className="profile-stats">
-            <span>
-              <strong>
-                {store.vehicles.filter((v) => v.owner === user!.id).length}
-              </strong>
-              mentett jármű
-            </span>
-            <span>
-              <strong>
-                {store.appointments.filter((a) => a.owner === user!.id).length}
-              </strong>
-              foglalás
-            </span>
-          </div>
-          <Link href="/idopont" className="button full-width">
-            Új időpont <Plus size={17} />
-          </Link>
-        </aside>
-      </div>
-    </>
-  );
-}
+export { Account } from "./account";
 
 export function Vehicles({ embedded = false }: { embedded?: boolean }) {
   const { user, store, mutate, notify } = usePortal();
@@ -1070,7 +650,7 @@ export function Appointments({ embedded = false }: { embedded?: boolean }) {
 }
 
 export function Partners() {
-  const { user, store, demo, mutate, notify } = usePortal();
+  const { user, store, mutate, notify } = usePortal();
   const [settings, setSettings] = useState(false);
   const [tab, setTab] = useState("fleet");
   const company = store.companies[user?.id || ""] || {
@@ -1078,7 +658,7 @@ export function Partners() {
     tax: "",
     city: "",
   };
-  if (user?.role !== "partner")
+  if (user?.role !== "partner" && user?.role !== "admin")
     return (
       <>
         <PageHeading
@@ -1097,16 +677,16 @@ export function Partners() {
               kövesd az időpontokat egyetlen felületen.
             </p>
             <div className="button-row">
-              <button className="button" onClick={() => demo("partner")}>
-                Partnerdemó kipróbálása <ArrowUpRight size={17} />
-              </button>
+              <Link className="button" href="/fiok?mode=register">
+                Céges fiók igénylése <ArrowUpRight size={17} />
+              </Link>
               <Link href="/fiok" className="text-link">
                 Céges fiók létrehozása <ArrowRight size={16} />
               </Link>
             </div>
             <p className="small muted">
-              Regisztrációkor jelöld be a „Céges partnerként regisztrálok”
-              lehetőséget.
+              Hozz létre ügyfélfiókot, majd kérj partnerhozzáférést az
+              adminisztrátortól.
             </p>
           </div>
           <Building2 size={150} strokeWidth={0.6} />
@@ -1267,7 +847,7 @@ export function Reception() {
   return <AppointmentDesk reception />;
 }
 function AppointmentDesk({ reception = false }: { reception?: boolean }) {
-  const { user, store, demo, mutate, notify } = usePortal();
+  const { user, store, mutate, notify } = usePortal();
   const permitted = reception
     ? canCoordinateAppointments(user?.role)
     : canManageWorkshop(user?.role);
@@ -1312,7 +892,7 @@ function AppointmentDesk({ reception = false }: { reception?: boolean }) {
           }
           description={
             reception
-              ? "A munkafelvevői demóban kipróbálhatod a kérések jóváhagyását, az időpontegyeztetést és az ügyféladatok kezelését."
+              ? "A munkafelvételhez munkafelvevői, vezetői vagy adminisztrátori hozzáférés szükséges."
               : "A munkafelvevői feladatokat a Munkafelvétel oldalon találod. A műhelyfolyamatok és a zárvatartás kezelése a vezetői nézethez tartozik."
           }
         >
@@ -1321,15 +901,9 @@ function AppointmentDesk({ reception = false }: { reception?: boolean }) {
               Munkafelvétel megnyitása <ArrowRight size={17} />
             </Link>
           ) : (
-            <button
-              className="button"
-              onClick={() => demo(reception ? "reception" : "manager")}
-            >
-              {reception
-                ? "Munkafelvevői demó megnyitása"
-                : "Vezetői demó megnyitása"}{" "}
-              <ArrowRight size={17} />
-            </button>
+            <Link className="button" href="/fiok">
+              Bejelentkezés <ArrowRight size={17} />
+            </Link>
           )}
         </Empty>
       </>

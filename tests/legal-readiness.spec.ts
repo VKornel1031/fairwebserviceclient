@@ -69,30 +69,3 @@ test("public pages load fonts locally and do not initialize a demo account datab
   const font = await page.request.get("/fonts/inter-variable.ttf");
   expect(font.ok()).toBe(true);
 });
-
-test("registration records explicit terms acceptance without calling it marketing consent", async ({
-  page,
-}) => {
-  await page.goto("/fiok?mode=register");
-  await page.getByLabel("Teljes név").fill("Minta Ügyfél");
-  await page.getByLabel("E-mail-cím").fill("legal-test@example.com");
-  await page.getByLabel("Jelszó").fill("DemoPassword123");
-  const terms = page.getByRole("checkbox", { name: /Megértettem/ });
-  await expect(terms).not.toBeChecked();
-  await terms.check();
-  await page.getByRole("button", { name: "Demófiók létrehozása" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Személyes adatok" }),
-  ).toBeVisible();
-  const acknowledgement = await page.evaluate(
-    () =>
-      JSON.parse(localStorage.getItem("fairauto-prototype-v1")!).users.find(
-        (u: { email: string }) => u.email === "legal-test@example.com",
-      ).legalAcknowledgement,
-  );
-  expect(acknowledgement.termsVersion).toBe(site.legal.version);
-  expect(acknowledgement.privacyNoticeVersion).toBe(site.legal.version);
-  expect(acknowledgement.mode).toBe("demo");
-  expect(Number.isNaN(Date.parse(acknowledgement.acceptedAt))).toBe(false);
-  expect(acknowledgement).not.toHaveProperty("marketingConsent");
-});

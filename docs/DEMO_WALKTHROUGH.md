@@ -1,3 +1,5 @@
+> Historical walkthrough for the previous local demo. The public role switcher and local account login have been removed. Use [the PocketBase account setup guide](./POCKETBASE_SETUP.md) for the current version. Booking/workshop backend integration is still pending.
+
 # Fair Autószerviz – a helyi demó bemutatása
 
 A demóhoz nem kell adatbázis, SQL-kiszolgáló, PocketBase, API-kulcs vagy környezeti változó. Indítás: `npm ci`, majd `npm run dev`; a felület a 3000-es porton érhető el. A meglévő világos/sötét megjelenés és az összes szerkeszthető tájékoztató megmaradt.

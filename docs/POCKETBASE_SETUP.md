@@ -1,170 +1,104 @@
-# PocketBase-fiókkezelés – induló beállítások
+# PocketBase fiókkezelés – e-mail és ellenőrzés nélkül
 
-Ez az útmutató a Fair Autószerviz portál **következő, éles fiókkezelési lépéséhez** készült. A frontend jelenleg továbbra is helyi demóadatokat használ: egy PocketBase-példány beállítása önmagában még nem kapcsolja át a weboldalt.
+Ez a dokumentum a most bekötött fiókkezeléshez tartozik. A korábbi `verified = true` belépési szabályt felváltja az `active = true`. SMTP nem szükséges. A PocketBase-superuser jelszavát vagy tokenjét **ne add meg a weboldalnak, Vercelnek vagy a csevegésben**.
 
-Az alábbi collection- és jogosultsági beállításokat a felhasználó által használt PocketBase **0.26.3** alatt, elkülönített helyi adatbázison ellenőriztük. Más verziónál a mezők és menüpontok eltérhetnek; először tesztkörnyezetben alkalmazd a saját verziódhoz illő beállításokat. A homelabodat és a valódi SMTP-küldést nem teszteltük.
+A megadott `argonptg/pocketbase` image-hez és `/DATA/AppData/pocketbase/pb_data` mappádhoz külön, konkrét lépések: **[CASAOS_POCKETBASE.md](./CASAOS_POCKETBASE.md)**.
 
-## 1. Mi szükséges a homelabon?
+## 1. Biztonsági mentés és migráció
 
-- Egy rögzített verziójú PocketBase-példány tartós `pb_data` kötettel. A SQLite-ot PocketBase kezeli, külön SQL-szerver és SQL API-kulcs nem kell.
-- HTTPS-es, stabil API-cím, például `https://pb.sajatdomain.hu`. A Vercelen futó frontendnek és a felhasználók böngészőinek is el kell érniük. A `localhost`, a privát LAN-cím vagy egy csak otthon feloldható név erre nem megfelelő.
-- Reverse proxy (például Caddy vagy Nginx), amely a PocketBase tényleges hallgatózási címére továbbít. Konténeres proxy esetén a belső konténerhálózatot használd; a PocketBase-portot ne kelljen közvetlenül publikálni.
-- SMTP-kiszolgáló a megerősítő és jelszó-visszaállító levelekhez.
-- Rendszeres, PocketBase által támogatott mentés és kipróbált visszaállítás. A `pb_data`, a saját migrációk és hookok maradjanak meg frissítéskor.
+Készíts és tölts le PocketBase-mentést, és őrizd meg a jelenlegi collection-beállításokat. Éles cégadatoknál előbb külön másolaton próbáld ki a migrációt. A verziózott fájl:
 
-A PocketBase beépített adminfelülete általában a `https://pb.sajatdomain.hu/_/` címen érhető el. Hozz létre **saját superuser** fiókot. Ezt kizárólag adminisztrációra használd: a weboldal tulajdonosi/vezetői ügyfélfiókja nem superuser.
+[`pocketbase/pb_migrations/1793404800_account_management.js`](../pocketbase/pb_migrations/1793404800_account_management.js)
 
-Böngészős kérésekhez korlátozhatod a megengedett originöket a tényleges frontendcímre és helyi fejlesztésre:
+A saját e-mail-cím SMTP nélküli módosításához a [`pocketbase/pb_hooks/account.pb.js`](../pocketbase/pb_hooks/account.pb.js) fájlt is másold a PocketBase tényleges `pb_hooks` könyvtárába, majd indítsd újra az alkalmazást. A hook kizárólag a saját aktív fiók jelszóval megerősített címváltoztatását engedi; nem bővíti a `manageRule` sajátfiók-jogosultságát.
+
+A migráció a meglévő `users` auth collectiont bővíti; nem törli és nem cseréli le a rekordokat vagy a meglévő mezőazonosítókat. A hiányzó mezőket hozzáadja, öt szerepkört állít be, és az API/auth szabályokat lecseréli. Az új `active` mező bevezetésekor a meglévő fiókokat egyszer aktiválja. Későbbi futtatás nem aktiválja újra a letiltott fiókokat. A legkorábban létrehozott aktív app-admint védetté teszi, ha már van ilyen. Automatikus visszagörgetés helyett ellenőrzött mentésből állíts vissza.
+
+**CasaOS / Docker:** az appok eltérő bináris- és kötetútvonalakat használhatnak. A CasaOS alkalmazás beállításaiban nézd meg a `pb_data` és `pb_migrations` köteteket és a PocketBase indítási parancsát. Szükség esetén a konténernevek megtekintése:
 
 ```sh
-./pocketbase serve --http=127.0.0.1:8090 --origins="https://portal.sajatdomain.hu,http://localhost:3000"
+docker ps --format '{{.Names}}\t{{.Image}}'
 ```
 
-Ez a példa ugyanazon gépen futó reverse proxyhoz való. Konténerben a hallgatózási címet és a belső hálózatot a telepítésedhez igazítsd. Az originlista nem helyettesíti a collection-jogosultságokat. Teszteld az API-t a frontend tényleges domainjéről is.
+Másold a migrációt a tényleges, tartós `pb_migrations` könyvtárba. Állítsd le a PocketBase-t a migráció idejére; az adott telepítés PocketBase binárisával, ugyanazzal a `pb_data` és migrációs útvonallal futtasd:
 
-## 2. Alap- és levelezési beállítások
+```sh
+/path/to/pocketbase migrate up --dir /actual/pb_data --migrationsDir /actual/pb_migrations
+```
 
-A PocketBase adminfelületének Settings részében:
+A fenti útvonalak helyőrzők, ne másold őket változatlanul. Az automatikus migrációt használó Docker-kép indításkor is alkalmazhatja a fájlt; ellenőrizd a konténer naplóját és a `users` mezőit. Ne indíts két PocketBase-példányt ugyanazzal a `pb_data` könyvtárral. Ha a CasaOS útvonalai nem egyértelműek, a konténer neve, képe és kötetútvonalai alapján lehet pontos parancsot adni; jelszó nem kell hozzá.
 
-1. Állítsd be az alkalmazás nevét és URL-jét. A beépített megerősítőoldalak használatakor az e-mail-sablonokban szereplő `/_/` útvonalaknak a **PocketBase domainjére** kell vezetniük. Ne irányítsd ezeket olyan frontendoldalra, amely még nem létezik.
-2. Kapcsold be az SMTP-t. Add meg biztonságosan a hostot, portot, felhasználónevet, jelszót és a szolgáltató szerinti TLS-beállítást. Ellenőrizd a feladói címet és az SPF/DKIM/DMARC beállításokat a levelezési szolgáltatónál.
-3. Küldj tesztlevelet. Külön próbáld ki a regisztrációs megerősítést és a jelszó-visszaállító linket is; egy sikeres tesztlevél önmagában nem ellenőrzi az authfolyamatot.
-4. Az éles használat előtt állíts be megfelelő beépített rate limitet a regisztrációra, belépésre és authlevelek kérésére.
+## 2. Ezt kell látnod a users collectionben
 
-A frontendbe nem kerül SMTP-jelszó vagy superuser-token. A nyilvános PocketBase API-URL nem titok; a hozzáférést a bejelentkezés és a szerveroldali szabályok szabályozzák.
+A rendszermezőket (`id`, `email`, `password`, `verified`, stb.) PocketBase kezeli. A jelszóhoz ne készíts saját text/hash mezőt.
 
-## 3. `users` – Auth collection
+| Mező               | Típus / beállítás                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| `name`             | Text, legalább 2, legfeljebb 100 karakter                                           |
+| `phone`            | Text, max. 25                                                                       |
+| `city`             | Text, max. 100                                                                      |
+| `reminders`        | Bool; jelenleg nincs levelezés és nincs ilyen beállítás a felületen                 |
+| `role`             | Select, kötelező, egy érték: `customer`, `partner`, `reception`, `manager`, `admin` |
+| `companyName`      | Text, max. 120                                                                      |
+| `companyTax`       | Text, max. 30                                                                       |
+| `companyCity`      | Text, max. 100                                                                      |
+| `partnerRequested` | Bool, fenntartott mező; önmagában nem ad szerepkört                                 |
+| `active`           | Bool, a belépéshez `true` szükséges                                                 |
+| `protectedRoot`    | Bool, a védett alapadminnál `true`; csak superuser állítsa                          |
+| `termsVersion`     | Text, max. 100; a szerver állítja regisztrációnál                                   |
+| `termsAcceptedAt`  | Date; a szerver állítja regisztrációnál                                             |
 
-A Collections alatt keresd meg az alap `users` auth collectiont. Ha még nincs ilyen, hozz létre egyet **Auth** típussal, `users` néven. Meglévő collectiont ne törölj vagy cserélj le; a saját adataidhoz és sémádhoz add hozzá a hiányzó mezőket.
+Password auth: engedélyezve, identity mező `email`; új jelszó 12–64 karakter, legfeljebb 72 UTF-8 bájt. Auth token élettartam 28 800 másodperc (8 óra). **Auth rule: `active = true`**. A `verified` nem belépési feltétel. OAuth2, OTP és e-mailes MFA ne legyen bekapcsolva ehhez az első verzióhoz.
 
-A rendszermezőket (`id`, `email`, `password`, `verified`, `emailVisibility`, dátumok stb.) PocketBase kezeli. Ne készíts saját `passwordHash`, `salt` vagy jelszót tároló text mezőt.
+A teljes API-szabályokat a migráció tartalmazza. Ne helyettesítsd őket üres szabállyal: a PocketBase üres szabálya nyilvános engedély, a `null` zárolást jelent. Saját profil mentésekor a szerver nem küldi vissza a szerepkört vagy az aktív állapotot. A közvetlen PocketBase API-nál is tilos ezek önálló módosítása.
 
-| Egyedi mező | Típus  | Beállítás                                                                       |
-| ----------- | ------ | ------------------------------------------------------------------------------- |
-| `name`      | Text   | Kötelező; min. 2, max. 100 karakter; teljes név                                 |
-| `phone`     | Text   | Nem kötelező; max. 25 karakter                                                  |
-| `city`      | Text   | Nem kötelező; max. 100 karakter                                                 |
-| `reminders` | Bool   | Értesítési preferencia; nem marketing-hozzájárulás                              |
-| `role`      | Select | Kötelező, egy választás; `customer`, `partner`, `reception`, `manager`, `admin` |
+## 3. Az első alkalmazás-admin
 
-Ha a `name` mező már létezik, annak beállításait módosítsd, ne készíts második, azonos nevű mezőt. A telefon és település regisztrációkor még lehet üres; az időpontkéréskor a frontend és a későbbi backend kötelezővé teheti őket.
+A PocketBase `/_/` kezelőjében, superuserként hozz létre egy normál **users rekordot** saját e-mail-címmel és erős jelszóval:
 
-## 4. Másolható API-szabályok
+- `name`: a neved;
+- `role`: `admin`;
+- `active`: `true`;
+- `protectedRoot`: `true`;
+- `emailVisibility`: `false`;
+- `verified`: maradhat `false`, mert most nincs címellenőrzés.
 
-A `users` collection API Rules részében:
+Ez az alkalmazás-admin különbözik a PocketBase-superusertől. A weboldalon a normál users rekord e-mail-címével és jelszavával lépsz be. Más app-admin nem törölheti, nem tilthatja le és nem veheti át a védett alapadmin fiókját az alkalmazás API-ján keresztül. A superuser továbbra is minden rekordot kezelhet a PocketBase adminfelületén.
 
-**List rule** és **View rule**:
+## 4. Vercel beállítások
+
+A projekt **Settings → Environment Variables** részén:
 
 ```text
-@request.auth.id != "" && id = @request.auth.id
+POCKETBASE_URL=https://pb.fairautoszervizkft.hu
+AUTH_APP_ORIGIN=https://fairwebserviceclient.vercel.app
+AUTH_REGISTRATION_ENABLED=true
 ```
 
-**Create rule**:
+Ezek szerveroldali változók: ne legyen `NEXT_PUBLIC_` előtagjuk. Az `AUTH_APP_ORIGIN` a tényleges frontend pontos originje, útvonal és záró perjel nélkül; saját domainre költözéskor ezt is módosítsd. Előnézeti telepítéshez annak külön originjét használd. A regisztráció alapértelmezetten le van tiltva, amíg az üzemeltető el nem készíti a migrációt és engedélyezi a fenti flaget.
 
-```text
-@request.auth.id = "" && @request.body.role = "customer" && @request.body.verified:isset = false
-```
+A változtatás után új Vercel deployment szükséges. A PocketBase-cím **alap URL**, ne `/api/health` végpont legyen. Nincs szükség API-kulcsra vagy superuser-hitelesítő adatra. Ha később Cloudflare Access service-token védi a backend API-t, az opcionális `CF_ACCESS_CLIENT_ID` és `CF_ACCESS_CLIENT_SECRET` kizárólag szerveroldali secret legyen; különben mindkettőt hagyd üresen.
 
-**Update rule**:
+## 5. Kipróbálás
 
-```text
-@request.auth.id != "" && id = @request.auth.id && @request.body.role:isset = false && @request.body.verified:isset = false
-```
+1. Nyisd meg a `/fiok` oldalt; nincs Demó mód vagy szerepkörválasztó.
+2. Regisztrálj új ügyfelet, majd lépj be: nincs aktiváló levél és nincs e-mail-ellenőrzés. Új fiók mindig `customer`.
+3. Ments telefonszámot, települést vagy céges adatokat; másik böngészőben is ellenőrizd a mentést.
+4. Lépj be az adminnal, nyisd meg az `/admin` oldalt. Hozz létre fiókot, vagy módosítsd egy másik felhasználó szerepét. Minden adminmódosításhoz a saját adminjelszó kell.
+5. A felhasználó oldalfrissítéskor, fókuszváltáskor vagy legfeljebb percenkénti ellenőrzéskor megkapja az új nézetet. Minden hitelesített API-hívás azonnal újraellenőrzi a PocketBase-fiókot és szerepkört.
+6. Tiltott fiók nem léphet be; meglévő munkamenete sem ad további API-hozzáférést. Törlésnél a cél e-mail-címét is meg kell erősíteni. Saját admin és védett alapadmin nem törölhető az appban.
+7. E-mail-cím és jelszó módosítása saját jelenlegi jelszóval lehetséges. Elfelejtett jelszónál az admin ellenőrzött megkeresés után állíthat újat. A fióktulajdonos személyazonosságának ellenőrzése az üzemeltető feladata.
 
-A 0.26.3-as verziónál a fenti `:isset` vizsgálatot használd. A profilszerkesztési kérésből a `role` és `verified` mezőket teljesen ki kell hagyni; még a változatlan értéküket se küldje vissza a frontend. A korábbi, újabb verzióra írt `:changed` szabály ezen a verzión a rendes profilmódosítást is letiltja.
+A járművek, időpontok, céges flotta és riportok adatbázisos bekötése még nincs kész. A bejelentkezett munkaterek ezért üres előnézetek, a mentési műveletek nem írnak helyi ál-adatbázisba. A vendégfoglaló külön helyi bemutató marad, mintaadatokkal. Nincs SMTP, levélküldés vagy előnézeti postafiók.
 
-**Delete rule**: maradjon **Locked / null** az induló verzióban. Az adatok törlésének folyamatát külön kell megvalósítani, beleértve a kapcsolódó foglalásokat és a kötelező megőrzéseket. A zárolt törlés nem váltja ki az érintetti kérelmek kezelését.
+## 6. Biztonsági határok és üzemeltetés
 
-**Manage rule**: maradjon **Locked / null**. Ez egy másik felhasználó hitelesítési adatainak teljes kezelését is lehetővé tehetné; ne legyen nyilvános.
+A böngésző csak a Next szerverhez fordul; a PocketBase-token HttpOnly, éles környezetben Secure, SameSite=Lax és hosthoz kötött sütiben van. A hitelesítési válasz nem gyorsítótárazható. Az író végpontok originellenőrzést, mezőengedélylistát és 8 KiB méretkorlátot használnak. A publikus regisztráció nem választhat szerepet. Jelszó- és adminműveletekhez új jelszóellenőrzés szükséges. A szerepköröket a PocketBase szabályai közvetlen API-hozzáférésnél is ellenőrzik.
 
-PocketBase-ben a **Locked / null** és az **üres szabály** különböző: az üres szabály nyilvános hozzáférést enged. A zárolt műveleteknél ne töröld egyszerűen a szabály szövegét.
+A Next folyamaton belüli próbálkozáskorlát **nem elosztott védelem**: Vercel több példányán és a közvetlen PocketBase elérésnél nem közös. PocketBase rate limit és Cloudflare oldali korlátozás is szükséges. A Tunnel önmagában nem korlátozza az API-hozzáférést, és egy másik domain nem jogosultsági védelem. A PocketBase `/_/` és superuser API-k elérését külön védd. A szuperuserhez távoli hozzáférést ne a webalkalmazásra bízd.
 
-Ezekkel a beállításokkal a felhasználó csak saját profilját olvashatja és módosíthatja; nem sorolhatja fel mások adatait, és nem adhat magának partner-, munkafelvevői, vezetői vagy adminisztrátori szerepet. A listázási szabály szűrőként is működik: tiltott adatoknál üres listát is kaphatsz, nem feltétlenül HTTP-hibát.
+Kijelentkezés a jelen böngésző sütijét törli, nem von vissza egy már ellopott JWT-t. A jelszócsere érvényteleníti a korábbi jelszó-tokeneket; a tiltást és törlést az API minden kéréskor ellenőrzi. A migráció 8 órás backend-tokenidőt állít be, de már kiadott tokenekhez a jelszó/tokenKey cseréje szükséges.
 
-Az itt megadott sajátprofil-szabályok önmagukban nem biztosítanak adminisztrátori fióklistázást vagy mások módosítását. A demó `/admin` műveletei helyi adatokon működnek; az éles adminisztrációhoz külön, szerver által ellenőrzött szabályok vagy végpontok szükségesek. Az alkalmazás `admin` szerepe sem PocketBase-superuser.
+A homelabon látott 0.26.3 régi: későbbi biztonsági javítások hiányoznak belőle, például a [GHSA-84vh-m24q-wjjx](https://github.com/pocketbase/pocketbase/security/advisories/GHSA-84vh-m24q-wjjx), javítva 0.39.7-ben. Cégszintű nyilvános használat előtt mentés és próbavisszaállítás után frissíts támogatott, javított PocketBase-verzióra, és azon is ellenőrizd a migrációt és a folyamatokat. A jelen integráció nem jelenti a teljes rendszer üzemeltetési vagy jogi készre jelentését.
 
-## 5. Hitelesítés és szerepkörök
-
-A `users` auth beállításaiban:
-
-- **Identity/Password**: bekapcsolva; azonosítómező: `email`.
-- A password rendszermezőnél állíts be megfelelő minimális hosszt, például 12 karaktert; a későbbi frontendnek ezt követnie kell. A mostani demó 8 karakteres minimuma ettől független.
-- **Auth rule**:
-
-```text
-verified = true
-```
-
-- OAuth2 és OTP az első verzióhoz nem szükséges. A superuser-fiókodnál használd a rendelkezésre álló erősebb hitelesítési védelmet.
-
-A regisztrációs kérésben **mindig `role: "customer"`** szerepeljen. A céges regisztráció később partnerigény lehet, amelyet admin hagy jóvá. A jelenlegi demó automatikus partnerjogosultságát és szabad szerepkörváltóját **nem szabad átvinni az éles authfolyamatba**.
-
-Partner-, reception-, manager- és admin-szerepet kizárólag ellenőrzött adminisztrációval adj. A munkafelvevő az időpontokat és az ügyfélfogadást kezeli; a műhelyfolyamatok és a riportok a vezetőhöz tartoznak. Az admin minden munkaterülethez hozzáfér, és a fiókokat is kezeli. Az appbeli `manager` szerep nem PocketBase superuser. A `role` értéke önmagában más collectionhöz sem ad hozzáférést: azokhoz később külön szabályok kellenek.
-
-A `verified = true` miatt a felhasználó regisztráció után a megerősítésig nem tud jelszóval belépni. Az első tesztfióknál az adminfelületen átállíthatod a `verified` mezőt, hogy ellenőrizd a profilfolyamatot; ez **nem helyettesíti az éles e-mailes megerősítést**.
-
-## 6. A majdani frontendhívások
-
-A hivatalos JavaScript SDK csomagneve `pocketbase`. A következő példák egy későbbi integrációhoz valók; most nem futnak a weboldalban.
-
-```ts
-import PocketBase from "pocketbase";
-
-const pb = new PocketBase("https://pb.sajatdomain.hu");
-
-// Regisztráció: nyers jelszót TLS-en keresztül PocketBase kapja meg;
-// soha ne a demóban mentett hash-t küldd, és ne naplózd a jelszót.
-await pb.collection("users").create({
-  email,
-  password,
-  passwordConfirm,
-  name,
-  role: "customer",
-  emailVisibility: false,
-  reminders: false,
-});
-await pb.collection("users").requestVerification(email);
-
-// Megerősítés után:
-await pb.collection("users").authWithPassword(email, password);
-const me = await pb.collection("users").authRefresh();
-await pb
-  .collection("users")
-  .update(me.record.id, { name, phone, city, reminders });
-
-// Elfelejtett jelszó és e-mail-cím módosítása:
-await pb.collection("users").requestPasswordReset(email);
-await pb.collection("users").requestEmailChange(newEmail);
-
-// Kijelentkezés:
-pb.authStore.clear();
-```
-
-A levelekben kapott tokenek kezelésére kezdetben használhatod PocketBase beépített megerősítőoldalait. Saját frontendoldalakhoz később a `confirmVerification`, `confirmPasswordReset` és `confirmEmailChange` hívásokat is be kell kötni, majd a sablonlinkeket hozzájuk igazítani. A jelszó-visszaállítás és az e-mail-változtatás a meglévő auth-tokenek érvénytelenítésével is járhat; ezt a felületnek kezelnie kell.
-
-Next.js-ben ne ossz meg egyetlen, változó felhasználói authállapotot hordozó SDK-példányt az összes szerverkérés között. Szerveroldali használathoz kérésenként külön példány és átgondolt sütikezelés kell; a böngészős SDK alap tárolási módját is szerepeltesd az adatkezelési tájékoztatóban. A hitelesítési token érvényességét és az adott művelet jogosultságát a backendnek kell ellenőriznie.
-
-## 7. Mit kell még bekötni ebben a projektben?
-
-1. A `components/provider.tsx` helyi sessionkezelését valódi PocketBase authra kell cserélni, elkülönített, tudatosan kiválasztott auth-tárolással.
-2. A `components/workspace.tsx` regisztrációját, belépését, profilmentését, megerősítéskérését és jelszó-visszaállítását az SDK-hoz kell kötni.
-3. A `lib/demo.ts` helyi jelszólenyomatait **nem importáljuk éles jelszóként**. A mintaadatok és a demószerepkörök nem éles ügyfélfiókok.
-4. A járművek, foglalások és céges rekordok jelenleg helyben maradnak; ezekhez a következő körben külön collectionök, szerveroldali hozzáférési szabályok és foglalási végpont szükségesek.
-5. A jogi mintaszövegeket frissíteni kell a valódi PocketBase-, tárhely-, e-mail- és megőrzési adatokkal.
-
-A bekötéshez a következő nem titkos információk elegendők az induláshoz: **PocketBase-verzió, HTTPS API-URL és a frontend végleges domainje**. Jelszót, superuser-tokent vagy SMTP-kulcsot ne küldj chatben és ne írj a repóba.
-
-## 8. Átadási ellenőrzés
-
-- Vendég létrehozhat `customer` fiókot, de `partner`/`reception`/`manager`/`admin` szerepet vagy `verified: true` értéket nem küldhet be.
-- Nem megerősített fiók nem léphet be; a kiküldött megerősítőlink működik.
-- A megerősített felhasználó be tud lépni, saját adatait módosíthatja, másét nem.
-- Saját szerepkörét és a `verified` állapotot sem módosíthatja.
-- A jelszó-visszaállítás és az e-mail-változtatás valódi tesztpostaládával végigfut.
-- Kijelentkezés és lejárt/érvénytelen token esetén a frontend visszatér a belépéshez.
-- A superuser adatai nem jelennek meg a frontendcsomagban vagy hálózati kérésben.
-- A backupból végzett visszaállítást külön is kipróbáltad.
-
-Az elkülönített 0.26.3-as helyi ellenőrzésben a regisztráció, megerősítés előtti belépés tiltása, saját profil módosítása, jogosultságemelés tiltása (a szerepkörmező módosítóival is), másik fiók olvasásának/módosításának tiltása és a zárolt törlés működött. Az admin által beállított `verified` érték utáni belépést teszteltük; tényleges levélküldést nem.
-
-Hivatalos források: [Hitelesítés](https://pocketbase.io/docs/authentication/), [API-szabályok](https://pocketbase.io/docs/api-rules-and-filters/), [Records API](https://pocketbase.io/docs/api-records/), [Éles üzemeltetés](https://pocketbase.io/docs/going-to-production/), [PocketBase 0.26.3](https://github.com/pocketbase/pocketbase/releases/tag/v0.26.3).
+Az adatkezelési és ÁSZF-fájlokat frissítettük a valódi fiókokra. A hiányzó hivatalos cégadatokat, megőrzést, adatfeldolgozókat és érintetti folyamatokat az üzemeltetőnek kell kitöltenie: `content/site.ts`, `content/legal.ts`, `docs/HUNGARIAN_LEGAL_READINESS.md`.

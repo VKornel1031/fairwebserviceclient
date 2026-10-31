@@ -27,7 +27,7 @@ import { downloadAppointments } from "@/lib/reports";
 import { canViewReports } from "@/lib/permissions";
 
 export default function Management() {
-  const { user, store, demo } = usePortal();
+  const { user, store } = usePortal();
   const [period, setPeriod] = useState("7");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
@@ -42,11 +42,11 @@ export default function Management() {
         <Empty
           icon={<BarChart3 size={32} />}
           title="Ez a vezetői munkaterület."
-          description="A demóban külön vezetői nézettel próbálhatod ki az összesítéseket és a riportokat. A saját foglalásaidat a megszokott oldalakon találod."
+          description="A vezetői munkatérhez vezetői vagy adminisztrátori hozzáférés szükséges. A saját fiókodat a Saját fiók oldalon kezelheted."
         >
-          <button className="button" onClick={() => demo("manager")}>
-            Vezetői demó megnyitása <ArrowUpRight size={16} />
-          </button>
+          <Link className="button" href="/fiok">
+            Bejelentkezés <ArrowUpRight size={16} />
+          </Link>
         </Empty>
       </>
     );

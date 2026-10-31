@@ -1,406 +1,474 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   Plus,
   Pencil,
   Trash2,
   Search,
   ShieldCheck,
-  Check,
-  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { usePortal } from "./provider";
 import { Modal, PageHeading } from "./ui";
 import { Empty, Field } from "./fields";
-import { id, type Role, type Store, type User } from "@/lib/demo";
-import { canAdminister, roleLabels, roleHome } from "@/lib/permissions";
+import { accountRequest, type Account } from "@/lib/accounts";
+import { roleLabels } from "@/lib/permissions";
+import type { Role } from "@/lib/demo";
 
+type Listing = {
+  items: Account[];
+  totalItems: number;
+  totalPages: number;
+  page: number;
+};
 export default function Administration() {
-  const { user, store, mutate, notify, demo, session } = usePortal();
-  const router = useRouter();
+  const { user, notify } = usePortal();
   const [query, setQuery] = useState("");
-  const [editor, setEditor] = useState<{ account: User | null } | null>(null);
-  const [role, setRole] = useState<Role>("customer");
-  const [deleting, setDeleting] = useState<User | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [revision, setRevision] = useState(0);
+  const [listing, setListing] = useState<Listing | null>(null);
+  const [editor, setEditor] = useState<{ account: Account | null } | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState<Account | null>(null);
   const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
-  if (!canAdminister(user?.role))
-    return (
-      <>
-        <PageHeading
-          eyebrow="ADMINISZTRÁCIÓ"
-          title="Fiókok és jogosultságok."
-          description="Az adminisztrátor kezeli az ügyfél-, partner- és munkatársi fiókokat."
-        />
-        <Empty
-          icon={<ShieldCheck size={32} />}
-          title="Ez az adminisztrátor munkaterülete."
-          description="A fiókok létrehozása, szerkesztése és törlése az adminisztrátori profilhoz tartozik."
-        >
-          <button className="button" onClick={() => demo("admin")}>
-            Adminisztrátori demó megnyitása
-          </button>
-        </Empty>
-      </>
-    );
-
-  function change(fn: (state: Store) => Store) {
-    return mutate((state) => {
-      if (
-        !canAdminister(
-          state.users.find((account) => account.id === user!.id)?.role,
-        )
-      )
-        throw new Error("Ehhez adminisztrátori jogosultság szükséges.");
-      return fn(state);
-    });
-  }
-  function open(account: User | null) {
-    setRole(account?.role || "customer");
+  const [loading, setLoading] = useState(false);
+  const permitted = user?.role === "admin" && user.setupReady;
+  useEffect(() => {
+    setListing(null);
+    if (!permitted) return;
+    const controller = new AbortController();
+    setLoading(true);
     setError("");
-    setEditor({ account });
-  }
-  function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const accountId = editor?.account?.id || id("USR");
-    const name = String(data.get("name") || "").trim();
-    const email = String(data.get("email") || "")
-      .trim()
-      .toLowerCase();
-    const phone = String(data.get("phone") || "").trim();
-    const city = String(data.get("city") || "").trim();
-    const company = {
-      name: String(data.get("companyName") || "").trim(),
-      tax: String(data.get("companyTax") || "").trim(),
-      city: String(data.get("companyCity") || "").trim(),
-    };
-    if (!name || !email || (role === "partner" && !company.name)) {
-      setError("Töltsd ki a kötelező adatokat.");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      const ok = change((state) => {
-        const existing = state.users.find(
-          (account) => account.id === accountId,
-        );
-        if (editor?.account && !existing)
-          throw new Error("A fiók időközben megszűnt.");
-        if (
-          state.users.some(
-            (account) =>
-              account.id !== accountId && account.email.toLowerCase() === email,
-          )
-        )
-          throw new Error("Ezzel az e-mail-címmel már létezik fiók.");
-        if (accountId === user!.id && role !== "admin")
-          throw new Error(
-            "A saját adminisztrátori szerepkörödet itt nem módosíthatod.",
+    accountRequest<Listing>(
+      `/api/admin/accounts?${new URLSearchParams({ q: search, page: String(page) })}`,
+      "GET",
+      undefined,
+      controller.signal,
+    )
+      .then((result) => {
+        if (!controller.signal.aborted) setListing(result);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Nem tölthetők be a fiókok.",
           );
-        const next: User = {
-          ...existing,
-          id: accountId,
-          name,
-          email,
-          phone,
-          city,
-          reminders: existing?.reminders ?? false,
-          role,
-        };
-        return {
-          ...state,
-          users: existing
-            ? state.users.map((account) =>
-                account.id === accountId ? next : account,
-              )
-            : [...state.users, next],
-          companies:
-            role === "partner"
-              ? { ...state.companies, [accountId]: company }
-              : state.companies,
-        };
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
-      if (ok) {
-        setEditor(null);
-        notify("A fiókot elmentettük a helyi demóba.");
-      } else
-        setError(
-          "A fiók nem menthető. Ellenőrizd az értesítésben jelzett hibát.",
-        );
-    } catch {
-      setError("A fiók nem menthető. Próbáld újra.");
+    return () => controller.abort();
+  }, [permitted, user?.id, page, search, revision]);
+  async function save(event: FormEvent<HTMLFormElement>, remove = false) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const payload: Record<string, unknown> = Object.fromEntries(data);
+    if (!remove) payload.active = data.get("active") === "on";
+    if (!payload.password) {
+      delete payload.password;
+      delete payload.passwordConfirm;
+    }
+    const target = remove ? deleting : editor?.account;
+    setBusy(true);
+    setFormError("");
+    try {
+      await accountRequest(
+        `/api/admin/accounts${target ? `/${target.id}` : ""}`,
+        remove ? "DELETE" : target ? "PATCH" : "POST",
+        payload,
+      );
+      form.reset();
+      setEditor(null);
+      setDeleting(null);
+      setRevision((value) => value + 1);
+      notify(
+        remove
+          ? "A fiókot töröltük."
+          : "A fiókot elmentettük. A jogosultságok a következő ellenőrzéskor frissülnek.",
+      );
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Nem sikerült a módosítás.",
+      );
     } finally {
       setBusy(false);
     }
   }
-  const accounts = store.users.filter((account) =>
-    `${account.name} ${account.email} ${roleLabels[account.role]}`
-      .toLocaleLowerCase("hu")
-      .includes(query.trim().toLocaleLowerCase("hu")),
-  );
-  const editing = editor?.account;
-  const company = editing ? store.companies[editing.id] : undefined;
   return (
     <>
       <PageHeading
-        eyebrow="ADMINISZTRÁTOR"
+        eyebrow="ADMINISZTRÁCIÓ"
         title="Fiókok és jogosultságok."
-        description="Ügyfelek, partnerek, munkafelvevők és vezetők kezelése."
+        description="Ügyfelek, partnerek és munkatársak hozzáférése egy helyen."
         action={
-          <button className="button" onClick={() => open(null)}>
-            Új fiók <Plus size={17} />
-          </button>
+          permitted ? (
+            <button
+              className="button"
+              onClick={() => {
+                setFormError("");
+                setEditor({ account: null });
+              }}
+            >
+              <Plus size={17} />
+              Új fiók
+            </button>
+          ) : undefined
         }
       />
-      <div className="list-toolbar">
-        <label className="search-input">
-          <Search size={16} />
-          <input
-            aria-label="Fiókok keresése"
-            placeholder="Név, e-mail vagy szerepkör…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
-        <span className="muted small">{accounts.length} fiók</span>
-      </div>
-      {accounts.length ? (
-        <div className="staff-table-wrap">
-          <table className="staff-table">
-            <thead>
-              <tr>
-                <th>Fiók</th>
-                <th>Elérhetőség</th>
-                <th>Szerepkör</th>
-                <th>Műveletek</th>
-              </tr>
-            </thead>
-            <tbody>
-              {accounts.map((account) => (
-                <tr key={account.id}>
-                  <td>
-                    <strong>{account.name}</strong>
-                    <span>
-                      {account.id === user!.id
-                        ? "Jelenlegi fiókod"
-                        : account.id.startsWith("demo-")
-                          ? "Mintafiók"
-                          : "Helyi demófiók"}
-                    </span>
-                  </td>
-                  <td>
-                    <strong>{account.email}</strong>
-                    <span>{account.phone || "Nincs telefonszám"}</span>
-                  </td>
-                  <td>{roleLabels[account.role]}</td>
-                  <td>
-                    <div className="button-row">
-                      <button
-                        className="icon-button"
-                        aria-label={`${account.email} profiljának kipróbálása`}
-                        title="Profil kipróbálása"
-                        onClick={() => {
-                          session(account.id);
-                          router.push(roleHome[account.role]);
-                        }}
-                      >
-                        <ArrowUpRight size={17} />
-                      </button>
-                      <button
-                        className="icon-button"
-                        aria-label={`${account.email} szerkesztése`}
-                        onClick={() => open(account)}
-                      >
-                        <Pencil size={17} />
-                      </button>
-                      <button
-                        className="icon-button danger-text"
-                        aria-label={`${account.email} törlése`}
-                        disabled={account.id === user!.id}
-                        title={
-                          account.id === user!.id
-                            ? "A bejelentkezett adminfiókot nem törölheted."
-                            : "Fiók törlése"
-                        }
-                        onClick={() => setDeleting(account)}
-                      >
-                        <Trash2 size={17} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
+      {!permitted ? (
         <Empty
-          icon={<Search size={30} />}
-          title="Nincs ilyen fiók."
-          description="Próbálj másik nevet, e-mail-címet vagy szerepkört."
-        />
-      )}
-      <p className="demo-footnote">
-        A fiókok és jogosultságok ebben a böngészőben működnek. A demó nem küld
-        meghívót vagy jelszó-visszaállító e-mailt. A saját adminisztrátori
-        szerepköröd és fiókod itt nem törölhető.
-      </p>
-      {editor && (
-        <Modal
-          title={editing ? "Fiók szerkesztése" : "Új fiók létrehozása"}
-          close={() => !busy && setEditor(null)}
+          icon={<ShieldCheck size={32} />}
+          title={
+            user?.role === "admin"
+              ? "A fiókkezelés beállítása szükséges."
+              : "Ez az adminisztrátor munkaterülete."
+          }
+          description={
+            user?.role === "admin"
+              ? "Alkalmazd a repóban található PocketBase migrációt a fiókkezelés engedélyezéséhez."
+              : "A fiókok kezeléséhez adminisztrátori hozzáférés szükséges."
+          }
         >
-          <form className="modal-form stack-form" onSubmit={save}>
+          <Link className="button" href="/fiok">
+            Saját fiók
+          </Link>
+        </Empty>
+      ) : (
+        <section className="panel">
+          <form
+            className="account-search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setSearch(query);
+              setPage(1);
+            }}
+          >
             <Field
-              name="name"
-              label="Teljes név"
-              required
+              label="Fiókok keresése"
+              type="search"
+              placeholder="Név vagy e-mail-cím"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
               maxLength={100}
-              defaultValue={editing?.name || ""}
             />
-            <Field
-              name="email"
-              label="E-mail-cím"
-              type="email"
-              required
-              maxLength={150}
-              defaultValue={editing?.email || ""}
-            />
-            <label className="field">
-              <span>Szerepkör</span>
-              <select
-                aria-label="Szerepkör"
-                value={role}
-                disabled={editing?.id === user!.id}
-                onChange={(event) => setRole(event.target.value as Role)}
-              >
-                {Object.entries(roleLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Field
-              name="phone"
-              label="Mobiltelefonszám"
-              type="tel"
-              maxLength={25}
-              defaultValue={editing?.phone || ""}
-            />
-            <Field
-              name="city"
-              label="Település"
-              maxLength={100}
-              defaultValue={editing?.city || ""}
-            />
-            {role === "partner" && (
-              <>
-                <Field
-                  name="companyName"
-                  label="Cégnév"
-                  required
-                  maxLength={120}
-                  defaultValue={company?.name || ""}
-                />
-                <Field
-                  name="companyTax"
-                  label="Adószám"
-                  maxLength={30}
-                  defaultValue={company?.tax || ""}
-                />
-                <Field
-                  name="companyCity"
-                  label="Cég települése"
-                  maxLength={100}
-                  defaultValue={company?.city || ""}
-                />
-              </>
-            )}
-            <p className="muted small">
-              Csak mintaadatokat adj meg. Ebben a demóban nem kell jelszó; a
-              létrehozott fiókot a profil kipróbálása gombbal nyithatod meg.
-            </p>
-            {error && (
-              <p role="alert" className="form-error">
-                {error}
-              </p>
-            )}
-            <div className="panel-actions">
+            <button className="button button-outline">
+              <Search size={16} />
+              Keresés
+            </button>
+          </form>
+          {error && (
+            <p role="alert" className="form-error">
+              {error}
               <button
                 className="text-button"
-                type="button"
-                disabled={busy}
-                onClick={() => setEditor(null)}
+                onClick={() => setRevision((value) => value + 1)}
               >
-                Mégse
+                Újrapróbálás
               </button>
-              <button className="button" type="submit" disabled={busy}>
-                {busy ? "Mentés…" : "Fiók mentése"} <Check size={17} />
-              </button>
-            </div>
+            </p>
+          )}
+          {loading && (
+            <p role="status" className="muted">
+              Fiókok betöltése…
+            </p>
+          )}
+          {listing && (
+            <>
+              <p className="small muted">{listing.totalItems} fiók</p>
+              <div className="account-table-wrap">
+                <table className="account-table">
+                  <thead>
+                    <tr>
+                      <th>Név és e-mail-cím</th>
+                      <th>Szerepkör</th>
+                      <th>Állapot</th>
+                      <th>
+                        <span className="sr-only">Műveletek</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listing.items.map((account) => (
+                      <tr key={account.id}>
+                        <td>
+                          <strong>{account.name}</strong>
+                          <small className="block muted">
+                            {account.email || "Rejtett e-mail-cím"}
+                          </small>
+                          {account.companyName && (
+                            <small className="block muted">
+                              {account.companyName}
+                            </small>
+                          )}
+                        </td>
+                        <td>{roleLabels[account.role]}</td>
+                        <td>
+                          {account.active ? "Aktív" : "Letiltva"}
+                          {account.protectedRoot && (
+                            <small className="block muted">Védett admin</small>
+                          )}
+                        </td>
+                        <td>
+                          {account.id === user!.id ? (
+                            <Link href="/fiok" className="text-link">
+                              Saját fiók
+                            </Link>
+                          ) : (
+                            !account.protectedRoot && (
+                              <div className="button-row">
+                                <button
+                                  className="icon-button"
+                                  aria-label={`${account.name} szerkesztése`}
+                                  onClick={() => {
+                                    setFormError("");
+                                    setEditor({ account });
+                                  }}
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                                <button
+                                  className="icon-button"
+                                  aria-label={`${account.name} törlése`}
+                                  onClick={() => {
+                                    setFormError("");
+                                    setDeleting(account);
+                                  }}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!listing.items.length && (
+                <p className="muted">Nincs a keresésnek megfelelő fiók.</p>
+              )}
+              <div className="panel-actions">
+                <button
+                  className="text-button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((value) => value - 1)}
+                >
+                  <ChevronLeft size={16} />
+                  Előző
+                </button>
+                <span className="muted">
+                  {page} / {Math.max(1, listing.totalPages)}
+                </span>
+                <button
+                  className="text-button"
+                  disabled={page >= listing.totalPages || loading}
+                  onClick={() => setPage((value) => value + 1)}
+                >
+                  Következő
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+      {editor && (
+        <Modal
+          title={editor.account ? "Fiók szerkesztése" : "Új fiók létrehozása"}
+          close={() => {
+            if (!busy) setEditor(null);
+          }}
+        >
+          <form className="modal-form" onSubmit={(event) => save(event)}>
+            <fieldset disabled={busy} className="account-fieldset">
+              <div className="form-grid">
+                <Field
+                  label="Teljes név"
+                  name="name"
+                  defaultValue={editor.account?.name}
+                  required
+                  minLength={2}
+                  maxLength={100}
+                  autoComplete="off"
+                />
+                <Field
+                  label="E-mail-cím"
+                  name="email"
+                  defaultValue={editor.account?.email}
+                  required
+                  type="email"
+                  maxLength={254}
+                  autoComplete="off"
+                />
+                <Field
+                  label="Mobiltelefonszám"
+                  name="phone"
+                  defaultValue={editor.account?.phone}
+                  maxLength={25}
+                  type="tel"
+                />
+                <Field
+                  label="Település"
+                  name="city"
+                  defaultValue={editor.account?.city}
+                  maxLength={100}
+                />
+                <div className="field">
+                  <label className="field-label" htmlFor="account-role">
+                    Szerepkör
+                  </label>
+                  <select
+                    name="role"
+                    id="account-role"
+                    defaultValue={editor.account?.role || "customer"}
+                  >
+                    {(Object.keys(roleLabels) as Role[]).map((role) => (
+                      <option value={role} key={role}>
+                        {roleLabels[role]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="active"
+                    defaultChecked={editor.account?.active ?? true}
+                  />
+                  <span>Aktív fiók</span>
+                </label>
+                <Field
+                  label="Cégnév"
+                  name="companyName"
+                  defaultValue={editor.account?.companyName}
+                  maxLength={120}
+                />
+                <Field
+                  label="Adószám"
+                  name="companyTax"
+                  defaultValue={editor.account?.companyTax}
+                  maxLength={30}
+                />
+                <Field
+                  label="Cég települése"
+                  name="companyCity"
+                  defaultValue={editor.account?.companyCity}
+                  maxLength={100}
+                />
+              </div>
+              <details className="account-details" open={!editor.account}>
+                <summary>
+                  {editor.account
+                    ? "Új jelszó beállítása (opcionális)"
+                    : "Kezdeti jelszó"}
+                </summary>
+                <div className="form-grid">
+                  <Field
+                    name="password"
+                    label="Fiók új jelszava"
+                    type="password"
+                    autoComplete="new-password"
+                    required={!editor.account}
+                    minLength={12}
+                    maxLength={64}
+                  />
+                  <Field
+                    name="passwordConfirm"
+                    label="Fiók új jelszava ismét"
+                    type="password"
+                    autoComplete="new-password"
+                    required={!editor.account}
+                    minLength={12}
+                    maxLength={64}
+                  />
+                </div>
+              </details>
+              <Field
+                name="adminPassword"
+                label="Saját adminjelszavad"
+                type="password"
+                autoComplete="current-password"
+                required
+                hint="A módosításhoz erősítsd meg a saját jelszavadat."
+              />
+              {formError && (
+                <p role="alert" className="form-error">
+                  {formError}
+                </p>
+              )}
+              <div className="panel-actions">
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setEditor(null)}
+                >
+                  Mégse
+                </button>
+                <button className="button">
+                  {busy ? "Mentés…" : "Fiók mentése"}
+                </button>
+              </div>
+            </fieldset>
           </form>
         </Modal>
       )}
       {deleting && (
-        <Modal title="Törlöd a fiókot?" close={() => setDeleting(null)}>
-          <div className="modal-form">
-            <p className="muted">
-              <strong>
-                {deleting.name} · {deleting.email}
-              </strong>
-            </p>
-            <p className="modal-intro">
-              A fiókot, a hozzá tartozó mentett járműveket és céges adatokat
-              töröljük. A korábbi foglalások a meglévő kapcsolattartási
-              adatokkal, vendégfoglalásként megmaradnak.
-            </p>
-            <div className="panel-actions">
-              <button className="text-button" onClick={() => setDeleting(null)}>
-                Mégse
-              </button>
-              <button
-                className="button danger"
-                onClick={() => {
-                  if (
-                    change((state) => {
-                      if (deleting.id === user!.id)
-                        throw new Error(
-                          "A jelenlegi adminfiókot nem törölheted.",
-                        );
-                      const companies = { ...state.companies };
-                      delete companies[deleting.id];
-                      return {
-                        ...state,
-                        users: state.users.filter(
-                          (account) => account.id !== deleting.id,
-                        ),
-                        vehicles: state.vehicles.filter(
-                          (vehicle) => vehicle.owner !== deleting.id,
-                        ),
-                        appointments: state.appointments.map((appointment) =>
-                          appointment.owner === deleting.id
-                            ? { ...appointment, owner: null }
-                            : appointment,
-                        ),
-                        companies,
-                      };
-                    })
-                  ) {
-                    setDeleting(null);
-                    notify(
-                      "A fiókot töröltük. A korábbi foglalásokat megőriztük.",
-                    );
-                  }
-                }}
-              >
-                Fiók végleges törlése <Trash2 size={17} />
-              </button>
-            </div>
-          </div>
+        <Modal
+          title="Fiók törlése"
+          close={() => {
+            if (!busy) setDeleting(null);
+          }}
+        >
+          <form className="modal-form" onSubmit={(event) => save(event, true)}>
+            <fieldset disabled={busy} className="account-fieldset">
+              <p>
+                <strong>{deleting.name}</strong> fiókjának törlése végleges. A
+                felhasználó nem tud többé belépni.
+              </p>
+              <p className="muted">
+                A megerősítéshez írd be ezt az e-mail-címet: {deleting.email}
+              </p>
+              <Field
+                name="confirmEmail"
+                label="Törlendő fiók e-mail-címe"
+                type="email"
+                required
+                autoComplete="off"
+              />
+              <Field
+                name="adminPassword"
+                label="Saját adminjelszavad"
+                type="password"
+                required
+                autoComplete="current-password"
+              />
+              {formError && (
+                <p role="alert" className="form-error">
+                  {formError}
+                </p>
+              )}
+              <div className="panel-actions">
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setDeleting(null)}
+                >
+                  Mégse
+                </button>
+                <button className="button danger">Fiók végleges törlése</button>
+              </div>
+            </fieldset>
+          </form>
         </Modal>
       )}
     </>

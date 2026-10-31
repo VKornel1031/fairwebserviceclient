@@ -16,7 +16,7 @@ A nyitvatartási feliratokat kézzel igazítsd a foglalási órákhoz. A `closed
 
 ## `content/legal.ts` – a jogi oldalak szövege
 
-Az alapdokumentumok minden bekezdése, felsorolása és adatblokkja itt található. A fogyasztói tájékoztató külön a `content/consumer.ts`, a letölthető nyilatkozatok szövege a `content/consumer-forms.ts` fájlban szerkeszthető. A szöveget a jelenlegi helyi demóhoz igazítottuk; az éles PocketBase-fiókkezelést még nem állítja működőnek.
+Az alapdokumentumok minden bekezdése, felsorolása és adatblokkja itt található. A fogyasztói tájékoztató külön a `content/consumer.ts`, a letölthető nyilatkozatok szövege a `content/consumer-forms.ts` fájlban szerkeszthető. A szöveg a PocketBase-fiókkezelést és az ettől elkülönülő helyi foglalási bemutatót írja le. A foglalási adatbázis és levelezés még nincs bekötve.
 
 Útvonalak:
 

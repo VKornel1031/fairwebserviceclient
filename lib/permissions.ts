@@ -1,6 +1,6 @@
 import type { Role } from "./demo";
 
-/** Local demo rules. The future backend must enforce these independently. */
+/** Navigation capabilities. Account API permissions are checked independently on the server and in PocketBase. */
 export const roleRules: Record<
   Role,
   {

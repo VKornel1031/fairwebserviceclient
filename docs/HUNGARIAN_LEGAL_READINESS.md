@@ -1,6 +1,8 @@
 # Magyar jogi előkészítés – időpontkérő portál
 
-Ellenőrzés dátuma: **2026. október 30.**
+Forrásellenőrzés dátuma: **2026. október 30.**
+
+Technikai frissítés (2026. október 31.): a fiókkezelés PocketBase-t használ, a foglaló helyi bemutató maradt. A tájékoztató a fiókok szerveroldali tárolását, a munkamenetsütit és az e-mail nélküli működést is leírja. Az üzemeltetőnek a tényleges adattárolás előtt ki kell töltenie a megőrzést, szolgáltatókat és hivatalos cégadatokat; a mintajelölés továbbra is érvényes.
 
 A felhasználó által megerősített és jelenleg megvalósított modell: **a weboldal csak időpontot kér; a javítás tartalmát és végleges árát külön egyeztetik.** Ár megjelenítése önmagában nem dönti el, hogy létrejön-e javítási szerződés: a teljes folyamatot, a gombok és nyilatkozatok tartalmát kell vizsgálni. A rögzített árú online megrendelési modellre való átállást külön tisztázni és megvalósítani kell. A prototípus nem köt javítási szerződést, nem fizettet és nem küld valódi kérést. Az itt leírt módosítások jogi és technikai előkészítést jelentenek; nem tanúsítják egy későbbi éles vállalkozás teljes jogszabályi megfelelőségét.
 

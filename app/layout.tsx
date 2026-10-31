@@ -6,7 +6,7 @@ import "./legal-links.css";
 import "./portal-roles.css";
 export const metadata: Metadata = {
   title: `${site.shortName} · Ügyfélportál`,
-  description: `Időpontfoglalás, saját járművek és céges flottakezelés. ${site.name} – működő demó.`,
+  description: `Saját fiók, céges és munkatársi hozzáférés. ${site.name} – ügyfélportál.`,
 };
 export default function RootLayout({
   children,

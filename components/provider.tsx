@@ -1,8 +1,10 @@
 "use client";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -12,34 +14,30 @@ import {
   writeStore,
   SESSION_KEY,
   type Store,
-  type User,
-  type Role,
 } from "@/lib/demo";
+import {
+  accountRequest,
+  type Account,
+  type AccountCapabilities,
+} from "@/lib/accounts";
+
 type Context = {
   store: Store;
-  user: User | null;
+  user: Account | null;
+  capabilities: AccountCapabilities;
   ready: boolean;
+  sessionError: string;
+  acceptAccount: (account: Account) => void;
+  refreshSession: () => Promise<void>;
+  logout: () => Promise<void>;
   mutate: (fn: (s: Store) => Store) => boolean;
-  session: (id: string | null) => void;
-  demo: (role: Role) => void;
-  resetDemo: () => boolean;
   notify: (text: string) => void;
 };
-function savedSession(store: Store) {
-  const previous = localStorage.getItem(SESSION_KEY);
-  const current = previous === "demo-staff" ? "demo-reception" : previous;
-  if (current && !store.users.some((user) => user.id === current)) {
-    localStorage.removeItem(SESSION_KEY);
-    return null;
-  }
-  if (current && current !== previous)
-    localStorage.setItem(SESSION_KEY, current);
-  return current;
-}
 const PortalContext = createContext<Context>(null!);
 export function usePortal() {
   return useContext(PortalContext);
 }
+
 export function Provider({
   children,
   initializeDemo = true,
@@ -48,93 +46,120 @@ export function Provider({
   initializeDemo?: boolean;
 }) {
   const [store, setStore] = useState<Store>(initialStore);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState<Account | null>(null);
+  const [capabilities, setCapabilities] = useState<AccountCapabilities>({
+    registration: false,
+  });
   const [ready, setReady] = useState(false);
+  const [sessionError, setSessionError] = useState("");
   const [toast, setToast] = useState("");
-  function notify(text: string) {
-    setToast(text);
-  }
-  useEffect(() => {
+  const epoch = useRef(0);
+  const channel = useRef<BroadcastChannel | null>(null);
+  const refreshSession = useCallback(async () => {
+    const revision = ++epoch.current;
     try {
-      const s = readStore();
-      if (initializeDemo) writeStore(s);
-      setStore(s);
-      setUserId(savedSession(s));
-    } catch {
-      setToast(
-        "A böngésző tárhelye nem érhető el vagy sérült. A mentéshez engedélyezd a helyi tárhelyet.",
+      const result = await accountRequest<{
+        user: Account | null;
+        capabilities: AccountCapabilities;
+      }>("/api/auth/session");
+      if (revision !== epoch.current) return;
+      setUser(result.user);
+      setCapabilities(result.capabilities);
+      setSessionError("");
+    } catch (error) {
+      if (revision !== epoch.current) return;
+      setUser(null);
+      setSessionError(
+        error instanceof Error
+          ? error.message
+          : "A fiókszolgáltatás nem érhető el.",
       );
+    } finally {
+      if (revision === epoch.current) setReady(true);
     }
-    setReady(true);
+  }, []);
+  useEffect(() => {
+    // Old local demo identities can never establish a real account session.
+    try {
+      localStorage.removeItem(SESSION_KEY);
+      const saved = readStore();
+      if (initializeDemo) writeStore(saved);
+      setStore(saved);
+    } catch {
+      setToast("A böngésző helyi demótárhelye nem érhető el.");
+    }
+    void refreshSession();
     const sync = () => {
       try {
-        const next = readStore();
-        setStore(next);
-        setUserId(savedSession(next));
-      } catch {
-        setToast("A mentett adatok nem tölthetők be.");
-      }
+        setStore(readStore());
+      } catch {}
     };
+    const focus = () => {
+      if (document.visibilityState === "visible") void refreshSession();
+    };
+    const expired = () => {
+      ++epoch.current;
+      setUser(null);
+      setSessionError("");
+    };
+    if (typeof BroadcastChannel !== "undefined") {
+      channel.current = new BroadcastChannel("fairauto-account");
+      channel.current.onmessage = () => {
+        void refreshSession();
+      };
+    }
+    const timer = setInterval(focus, 60_000);
+    window.addEventListener("focus", focus);
     window.addEventListener("storage", sync);
     window.addEventListener("fairauto-store", sync);
+    window.addEventListener("fairauto-session-expired", expired);
     return () => {
+      ++epoch.current;
+      clearInterval(timer);
+      channel.current?.close();
+      channel.current = null;
+      window.removeEventListener("focus", focus);
       window.removeEventListener("storage", sync);
       window.removeEventListener("fairauto-store", sync);
+      window.removeEventListener("fairauto-session-expired", expired);
     };
-  }, [initializeDemo]);
+  }, [initializeDemo, refreshSession]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 6000);
     return () => clearTimeout(timer);
   }, [toast]);
+  function acceptAccount(account: Account) {
+    ++epoch.current;
+    setUser(account);
+    setSessionError("");
+    setReady(true);
+    channel.current?.postMessage("changed");
+  }
+  async function logout() {
+    await accountRequest("/api/auth/logout", "POST");
+    ++epoch.current;
+    setUser(null);
+    setSessionError("");
+    channel.current?.postMessage("changed");
+  }
   function mutate(fn: (s: Store) => Store) {
+    if (user) {
+      setToast(
+        "A foglalások és járművek adatbázisos kezelése a következő lépés. A fiókadatok a Saját fiók oldalon menthetők.",
+      );
+      return false;
+    }
     try {
       const next = fn(readStore());
       writeStore(next);
       setStore(next);
       return true;
-    } catch (e) {
-      notify(
-        e instanceof Error ? e.message : "Nem sikerült menteni a módosítást.",
-      );
-      return false;
-    }
-  }
-  function session(id: string | null) {
-    try {
-      if (id) localStorage.setItem(SESSION_KEY, id);
-      else localStorage.removeItem(SESSION_KEY);
-      setUserId(id);
-    } catch {
-      notify("A bejelentkezéshez engedélyezd a böngésző tárhelyét.");
-    }
-  }
-  function demo(role: Role) {
-    const account =
-      store.users.find(
-        (account) => account.id === `demo-${role}` && account.role === role,
-      ) || store.users.find((account) => account.role === role);
-    if (!account) {
-      notify(
-        "Ez a mintafiók már nem elérhető. Az admin kezelheti a fiókokat, vagy újrakezdheted a demót.",
-      );
-      return;
-    }
-    session(account.id);
-    notify("Demónézet megnyitva. Kizárólag helyi mintaadatokat használsz.");
-  }
-  function resetDemo() {
-    try {
-      const next = initialStore();
-      localStorage.removeItem(SESSION_KEY);
-      writeStore(next);
-      setStore(next);
-      setUserId(null);
-      notify("A mintaadatokat visszaállítottuk. Újra kipróbálhatod a demót.");
-      return true;
-    } catch {
-      notify(
-        "A demó nem állítható vissza. Ellenőrizd a böngésző helyi tárhelyét.",
+    } catch (error) {
+      setToast(
+        error instanceof Error
+          ? error.message
+          : "Nem sikerült menteni a módosítást.",
       );
       return false;
     }
@@ -142,14 +167,32 @@ export function Provider({
   return (
     <PortalContext.Provider
       value={{
-        store,
-        user: store.users.find((u) => u.id === userId) || null,
+        store: user
+          ? {
+              version: 1,
+              rolesRevision: 2,
+              users: [user],
+              vehicles: [],
+              appointments: [],
+              blockedDates: [],
+              companies: {
+                [user.id]: {
+                  name: user.companyName,
+                  tax: user.companyTax,
+                  city: user.companyCity,
+                },
+              },
+            }
+          : store,
+        user,
         ready,
+        capabilities,
+        sessionError,
+        acceptAccount,
+        refreshSession,
+        logout,
         mutate,
-        session,
-        demo,
-        resetDemo,
-        notify,
+        notify: setToast,
       }}
     >
       {children}

@@ -45,9 +45,11 @@ test("quiet account and partner links still reach their working flows", async ({
   await expect(
     page.getByRole("heading", { name: "A flottád is jó kezekben." }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Partnerdemó kipróbálása" }).click();
+  await page.getByRole("link", { name: /Céges fiók igénylése/ }).click();
+  await expect(page).toHaveURL(/\/fiok\?mode=register$/);
   await page.goto("/");
-  await page.getByRole("link", { name: "Saját portálom" }).click();
+  await page.getByRole("link", { name: "Bejelentkezés", exact: true }).click();
+  await page.goto("/attekintes");
   await expect(page).toHaveURL(/\/attekintes$/);
   await page.getByRole("link", { name: "Fair Autószerviz – főoldal" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(

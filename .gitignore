@@ -7,3 +7,6 @@ playwright-report/
 test-results/
 .env*
 !.env.example
+
+.next-test/
+pb_data/

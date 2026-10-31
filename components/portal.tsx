@@ -6,7 +6,6 @@ import Management from "./management";
 import Administration from "./administration";
 import { canAdminister, canViewReports, roleLabels } from "@/lib/permissions";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import LegalLinks from "./legal-links";
 import { site, address } from "@/content/site";
 import {
@@ -23,14 +22,12 @@ import {
   Moon,
   Menu,
   X,
-  LogOut,
   CircleHelp,
   MapPin,
   Clock3,
   Phone,
   BarChart3,
   Mail,
-  RotateCcw,
   ClipboardList,
 } from "lucide-react";
 import { Provider, usePortal } from "./provider";
@@ -78,8 +75,7 @@ const names: Record<View, string> = {
   management: "Vezetői áttekintés",
 };
 function Shell({ view }: { view: View }) {
-  const { user, store, ready, session, demo, resetDemo } = usePortal();
-  const router = useRouter();
+  const { user, store, ready } = usePortal();
   const admin = canAdminister(user?.role);
   const management = canViewReports(user?.role);
   const reception = user?.role === "reception";
@@ -187,8 +183,6 @@ function Shell({ view }: { view: View }) {
         : nav;
   const [menu, setMenu] = useState(false);
   const [help, setHelp] = useState(false);
-  const [demoOpen, setDemoOpen] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
   const [dark, setDark] = useState(false);
   useEffect(
     () => setDark(document.documentElement.dataset.theme === "dark"),
@@ -294,10 +288,6 @@ function Shell({ view }: { view: View }) {
             <strong>{names[activeView]}</strong>
           </div>
           <div className="top-actions">
-            <button className="demo-pill" onClick={() => setDemoOpen(true)}>
-              <span /> Demó mód <ChevronDown size={12} />
-            </button>
-            <span className="top-divider" />
             <button
               className="icon-button"
               aria-label={dark ? "Világos téma" : "Sötét téma"}
@@ -333,6 +323,21 @@ function Shell({ view }: { view: View }) {
           </div>
         </header>
         <main id="main" className="main">
+          {ready &&
+            user &&
+            activeView !== "account" &&
+            activeView !== "admin" && (
+              <div className="info-box account-scope">
+                <strong>A fiókkezelés már elérhető.</strong>
+                <p>
+                  Az időpontok, járművek és riportok bekötése a következő lépés.
+                  Ezen az oldalon még nincs élő szervizadat.
+                </p>
+                <Link className="text-link" href="/fiok">
+                  Saját adatok kezelése
+                </Link>
+              </div>
+            )}
           {!ready ? (
             <div className="loading">A műhely ajtaja nyílik…</div>
           ) : activeView === "admin" ? (
@@ -341,6 +346,17 @@ function Shell({ view }: { view: View }) {
             <Management />
           ) : activeView === "overview" ? (
             <CustomerOverview />
+          ) : activeView === "booking" && user ? (
+            <div className="panel">
+              <h1>Hamarosan itt is foglalhatsz.</h1>
+              <p>
+                A fiókodat már használhatod. Az online időpontkérés bekötése még
+                folyamatban van.
+              </p>
+              <a className="button" href={site.contact.phoneHref}>
+                Telefonos időpontkérés
+              </a>
+            </div>
           ) : activeView === "booking" ? (
             <Booking />
           ) : activeView === "account" ? (
@@ -370,135 +386,6 @@ function Shell({ view }: { view: View }) {
           <LegalLinks />
         </footer>
       </div>
-      {demoOpen && (
-        <Modal title="Próbáld ki a portált" close={() => setDemoOpen(false)}>
-          <p className="muted modal-intro">
-            Válassz egy nézetet, és próbáld ki az időpontkérést az ügyféltől a
-            műhelyig. A demó ebben a böngészőben ment; valódi foglalást és
-            e-mailt nem küld. Kérjük, mintaadatokat használj.
-          </p>
-          <div className="demo-options">
-            {(
-              [
-                {
-                  role: "customer",
-                  label: "Magánügyfél",
-                  desc: "Saját autók, foglalások és személyes adatok.",
-                  icon: UserRound,
-                },
-                {
-                  role: "partner",
-                  label: "Céges partner",
-                  desc: "Közös flotta és céges időpontok.",
-                  icon: Building2,
-                },
-                {
-                  role: "reception",
-                  label: "Munkafelvevő",
-                  desc: "Ügyfélfogadás, időpontok és beérkező kérések kezelése.",
-                  icon: ClipboardList,
-                },
-                {
-                  role: "manager",
-                  label: "Tulajdonos / vezető",
-                  desc: "Naptár, foglalások kezelése és műhelyszintű riportok.",
-                  icon: BarChart3,
-                },
-                {
-                  role: "admin",
-                  label: "Adminisztrátor",
-                  desc: "Fiókkezelés, jogosultságok és hozzáférés minden munkatérhez.",
-                  icon: UserRound,
-                },
-              ] as const
-            )
-              .filter((r) =>
-                store.users.some((account) => account.role === r.role),
-              )
-              .map((r) => (
-                <Link
-                  href={
-                    r.role === "admin"
-                      ? "/admin"
-                      : r.role === "manager"
-                        ? "/vezetes"
-                        : r.role === "reception"
-                          ? "/munkafelvetel"
-                          : r.role === "partner"
-                            ? "/partnerek"
-                            : "/attekintes"
-                  }
-                  key={r.role}
-                  className="demo-option"
-                  onClick={() => {
-                    demo(r.role);
-                    setDemoOpen(false);
-                  }}
-                >
-                  <r.icon size={23} />
-                  <span>
-                    <strong>{r.label}</strong>
-                    <small>{r.desc}</small>
-                  </span>
-                  <ArrowUpRight size={19} />
-                </Link>
-              ))}
-          </div>
-          {user && (
-            <button
-              className="text-button modal-logout"
-              onClick={() => {
-                session(null);
-                setDemoOpen(false);
-              }}
-            >
-              <LogOut size={16} /> Folytatás vendégként
-            </button>
-          )}
-          <div className="demo-reset">
-            <button
-              className="text-button"
-              onClick={() => {
-                setDemoOpen(false);
-                setResetOpen(true);
-              }}
-            >
-              <RotateCcw size={15} /> Demó újrakezdése
-            </button>
-          </div>
-        </Modal>
-      )}
-      {resetOpen && (
-        <Modal title="Újrakezded a demót?" close={() => setResetOpen(false)}>
-          <div className="modal-form">
-            <p className="muted">
-              Ebben a böngészőben töröljük a létrehozott demófiókokat, a mentett
-              járműveket, foglalásokat és zárvatartásokat, majd visszaállítjuk
-              az eredeti mintaadatokat. Kijelentkezel a jelenlegi fiókból. A
-              témabeállításod megmarad.
-            </p>
-            <div className="panel-actions">
-              <button
-                className="text-button"
-                onClick={() => setResetOpen(false)}
-              >
-                Mégse
-              </button>
-              <button
-                className="button danger"
-                onClick={() => {
-                  if (resetDemo()) {
-                    setResetOpen(false);
-                    router.replace("/attekintes");
-                  }
-                }}
-              >
-                Mintaadatok visszaállítása <RotateCcw size={16} />
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
       {help && (
         <Modal
           title="Itt vagyunk, ha szükséged van ránk."
@@ -521,11 +408,10 @@ function Shell({ view }: { view: View }) {
             <div className="info-box">
               <strong>A prototípus adatkezelése</strong>
               <p>
-                Az itt megadott adatok kizárólag ebben a böngészőben maradnak. A
-                demónézetek szabadon válthatók; ez nem éles jogosultságkezelés.
-                Ne adj meg valós személyes adatokat vagy máshol használt
-                jelszót. A böngésző webhelyadatainak törlése eltávolítja a
-                mentéseket.
+                A fiókokat a PocketBase tárolja. A szerepköröket az
+                adminisztrátor kezeli. Az időpontfoglaló továbbra is helyi
+                bemutató: nem küld valódi kérést vagy levelet, ott csak
+                mintaadatokat adj meg.
               </p>
             </div>
           </div>

@@ -10,13 +10,15 @@
     "test": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "legal:check": "node --experimental-strip-types scripts/check-legal.mjs"
+    "legal:check": "node --experimental-strip-types scripts/check-legal.mjs",
+    "test:migration": "python3 scripts/check-account-migration.py"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
     "next": "^15.5.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
@@ -25,5 +27,8 @@
     "@types/react-dom": "^19.0.0",
     "prettier": "^3.9.10",
     "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.32"
   }
 }

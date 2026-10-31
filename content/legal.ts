@@ -1,5 +1,5 @@
-/** A jogi oldalak szerkeszthető szövege. A jelenlegi, helyben tároló demót írja le.
- * PocketBase, levelezés vagy analitika bekötésekor a tényleges adatfolyamokkal együtt frissítsd. */
+/** A jogi oldalak szerkeszthető szövege. A PocketBase-fiókokat és a helyi foglalási bemutatót írja le.
+ * A foglalási adatbázis, levelezés vagy analitika bekötésekor a tényleges adatfolyamokkal együtt frissítsd. */
 import { address, site, legalNavigation } from "./site";
 import { consumerDocument } from "./consumer";
 export type LegalSection = {
@@ -43,35 +43,35 @@ export const legalDocuments: LegalDocument[] = [
         id: "jelenlegi-mukodes",
         title: "A portál jelenlegi működése",
         paragraphs: [
-          "Ez a változat egy helyi adatokat használó bemutató. Nem kapcsolódik a szerviz ügyféladatbázisához, nem küld valódi időpontkérést vagy e-mailt. Kérjük, csak mintaadatokat és máshol nem használt demójelszót adj meg.",
-          "A PocketBase-alapú fiókkezelés későbbi bekötése külön fejlesztés. A jelen tájékoztató nem ír le még nem létező adatkezelést.",
+          "A regisztráció, bejelentkezés, profilmódosítás és adminisztrátori fiókkezelés a szerviz PocketBase-adatbázisával működik. Az adatokat a webhely szervere továbbítja a homelabon működő PocketBase felé, HTTPS-kapcsolaton keresztül.",
+          "A vendég időpontfoglaló továbbra is helyi bemutató: nem küld valódi időpontkérést a műhelynek. Ebben csak mintaadatokat adj meg. Jelenleg nincs e-mail-küldés, címellenőrzés vagy e-mailes jelszó-visszaállítás.",
         ],
       },
       {
         id: "adatok",
-        title: "Milyen adatokat kezel a demó?",
+        title: "Milyen adatokat kezel a portál?",
         items: [
-          "Fiók: név, e-mail-cím, mobiltelefonszám, település és értesítési preferencia.",
+          "Fiók: név, e-mail-cím, opcionális mobiltelefonszám és település, szerepkör, aktív/letiltott állapot és fiókazonosító. Az ÁSZF elfogadott verzióját és időpontját a szerver rögzíti.",
           "Jármű: rendszám, márka, modell és gyártási év.",
           "Időpontkérés: szolgáltatás, nap, időpont, megjegyzés és állapot, valamint a megadott kapcsolattartási és járműadatok másolata.",
-          "Céges fiók: cégnév, adószám, település és a fiókhoz mentett flotta.",
-          "Helyi bejelentkezés: az aktív demófiók azonosítója és a regisztrált demójelszó sózott lenyomata. Ez nem éles hitelesítési rendszer.",
+          "Céges profiladatok: opcionális cégnév, adószám és céges település. A flotta adatbázisos kezelése még nem érhető el.",
+          "Hitelesítés: a jelszó lenyomatát PocketBase tárolja, a jelszó TLS-kapcsolaton jut el a kiszolgálókhoz. A böngésző HttpOnly munkamenetsütit kap; az alkalmazás nem tárol valódi jelszót vagy hitelesítési tokent a localStorage-ban.",
         ],
       },
       {
         id: "celok",
         title: "Mire használjuk ezeket?",
         paragraphs: [
-          "Az adatok a foglalási és fiókkezelési felület kipróbálását, az automatikus adatkitöltést, valamint a szerepkörök és helyi riportok bemutatását szolgálják. A mentések a böngésző localStorage-tárolójába kerülnek.",
-          "A bemutatóban a szerepkörök szabadon válthatók; az ugyanabban a böngészőben tárolt adatok így nem tekinthetők egymástól biztonságosan elkülönített ügyféladatoknak.",
+          "A fiókadatok a belépést, profilkezelést és jogosultságkezelést szolgálják. A fiók és a céges profil adatai PocketBase-ben tárolódnak. A helyi foglalási bemutató és a témabeállítás ettől elkülönülten a böngésző tárhelyét használja.",
+          "Minden új fiók magánügyfélként indul. Partner-, munkafelvevői, vezetői vagy adminisztrátori hozzáférést adminisztrátor adhat. A nyilvános demószerepkör-váltó megszűnt.",
         ],
       },
       {
         id: "tarolas",
         title: "Tárolás és megőrzés",
         paragraphs: [
-          "A demómentések a böngészőben maradnak a webhelyadatok törléséig. Nincs automatikus lejárat. Másik böngészőben vagy eszközön ezek a mentések nem érhetők el.",
-          "A járműadatok későbbi módosítása nem írja át a korábbi foglalásokban tárolt másolatot. A teljes helyi demóadatállományt a böngésződ webhelyadat-kezelésében törölheted.",
+          "A fiókok az üzemeltető PocketBase-adatbázisában tárolódnak, másik eszközről is elérhetők. A fiók-, technikai napló- és biztonságimentés-megőrzési időket az alábbi megőrzési adatmezőben az üzemeltetőnek kell meghatároznia. A munkamenetsüti legfeljebb 8 órás; kijelentkezéskor a jelen böngésző sütijét töröljük.",
+          "A helyi foglalási bemutató adatai a böngésző webhelyadatainak törléséig maradnak meg, automatikus lejárat nélkül. Törlésük nem törli a PocketBase-fiókot. Korábbi demóverzióból mentett helyi fiókadatok is maradhatnak a tárhelyen, amíg nem törlöd a webhelyadatokat; ezekkel már nem lehet bejelentkezni.",
         ],
       },
       {
@@ -115,7 +115,7 @@ export const legalDocuments: LegalDocument[] = [
         paragraphs: [
           "A GDPR feltételei szerint tájékoztatást és hozzáférést, helyesbítést, törlést vagy korlátozást kérhetsz; megfelelő esetben adathordozhatósági vagy tiltakozási jogod is van. Hozzájáruláson alapuló kezelésnél a hozzájárulást a jövőre nézve visszavonhatod. A törlés nem feltétlenül terjed ki a jogszabály alapján kötelezően megőrzött adatokra.",
           "A kérelmeket indokolatlan késedelem nélkül, főszabály szerint egy hónapon belül kell megválaszolni. Összetett vagy nagyszámú kérelmeknél a GDPR feltételeivel legfeljebb további két hónap hosszabbítás lehetséges; erről és az okokról az első hónapon belül tájékoztatást kell adni. Személyazonosításhoz csak az indokolt, szükséges adat kérhető.",
-          "A helyi demóadatokhoz az üzemeltetőnek nincs távoli hozzáférése. Az élesítés előtt működő folyamat szükséges a kérelmek befogadására, azonosítására, teljesítésére és dokumentálására. Panasz a NAIH-nál tehető, és a GDPR szerint bírósági jogorvoslat is rendelkezésre áll.",
+          "A saját profiladatok a Saját fiók oldalon helyesbíthetők. Fióktörléshez és egyéb érintetti kérelmekhez keresd az adatkezelőt a fent megadott címen. A kérelmek azonosítását, teljesítését és dokumentálását az üzemeltető végzi. A böngészőben maradó demóadatokat a webhelyadatok törlésével távolíthatod el. Panasz a NAIH-nál tehető, és a GDPR szerint bírósági jogorvoslat is rendelkezésre áll.",
           "A NAIH székhelye: 1055 Budapest, Falk Miksa utca 9–11.; levelezési címe: 1363 Budapest, Pf. 9.; telefon: +36 (1) 391-1400. Hatósági eljárás indításához a Hatóság hivatalos ügyintézési csatornáit kell követni.",
         ],
         links: [
@@ -158,7 +158,7 @@ export const legalDocuments: LegalDocument[] = [
         id: "hataly",
         title: "A dokumentum hatálya",
         paragraphs: [
-          "Ez a szerkeszthető minta a portál bemutató változatát írja le. A demóban létrehozott fiók vagy időpont nem hoz létre tényleges szervizmegrendelést. Az éles szolgáltatás feltételeit a tényleges működéshez és a kötelező jogszabályokhoz kell igazítani.",
+          "Ez a szerkeszthető minta a portál bemutató változatát írja le. A PocketBase-fiók létrehozása és a helyi időpontfoglaló kipróbálása nem hoz létre tényleges szervizmegrendelést. Az éles szolgáltatás feltételeit a tényleges működéshez és a kötelező jogszabályokhoz kell igazítani.",
         ],
       },
       {
@@ -183,7 +183,7 @@ export const legalDocuments: LegalDocument[] = [
           "A portál nyelve magyar. A szolgáltatás és időpont kiválasztását adatmegadás és áttekintés követi. Az adatbeviteli hibák a végleges elküldés előtt a visszalépési és módosítási lehetőségekkel javíthatók.",
           "A jelenlegi modellben időpontkérés történik; a javítás tartalmát és árát külön kell egyeztetni. A demó nem hoz létre írásba foglalt javítási szerződést, nem iktat ilyen szerződést, és nem küld szerződéses visszaigazolást. A helyi foglalási adatokat a Foglalásaim oldal mutatja, amíg a böngésző megőrzi őket.",
           "Éles elektronikus megrendelés esetén a 2001. évi CVIII. törvény szerinti beérkezési visszaigazolást és a szerződéses folyamatot ténylegesen biztosítani kell; az automatikus átvételi visszaigazolás és a megrendelés elfogadása nem feltétlenül ugyanaz. Az elküldött megrendelés visszaigazolásának elmaradásához a törvény főszabály szerint legfeljebb 48 órán belüli jogkövetkezményt kapcsol. A pontos alkalmazhatóságot a megvalósított üzleti modell szerint kell ellenőrizni.",
-          "A feltételek megismerését, menthetőségét és visszaidézhetőségét biztosítani kell. A dokumentum lent szöveges fájlként letölthető. A demó az új fiókoknál és időpontkéréseknél rögzíti az elfogadott feltételverziót és a helyi elfogadási időt; éles környezetben ehhez megbízható szerveroldali nyilvántartás szükséges.",
+          "A feltételek megismerését, menthetőségét és visszaidézhetőségét biztosítani kell. A dokumentum lent szöveges fájlként letölthető. A regisztrációnál a szerver PocketBase-ben rögzíti az elfogadott feltételverziót és az időpontot; a helyi foglalási bemutató a saját helyi elfogadási adatait rögzíti.",
         ],
       },
       {
@@ -213,8 +213,8 @@ export const legalDocuments: LegalDocument[] = [
         id: "fiok",
         title: "Fiók és céges használat",
         paragraphs: [
-          "Vendégként is megadhatók a foglalási adatok. Saját fiókkal a kapcsolattartási adatok és járművek elmenthetők. A demófiók csak az adott böngészőben működik.",
-          "A céges felület flottakezelési és exportálási lehetőségeket mutat be. A demóban az üzemeltetői szerepkörök is kipróbálhatók; ezek nem jelentenek éles hozzáférési jogosultságot.",
+          "Regisztráció után e-mail-címmel és jelszóval azonnal bejelentkezhetsz, e-mail-ellenőrzés nélkül. A saját kapcsolattartási és céges profiladatok elmenthetők; az e-mail-cím és jelszó módosításához a jelenlegi jelszó szükséges. Elfelejtett jelszóval az üzemeltetőhöz kell fordulni. A járművek és foglalások adatbázisos kezelése még nem érhető el.",
+          "A céges és munkatársi nézetek elérését a PocketBase-ben tárolt szerepkör szabályozza. Új fiókhoz az adminisztrátor adhat bővebb hozzáférést. Az admin kezelheti mások fiókjait és hozzáférését; a saját és a védett alapadmin-fiók törlése vagy lefokozása az alkalmazásban nem engedélyezett.",
         ],
       },
       {
@@ -236,7 +236,7 @@ export const legalDocuments: LegalDocument[] = [
         id: "helyi-tarhely",
         title: "Sütik és localStorage",
         paragraphs: [
-          "A prototípus a saját fiók-, jármű- és foglalási adatait a böngésző localStorage-tárhelyén menti. Ezek nem automatikusan, minden kéréshez elküldött HTTP-sütik. A jelen alkalmazáskódban nincs beépített hirdetési vagy analitikai követés. A localStorage használata sem mentesül automatikusan az adatvédelmi és végberendezési tárolásra vonatkozó szabályok alól: az Eht. 155. § és az alkalmazandó uniós előírások szerinti vizsgálat ezekre is kiterjed.",
+          "A bejelentkezéshez szükséges munkamenet HttpOnly sütiben tárolódik. A valódi fiókadatokat PocketBase tárolja, nem a localStorage. A helyi foglalási bemutató és a témabeállítás a localStorage-ot használja. A jelen alkalmazáskódban nincs beépített hirdetési vagy analitikai követés. A localStorage használata sem mentesül automatikusan az adatvédelmi és végberendezési tárolásra vonatkozó szabályok alól: az Eht. 155. § és az alkalmazandó uniós előírások szerinti vizsgálat ezekre is kiterjed.",
         ],
       },
       {
@@ -246,12 +246,12 @@ export const legalDocuments: LegalDocument[] = [
           {
             label: "fairauto-prototype-v1",
             value:
-              "Demófiókok, sózott jelszólenyomatok, járművek, foglalások, céges adatok és lezárt napok. Megmaradnak a webhelyadatok törléséig.",
+              "Helyi foglalási bemutató és mintaadatok, esetleg régebbi verzióból maradt helyi demófiókok. Megmaradnak a webhelyadatok törléséig; nem biztosítanak bejelentkezést.",
           },
           {
-            label: "fairauto-session-v1",
+            label: "__Host-fairauto_session (fejlesztéskor: fairauto_session)",
             value:
-              "Az aktív demófiók azonosítója. Kijelentkezéskor vagy a webhelyadatok törlésekor eltávolítható.",
+              "Belépéskor létrejövő, a kért hitelesítési szolgáltatáshoz szükséges munkamenetsüti. HttpOnly; éles környezetben Secure és SameSite=Lax, legfeljebb 8 óráig érvényes. Kijelentkezés törli a jelen böngészőből. Nem marketingcélú.",
           },
           {
             label: "fairauto-theme",
@@ -274,7 +274,7 @@ export const legalDocuments: LegalDocument[] = [
         title: "Külső betűkészletek és későbbi bővítések",
         paragraphs: [
           "A betűkészletek a webhely saját fájljai közül töltődnek be, külső Google Fonts-kapcsolat nélkül. A tárhelyszolgáltatóhoz a weboldal kiszolgálásával járó technikai kérések természetesen eljutnak.",
-          "PocketBase-hitelesítés, analitika, beágyazott térkép vagy más külső szolgáltatás bevezetésekor a listát és az esetleg szükséges hozzájárulás-kezelést a tényleges működéshez kell igazítani. Ez az oldal önmagában nem vezet be ilyen szolgáltatást.",
+          "Az alkalmazásban nincs analitika, beágyazott térkép vagy hirdetési követés. A tárhely és a Cloudflare Tunnel a fiókszolgáltatás technikai kéréseit is kezeli. Új külső szolgáltatásnál a tájékoztatót és a szükséges hozzájárulás-kezelést a tényleges működéshez kell igazítani.",
         ],
       },
     ],
@@ -335,7 +335,7 @@ export const legalDocuments: LegalDocument[] = [
           },
         ],
         paragraphs: [
-          "A tényleges frontendtárhelyet, a homelab üzemeltetőjét, az e-mail-szolgáltatót és az adatfeldolgozói szerepeket az éles telepítés alapján kell megadni. A PocketBase jelenleg nincs bekötve ebbe a prototípusba.",
+          "A frontend Vercelen, a PocketBase az üzemeltető homelabján, Cloudflare Tunnel közvetítésével működik. A szolgáltatók pontos jogi adatait, adatfeldolgozói szerepeit, földrajzi helyét és továbbítási garanciáit az üzemeltetőnek a tényleges telepítés szerint ki kell töltenie. Jelenleg nincs e-mail-küldő szolgáltatás.",
         ],
       },
     ],
