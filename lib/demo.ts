@@ -52,6 +52,12 @@ export type Appointment = {
   created: string;
   demo?: boolean;
   legalAcknowledgement?: LegalAcknowledgement;
+  confirmation?: {
+    method: "phone";
+    at: string;
+    actorId: string;
+    actorName: string;
+  };
 };
 export type Store = {
   version: 1;
@@ -93,7 +99,7 @@ export const STORE_KEY = "fairauto-prototype-v1";
 export const SESSION_KEY = "fairauto-session-v1";
 export const services = serviceOptions;
 export const statusNames: Record<Status, string> = {
-  requested: "Visszaigazolásra vár",
+  requested: "Telefonos egyeztetésre vár",
   confirmed: "Visszaigazolva",
   progress: "Folyamatban",
   completed: "Elkészült",

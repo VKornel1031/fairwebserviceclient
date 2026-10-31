@@ -40,6 +40,8 @@ Data is saved in this browser's localStorage and survives reloads. Forms validat
 
 Submitting rechecks the latest stored capacity. Web Locks serialize cooperating same-origin browser tabs when supported. Rescheduling replaces the original booking and returns it to requested status. Cancellation frees capacity. Bookings retain contact and vehicle snapshots independently of later profile edits.
 
+New requests are labelled **Telefonos egyeztetésre vár**. Reception staff, owners/managers and admins can confirm them after the phone call; the demo records who confirmed them and when. Rescheduling clears that confirmation and requires another call. This does not initiate a phone call or send email.
+
 Passwords for locally registered accounts are salted and hashed using Web Crypto PBKDF2; plaintext passwords are not persisted. This remains a **local demonstration, not secure backend authentication**. Demo roles can be freely selected, all local records are inspectable, and these permissions must not be used for production data.
 
 ## Deliberate boundaries
@@ -70,6 +72,8 @@ CHROMIUM_PATH=/path/to/chromium npm test
 The test runner starts the dev server if needed. Tests cover guest booking and persistence, calendar download, rescheduling/cancellation, registration/sign-in, profile autofill, vehicle management, separate company fleets, reception intake, admin account management, owner-managed status transitions, closures, capacity rechecks, mobile navigation and theme persistence, plus homepage booking handoff, role-specific navigation, company-scoped exports, management reporting, saved-data compatibility, confirmed demo reset and responsive navigation.
 
 A Hungarian walkthrough for presenting the complete local demo: [`docs/DEMO_WALKTHROUGH.md`](./docs/DEMO_WALKTHROUGH.md).
+
+The requested customer and staff email flow for the later live system is recorded in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md). No email sending, preview inbox or SMTP integration is implemented in the demo.
 
 ## Editable site content and legal pages
 

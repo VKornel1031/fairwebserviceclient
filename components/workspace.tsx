@@ -32,6 +32,8 @@ import { usePortal } from "./provider";
 import { Modal, PageHeading } from "./ui";
 import { Field, Empty } from "./fields";
 import { calendarFile } from "@/lib/calendar";
+import { changeAppointmentStatus } from "@/lib/appointments";
+import ConfirmationNote from "./confirmation-note";
 import { downloadAppointments } from "@/lib/reports";
 import {
   canManageWorkshop,
@@ -999,6 +1001,7 @@ export function Appointments({ embedded = false }: { embedded?: boolean }) {
               </div>
             </div>
             {selected.note && <div className="hint-box">{selected.note}</div>}
+            <ConfirmationNote appointment={selected} />
             <div className="button-row">
               <button
                 className="button button-outline"
@@ -1343,24 +1346,10 @@ function AppointmentDesk({ reception = false }: { reception?: boolean }) {
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const a = store.appointments.find((x) => x.id === selected);
   function status(next: Status) {
-    const allowed: Record<Status, Status[]> = {
-      requested: ["confirmed", "cancelled"],
-      confirmed: operational ? ["progress", "cancelled"] : ["cancelled"],
-      progress: operational ? ["completed"] : [],
-      completed: [],
-      cancelled: [],
-    };
-    const ok = mutate((s) => {
-      const current = s.appointments.find((x) => x.id === selected);
-      if (!current || !allowed[current.status].includes(next))
-        throw new Error("Ez az állapotváltás már nem elérhető.");
-      return {
-        ...s,
-        appointments: s.appointments.map((x) =>
-          x.id === selected ? { ...x, status: next } : x,
-        ),
-      };
-    });
+    if (!selected || !user) return;
+    const ok = mutate((s) =>
+      changeAppointmentStatus(s, selected, next, user.id),
+    );
     if (ok) notify("A foglalás állapotát frissítettük.");
   }
   return (
@@ -1392,7 +1381,7 @@ function AppointmentDesk({ reception = false }: { reception?: boolean }) {
       />
       <div className="stats-grid">
         <div>
-          <span>Visszaigazolásra vár</span>
+          <span>Telefonos egyeztetésre vár</span>
           <strong>
             {requests.length.toString().padStart(2, "0")}
             <Clock3 size={24} />
@@ -1596,6 +1585,7 @@ function AppointmentDesk({ reception = false }: { reception?: boolean }) {
               </div>
             </div>
             {a.note && <div className="hint-box">{a.note}</div>}
+            <ConfirmationNote appointment={a} internal />
             <div className="button-row">
               {a.status === "requested" && (
                 <button className="button" onClick={() => status("confirmed")}>

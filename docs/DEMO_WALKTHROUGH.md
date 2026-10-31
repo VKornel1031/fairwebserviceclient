@@ -20,6 +20,8 @@ Az időpontkérés nem javítási megrendelés. A munka tartalmát és a végleg
 4. Nyisd meg az előbb létrehozott kérést, és válaszd a **Visszaigazolás**, **Munka indítása**, majd **Elkészült** állapotokat.
 5. A **Zárvatartás kezelése** alatt lezárhatsz és újranyithatsz napokat. A lezárt nap vendégként sem foglalható.
 
+Az új kérések állapota **Telefonos egyeztetésre vár**. A munkafelvevő és a vezető egyaránt használhatja a **Visszaigazolás** gombot a telefonos egyeztetés után. A részleteknél megjelenik a visszaigazolás ideje és az eljáró munkatárs. Új időpont kérésekor ezt töröljük, és a kérés ismét telefonos egyeztetésre vár.
+
 A **Demó mód → Munkafelvevő** külön munkateret nyit a `/munkafelvetel` oldalon. Itt ügyfélnek vehetsz fel időpontot, visszaigazolhatsz, átütemezhetsz vagy lemondhatsz kéréseket, és megnyithatod az ügyfél telefonos vagy e-mailes elérhetőségét. A munka indítása/lezárása, a zárvatartás és a riportok a vezetői nézetben maradnak.
 
 Korábbi helyi mentés betöltésekor a régi staff-profil munkafelvevővé alakul; a foglalási azonosítók, személyes adatok és járművek megmaradnak. A korábban már vezetőhöz került adatoknál a tulajdonos nem változik.
@@ -46,3 +48,5 @@ Az admin minden munkaterülethez hozzáfér. A helyi szerepkörszabályok a `lib
 A megerősítés törli az ebben a böngészőben létrehozott demófiókokat, járműveket, foglalásokat és zárvatartásokat, majd visszaállítja az öt mintaprofilt. Kijelentkeztet, de a világos/sötét témát és más alkalmazások helyi adatait nem törli. A **Mégse** gomb változtatás nélkül bezárja a megerősítést.
 
 Az adatok frissítés után megmaradnak, más eszközre nem szinkronizálódnak. A helyi tárhely engedélyezése szükséges. A jogi dokumentumok továbbra is az ellenőrzésre és a hiteles cégadatok kitöltésére váró minták; az élesítés előtti teendőket a [jogi útmutató](./HUNGARIAN_LEGAL_READINESS.md) tartalmazza.
+
+A későbbi valódi levelezés igényei külön az [éles e-mail-folyamat leírásában](./PRODUCTION_EMAIL_REQUIREMENTS.md) vannak rögzítve. A demó nem küld levelet, és nem tartalmaz e-mail-előnézeteket.

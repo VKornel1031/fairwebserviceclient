@@ -256,8 +256,9 @@ export default function Booking() {
                 : "Köszönjük a bizalmat!"}
           </h2>
           <p className="muted">
-            A foglalás visszaigazolásra vár. A prototípus nem küld e-mailt és
-            nem továbbít kérést a szerviznek.
+            Az időpontkérés telefonos egyeztetésre vár. A demóban ezt a
+            munkafelvevő vagy a vezető igazolhatja vissza. A prototípus nem küld
+            e-mailt és nem továbbít kérést a szerviznek.
           </p>
           <div className="confirmation-id">
             FOGLALÁSI AZONOSÍTÓ <strong>{success.id}</strong>
@@ -283,7 +284,7 @@ export default function Booking() {
               <ShieldCheck size={19} />
               <span>
                 {service?.name}
-                <strong>Visszaigazolásra vár</strong>
+                <strong>Telefonos egyeztetésre vár</strong>
               </span>
             </p>
           </div>

@@ -62,6 +62,9 @@ test("reception creates, confirms, reschedules and cancels a customer request wi
   await page.getByRole("link", { name: "Időpontkezelés megnyitása" }).click();
   await expect(page.getByRole("dialog")).toContainText("Ügyfél Minta");
   await expect(
+    page.getByRole("dialog").locator(".status-requested"),
+  ).toContainText("Telefonos egyeztetésre vár");
+  await expect(
     page.getByRole("dialog").getByRole("link", { name: "intake@example.com" }),
   ).toHaveAttribute("href", "mailto:intake@example.com");
   await page
@@ -70,6 +73,10 @@ test("reception creates, confirms, reschedules and cancels a customer request wi
   await expect(
     page.getByRole("dialog").locator(".status-confirmed"),
   ).toBeVisible();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Telefonon visszaigazolva:",
+  );
+  await expect(page.getByRole("dialog")).toContainText("Fair munkafelvevő");
   await expect(
     page.getByRole("button", { name: "Munka indítása" }),
   ).toHaveCount(0);
@@ -95,6 +102,7 @@ test("reception creates, confirms, reschedules and cancels a customer request wi
   expect(requests).toHaveLength(1);
   expect(requests[0].owner).toBeNull();
   expect(requests[0].status).toBe("requested");
+  expect(requests[0].confirmation).toBeUndefined();
   await page.getByRole("link", { name: "Időpontkezelés megnyitása" }).click();
   await page.getByRole("button", { name: "Lemondás / elutasítás" }).click();
   await expect(
