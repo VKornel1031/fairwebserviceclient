@@ -129,3 +129,20 @@ Ha az alapcím és a kliensazonosítás helyes, a bejelentkezési kísérlethez 
 - `status: 502/503/504`: a Tunnel, az origin vagy a köztes szolgáltatás nem érhető el megfelelően.
 
 A Cloudflare védelmeit ne kapcsold ki találomra az egész domainre. A hibás URL vagy a konkrét szerveroldali elérési szabály javítandó; a PocketBase hozzáférési szabályait meg kell tartani. E hiba miatt nem szükséges újra futtatni az adatbázis-migrációt.
+
+### Azonosított eset: Bot Fight Mode
+
+Ha a Cloudflare Security Events bejegyzésében a **Service = Bot fight mode**, az **Action = Managed Challenge**, és a kérés a `pb.fairautoszervizkft.hu/api/collections/users/auth-with-password` végpontra megy, a szerveroldali belépést a Bot Fight Mode állítja meg. A `FairautoszervizAccountServer/0.1` user agent azt is megmutatja, hogy az új kliens már telepítve van.
+
+A Cloudflare **Bot Fight Mode** nem támogat útvonalhoz kötött WAF Skip vagy Page Rule kivételt. A korábban említett célzott skip lehetőség ennél a konkrét terméknél nem használható. A Super Bot Fight Mode külön termék, amely támogat ilyen kivételeket.
+
+A jelenlegi beállítás mellett a javítás:
+
+1. A Cloudflare-ben válaszd ki a `fairautoszervizkft.hu` domaint.
+2. **Security → Settings → Bot traffic → Bot Fight Mode**.
+3. Állítsd a **Bot Fight Mode** kapcsolót **Off** állásba.
+4. Várj néhány másodpercet, majd próbáld újra a bejelentkezést. Ehhez a Cloudflare-beállításhoz nem kell új Vercel-deployment vagy adatbázis-migráció.
+
+Ez a változtatás a Bot Fight Mode réteget a teljes zónára kapcsolja ki, nem csak a PocketBase aldomainre. A Tunnel, HTTPS, PocketBase-jogosultságok és a többi bekapcsolt Cloudflare-védelem ettől nem módosulnak. Ha más hostneveken meg szeretnéd tartani a botvédelmet, útvonal-/hostname-kivételt támogató termékre vagy külön zónába szervezett API-ra van szükség. Vercel megosztott/képlékeny kimenő címei helyett ne engedélyezz teljes felhős IP-tartományokat ennek megkerülésére.
+
+Hivatalos forrás: [Bot Fight Mode – kikapcsolás és korlátozások](https://developers.cloudflare.com/bots/get-started/free/).
