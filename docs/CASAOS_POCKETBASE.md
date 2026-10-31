@@ -1,6 +1,6 @@
 # A te CasaOS PocketBase-telepítésed
 
-Megadott image: **`argonptg/pocketbase`**. Meglévő host adatmappa: **`/DATA/AppData/pocketbase/pb_data`**.
+Konténernév: **`pocketbase`**. Telepített image: **`argonptg/pocketbase:0.26.6`**. Meglévő host adatmappa: **`/DATA/AppData/pocketbase/pb_data`**.
 
 Az image közzétett konfigurációjában a munkakönyvtár `/pocketbase`, a bináris `/pocketbase/pocketbase`. Ebből következnek az alábbi alapértelmezett célmappák; a meglévő CasaOS-beállításban ellenőrizd, hogy nem írtad-e felül őket egyedi indítási paraméterrel. A `pb_data` meglévő kötetét ne töröld és ne cseréld le.
 
@@ -67,16 +67,23 @@ A normál PocketBase `serve` indítás automatikusan alkalmazza az új migráci�
 
 Ha kifejezetten kikapcsoltad az automigrációt, a saját telepítésed indítási beállításai szerint, leállított kiszolgáló mellett futtasd a migrációt; ne indíts párhuzamos PocketBase-példányt ugyanazon adatmappával. A migráció hibánál nem töröl rekordot; ellenőrizd például a meglévő fiókok nevét és szerepkörét, és mentés után javítsd a nem megfelelő adatokat, mielőtt újrapróbálod.
 
-A konténer nevét így találod meg:
+Ha kézzel szeretnéd futtatni a migrációt, a te telepítésedhez ez a bemásolható parancs használható a mentés elkészítése után. A telepített `0.26.6` image-et használja, nem tölt le másik verziót. Csak sikeres migráció után indítja újra az alkalmazást:
 
 ```sh
-sudo docker ps --filter ancestor=argonptg/pocketbase --format '{{.Names}}'
+sudo docker stop pocketbase &&
+sudo docker run --rm --pull=never --network none \
+  --mount type=bind,src=/DATA/AppData/pocketbase/pb_data,dst=/pocketbase/pb_data \
+  --mount type=bind,src=/DATA/AppData/pocketbase/pb_migrations,dst=/pocketbase/pb_migrations,readonly \
+  --entrypoint /pocketbase/pocketbase \
+  argonptg/pocketbase:0.26.6 \
+  migrate up --dir /pocketbase/pb_data --migrationsDir /pocketbase/pb_migrations &&
+sudo docker start pocketbase
 ```
 
-A kötetek ellenőrzéséhez, a kapott konténernevet behelyettesítve:
+A kötetek ellenőrzése:
 
 ```sh
-sudo docker inspect CONTAINER_NAME --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}'
+sudo docker inspect pocketbase --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}'
 ```
 
 ## 4. Admin és Vercel

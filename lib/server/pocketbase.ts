@@ -57,6 +57,8 @@ export async function pb<T = Record<string, unknown>>(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
+    // Identify the actual server client; generic runtime user agents can trigger Cloudflare 1010.
+    "User-Agent": "FairautoszervizAccountServer/0.1",
   };
   if (token) headers.Authorization = token;
   const clientId = process.env.CF_ACCESS_CLIENT_ID,
@@ -89,11 +91,42 @@ export async function pb<T = Record<string, unknown>>(
   if (response.status === 429)
     throw new AccountError(429, "Túl sok próbálkozás. Próbáld újra később.");
   if (response.status === 204) return {} as T;
-  if (!response.headers.get("content-type")?.includes("application/json"))
+  if (!response.headers.get("content-type")?.includes("application/json")) {
+    const media = response.headers
+      .get("content-type")
+      ?.split(";")[0]
+      .trim()
+      .toLowerCase();
+    const server = response.headers.get("server")?.toLowerCase();
+    const ray = response.headers.get("cf-ray");
+    // Log only bounded infrastructure metadata, never credentials, URLs, tokens or bodies.
+    console.error("[fairauto] account_backend_non_json", {
+      status: response.status,
+      format:
+        media === "text/html"
+          ? "html"
+          : media === "text/plain"
+            ? "text"
+            : media
+              ? "other"
+              : "missing",
+      gateway: server?.includes("cloudflare")
+        ? "cloudflare"
+        : server?.includes("vercel")
+          ? "vercel"
+          : "other",
+      cloudflareChallenge: response.headers.get("cf-mitigated") === "challenge",
+      cloudflareRay:
+        ray && /^[a-f0-9]{16}-[A-Z0-9]{3}$/i.test(ray) ? ray : null,
+    });
     throw new AccountError(
       503,
       "A fiókszolgáltatás kapcsolata most nem használható.",
+      response.headers.get("cf-mitigated") === "challenge"
+        ? "account_backend_cloudflare_challenge"
+        : `account_backend_http_${response.status}_non_json`,
     );
+  }
   if (!response.ok) {
     // Never expose upstream response bodies, credentials or internal URLs to the browser.
     if (response.status >= 500)

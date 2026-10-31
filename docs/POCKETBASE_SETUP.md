@@ -112,3 +112,20 @@ A beállításhoz szervercím, port/TLS mód, SMTP-felhasználó és jelszó, va
 Alapértelmezésben PocketBase a Unix `sendmail` parancsot is használhatja. Ez nem jelent automatikusan működő vagy megbízható kézbesítést egy CasaOS/Docker homelabon. A hivatalos [üzemeltetési útmutató](https://pocketbase.io/docs/going-to-production/#use-smtp-mail-server) SMTP-szolgáltatást javasol éles levelezéshez.
 
 Az SMTP beállítása önmagában nem kapcsolja be a weboldal ellenőrző vagy jelszó-visszaállító folyamatait: ezek a felhasználó kérésére jelenleg ki vannak kapcsolva. A mostani regisztráció és belépés levelezés nélkül működik. A későbbi emailes folyamatokat külön kell bekötni és tesztelni.
+
+## 8. „A fiókszolgáltatás kapcsolata most nem használható”
+
+Ez a hiba azt jelenti, hogy a Next szerver a PocketBase-től várt JSON helyett más választ, például HTML-oldalt kapott. Nem hibás jelszót jelez. A `/api/health` böngészős elérése önmagában nem teszteli a Vercel → PocketBase bejelentkezési útvonalat.
+
+Először a Vercel **Production** környezetében ellenőrizd: `POCKETBASE_URL=https://pb.fairautoszervizkft.hu`. Az alapcím ne a frontend címe, a `/_/` adminoldal vagy az `/api/health` végpont legyen. Környezeti változó módosítása után új deployment szükséges.
+
+Cloudflare **1010 / browser_signature_banned** esetén a generikus szerveroldali user agent is lehet az ok. A kliens ezért `User-Agent: FairautoszervizAccountServer/0.1` fejlécet küld, amely a tényleges alkalmazást azonosítja. Nem böngészőt utánoz, és nem helyettesíti az autentikációt. A javítás telepítése után újra teszteld a szerveroldali belépést. [Cloudflare 1010 dokumentáció](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1010/).
+
+Ha az alapcím és a kliensazonosítás helyes, a bejelentkezési kísérlethez tartozó Vercel Runtime Logs részben keresd az `account_backend_non_json` eseményt. Ez kizárólag a HTTP-státuszt, válaszformátumot, átjáró típusát és esetleges Cloudflare challenge/ray azonosítót naplózza; nem naplóz jelszót, tokent, e-mail-címet vagy upstream választörzset.
+
+- `status: 200`, `format: html`: ellenőrizd a backend URL-jét és a köztes átjárót; az API helyett weboldal érkezett.
+- `status: 403`, `cloudflareChallenge: true`: interaktív Cloudflare-ellenőrzés blokkolja a szerverhívást. A Vercel szerver nem tud böngészős CAPTCHA-t megoldani. A szerveroldali eléréshez megfelelő Cloudflare-szabály vagy Access service-tokenes kapcsolat szükséges.
+- `status: 401/403`, `cloudflareChallenge: false`: Access/WAF vagy más hozzáférési tiltás is lehet; nézd meg a megfelelő Cloudflare-eseményt a ray azonosító alapján.
+- `status: 502/503/504`: a Tunnel, az origin vagy a köztes szolgáltatás nem érhető el megfelelően.
+
+A Cloudflare védelmeit ne kapcsold ki találomra az egész domainre. A hibás URL vagy a konkrét szerveroldali elérési szabály javítandó; a PocketBase hozzáférési szabályait meg kell tartani. E hiba miatt nem szükséges újra futtatni az adatbázis-migrációt.
