@@ -275,7 +275,7 @@ function designedMessage(job, info) {
     escape(config.appUrl.replace(/\/$/, "")) +
     '" style="display:inline-block;text-decoration:none"><img src="' +
     escape(config.appUrl.replace(/\/$/, "") + "/images/fair-logo.png") +
-    '" width="156" height="69" alt="Fair Autószerviz" style="display:block;width:156px;max-width:100%;height:auto;border:0"></a><p style="font-size:10px;letter-spacing:2px;margin:9px 0 0;color:#68726b">SZÉKESFEHÉRVÁR · ÜGYFÉLPORTÁL</p></td></tr><tr><td style="padding:26px"><h1 style="font-size:25px;line-height:1.35;margin:0 0 14px;font-weight:600">' +
+    '" width="156" height="69" alt="Fair Autószerviz" style="display:block;width:156px;max-width:100%;height:auto;border:0"></a><p style="font-size:10px;letter-spacing:2px;margin:9px 0 0;color:#68726b">ÜGYFÉLPORTÁL</p></td></tr><tr><td style="padding:26px"><h1 style="font-size:25px;line-height:1.35;margin:0 0 14px;font-weight:600">' +
     escape(titles[job.event]) +
     "</h1>" +
     body +

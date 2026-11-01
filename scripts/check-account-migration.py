@@ -182,7 +182,7 @@ with tempfile.TemporaryDirectory(prefix="fair-migration-check-") as directory:
         assert status == 200
         started = time.time()
         stop()
-        for name in ["1793541600_guest_retention.js", "1793545200_email_verification.js", "1793548800_email_website_logo.js"]:
+        for name in ["1793541600_guest_retention.js", "1793545200_email_verification.js", "1793548800_email_website_logo.js", "1793552400_email_portal_caption.js"]:
             shutil.copyfile(source / name, migrations / name)
         subprocess.run([binary, "migrate", "up", *options], check=True, stdout=subprocess.DEVNULL)
         token = start()

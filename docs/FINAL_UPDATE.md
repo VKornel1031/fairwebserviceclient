@@ -4,7 +4,7 @@ A változat tartalmazza a megadott két dokumentum webes és szerkeszthető Word
 
 ## A meglévő CasaOS PocketBase frissítése
 
-Előbb készíts és tölts le mentést a PocketBase adminfelületén. A következő blokk a már működő `pocketbase` konténert és a tényleges **`/pocketbase/pb_data`** adatbázist használja; kötetet és indítási útvonalat nem változtat. Három új migrációt alkalmaz, majd bemásolja a hozzájuk tartozó hookokat. A migráció önmagában nem töröl időpontot. Az újraindítás után a percenkénti feladat már törölheti a bizonyíthatóan legalább 30 napja lezárt vendégkéréseket; az ismeretlen lezárási idejű régi vendégkérések friss türelmi időt kapnak.
+Előbb készíts és tölts le mentést a PocketBase adminfelületén. A következő blokk a már működő `pocketbase` konténert és a tényleges **`/pocketbase/pb_data`** adatbázist használja; kötetet és indítási útvonalat nem változtat. Négy új migrációt alkalmaz, majd bemásolja a hozzájuk tartozó hookokat. A migráció önmagában nem töröl időpontot. Az újraindítás után a percenkénti feladat már törölheti a bizonyíthatóan legalább 30 napja lezárt vendégkéréseket; az ismeretlen lezárási idejű régi vendégkérések friss türelmi időt kapnak.
 
 Másold be ezt az egész blokkot:
 
@@ -13,6 +13,7 @@ sudo mkdir -p /DATA/AppData/pocketbase/pb_migrations /DATA/AppData/pocketbase/pb
 sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_migrations/1793541600_guest_retention.js -o /DATA/AppData/pocketbase/pb_migrations/1793541600_guest_retention.js &&
 sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_migrations/1793545200_email_verification.js -o /DATA/AppData/pocketbase/pb_migrations/1793545200_email_verification.js &&
 sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_migrations/1793548800_email_website_logo.js -o /DATA/AppData/pocketbase/pb_migrations/1793548800_email_website_logo.js &&
+sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_migrations/1793552400_email_portal_caption.js -o /DATA/AppData/pocketbase/pb_migrations/1793552400_email_portal_caption.js &&
 sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/content/booking.json -o /DATA/AppData/pocketbase/pb_hooks/fairauto-booking.json &&
 sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/fairauto-retention.js -o /DATA/AppData/pocketbase/pb_hooks/fairauto-retention.js &&
 sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/fairauto-appointments.js -o /DATA/AppData/pocketbase/pb_hooks/fairauto-appointments.js &&
@@ -25,6 +26,7 @@ sudo docker exec pocketbase mkdir -p /pocketbase/fairauto_final_migrations /pock
 sudo docker cp /DATA/AppData/pocketbase/pb_migrations/1793541600_guest_retention.js pocketbase:/pocketbase/fairauto_final_migrations/1793541600_guest_retention.js &&
 sudo docker cp /DATA/AppData/pocketbase/pb_migrations/1793545200_email_verification.js pocketbase:/pocketbase/fairauto_final_migrations/1793545200_email_verification.js &&
 sudo docker cp /DATA/AppData/pocketbase/pb_migrations/1793548800_email_website_logo.js pocketbase:/pocketbase/fairauto_final_migrations/1793548800_email_website_logo.js &&
+sudo docker cp /DATA/AppData/pocketbase/pb_migrations/1793552400_email_portal_caption.js pocketbase:/pocketbase/fairauto_final_migrations/1793552400_email_portal_caption.js &&
 sudo docker exec pocketbase /pocketbase/pocketbase migrate up --dev=false --dir /pocketbase/pb_data --migrationsDir /pocketbase/fairauto_final_migrations &&
 sudo docker cp /DATA/AppData/pocketbase/pb_hooks/fairauto-booking.json pocketbase:/pocketbase/pb_hooks/fairauto-booking.json &&
 sudo docker cp /DATA/AppData/pocketbase/pb_hooks/fairauto-retention.js pocketbase:/pocketbase/pb_hooks/fairauto-retention.js &&
