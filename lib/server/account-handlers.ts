@@ -151,26 +151,19 @@ export async function authPost(request: NextRequest, action: string) {
     if (data.partnerRequested === true && !details.companyName)
       throw new AccountError(400, "Céges fiókigényhez add meg a cég nevét.");
     try {
-      const result = await pb<Record<string, unknown>>(
-        "/api/collections/users/records",
-        "POST",
-        {
-          ...details,
-          email: identity,
-          password: secret,
-          passwordConfirm: secret,
-          emailVisibility: false,
-          role: "customer",
-          active: true,
-          termsVersion: site.legal.version,
-          termsAcceptedAt: new Date().toISOString(),
-        },
-      );
-      if (!account(result).setupReady)
-        throw new AccountError(
-          503,
-          "A PocketBase fiókkezelési beállítása hiányos. Az üzemeltetőnek alkalmaznia kell a migrációt.",
-        );
+      // PocketBase has already persisted the account on a successful create response.
+      // Public responses may omit internal fields; they are not a schema-readiness probe.
+      await pb("/api/collections/users/records", "POST", {
+        ...details,
+        email: identity,
+        password: secret,
+        passwordConfirm: secret,
+        emailVisibility: false,
+        role: "customer",
+        active: true,
+        termsVersion: site.legal.version,
+        termsAcceptedAt: new Date().toISOString(),
+      });
     } catch (error) {
       // The same outward result for existing addresses; never reveal account existence.
       if (!(error instanceof PocketBaseError && error.status === 400))

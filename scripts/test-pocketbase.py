@@ -42,6 +42,18 @@ with tempfile.TemporaryDirectory(prefix="fair-pb-tests-") as directory:
     shutil.copytree(Path(__file__).resolve().parents[1] / "pocketbase/pb_migrations", migrations)
     hooks = root / "pb_hooks"
     shutil.copytree(Path(__file__).resolve().parents[1] / "pocketbase/pb_hooks", hooks)
+    # Test-only: emulate a successful public creation response with internal fields redacted.
+    # This temporary hook is never installed on the homelab or included in production pb_hooks.
+    (hooks / "registration-response.pb.js").write_text('''
+onRecordEnrich((event) => {
+  const info = event.requestInfo;
+  if (info && info.body && info.body.passwordConfirm &&
+      event.record.getString("email").endsWith("@minimal-response.example.test")) {
+    event.record.hide("active", "protectedRoot", "termsVersion", "companyName");
+  }
+  event.next();
+}, "users");
+''')
     options = ["--dir", str(root / "pb_data"), "--migrationsDir", str(migrations), "--hooksDir", str(hooks), "--dev=false"]
     subprocess.run([binary, "superuser", "upsert", "root@fairauto.test", secret, *options], check=True)
     server = subprocess.Popen([binary, "serve", "--http=127.0.0.1:3101", *options])

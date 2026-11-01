@@ -146,3 +146,11 @@ A jelenlegi beállítás mellett a javítás:
 Ez a változtatás a Bot Fight Mode réteget a teljes zónára kapcsolja ki, nem csak a PocketBase aldomainre. A Tunnel, HTTPS, PocketBase-jogosultságok és a többi bekapcsolt Cloudflare-védelem ettől nem módosulnak. Ha más hostneveken meg szeretnéd tartani a botvédelmet, útvonal-/hostname-kivételt támogató termékre vagy külön zónába szervezett API-ra van szükség. Vercel megosztott/képlékeny kimenő címei helyett ne engedélyezz teljes felhős IP-tartományokat ennek megkerülésére.
 
 Hivatalos forrás: [Bot Fight Mode – kikapcsolás és korlátozások](https://developers.cloudflare.com/bots/get-started/free/).
+
+## 9. Sikeres regisztráció utáni téves migrációs hiba
+
+Ha az új fiók már megjelent PocketBase-ben, de a weboldal azt írta, hogy a fiókkezelési migráció hiányos, a regisztráció utáni válaszellenőrzés adott téves hibát. A sikeres létrehozási válaszban belső mezők hiányozhatnak; ez önmagában nem bizonyít hiányzó sémát. A regisztráció most a PocketBase sikeres mentését fogadja el, és a belépési, szerepkör- és adminjogosultsági ellenőrzéseket külön továbbra is elvégzi.
+
+A már létrejött fiókkal a Bejelentkezés lapon lépj be; ugyanazt a címet nem kell újra regisztrálnod. Ha az adminfelület külön jelez hiányzó mezőt vagy szabályt, azt továbbra is ellenőrizni kell. A téves regisztrációs üzenet javításához nem kell ismét futtatni a már alkalmazott migrációt.
+
+A Cloudflare automatikus DDoS-védelme a Bot Fight Mode kapcsolójától függetlenül működik a Cloudflare-en átmenő forgalomra. A Bot Fight Mode kikapcsolása az extra botellenőrzési réteget kapcsolja ki. Az API-hoz ezen felül megfelelő próbálkozáskorlát és szükség esetén Access service-tokenes szerverkapcsolat használható; ezeket külön kell beállítani. [Cloudflare DDoS-védelem](https://developers.cloudflare.com/ddos-protection/).

@@ -65,6 +65,47 @@ async function loaded(page: Page, path: string) {
   await expect(page.getByText("A műhely ajtaja nyílik…")).toHaveCount(0);
 }
 
+test("successful registration stays successful when its response omits internal fields", async ({
+  request,
+}) => {
+  const email = `minimal-${crypto.randomUUID()}@minimal-response.example.test`;
+  const response = await request.post("/api/auth/register", {
+    headers: { Origin: origin },
+    data: {
+      name: "Minimal response account",
+      email,
+      password: testPassword,
+      passwordConfirm: testPassword,
+      acceptTerms: true,
+    },
+  });
+  expect(response.status()).toBe(202);
+  expect((await response.json()).message).toContain("most bejelentkezhetsz");
+  const user = await login(request, email);
+  expect(user).toMatchObject({
+    email,
+    role: "customer",
+    active: true,
+    setupReady: true,
+  });
+  expect(
+    (await write(request, "/api/account", { city: "Veszprém" })).status(),
+  ).toBe(200);
+  const session = await (await request.get("/api/auth/session")).json();
+  expect(session.user.city).toBe("Veszprém");
+  const record = await request.get(
+    `${backend}/api/collections/users/records/${user.id}`,
+    {
+      headers: { Authorization: await rootToken() },
+    },
+  );
+  expect(await record.json()).toMatchObject({
+    role: "customer",
+    active: true,
+    termsVersion: site.legal.version,
+  });
+});
+
 test("registration, profile persistence and logout use PocketBase without verification or browser tokens", async ({
   page,
 }) => {
