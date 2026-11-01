@@ -965,6 +965,14 @@ test("guest bookings require a valid VIN; historical appointments can still be r
   request,
 }) => {
   const data = await payload(request);
+  expect(
+    (
+      await request.post("/api/appointments", {
+        headers,
+        data: { ...data, bookingFor: "customer" },
+      })
+    ).status(),
+  ).toBe(403);
   for (const vin of [undefined, "", "INVALID", "WVWZZZ1JZXW00000O"]) {
     const r = await request.post("/api/appointments", {
       headers,
@@ -987,4 +995,215 @@ test("guest bookings require a valid VIN; historical appointments can still be r
   const r = await request.get(`/api/appointments/${a.id}`);
   expect(r.status()).toBe(200);
   expect((await r.json()).appointment.vehicle.vin).toBe("");
+});
+
+test("admin, reception and manager accounts autofill their own profile and car; staff customer bookings stay blank", async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  for (const [index, role] of ["admin", "reception", "manager"].entries()) {
+    const user = await login(page.request, role);
+    expect(
+      (
+        await page.request.patch("/api/account", {
+          headers,
+          data: { phone: "+36301234567", city: "Pákozd" },
+        })
+      ).status(),
+    ).toBe(200);
+    const carResponse = await page.request.post("/api/vehicles", {
+      headers,
+      data: {
+        plate: `STAFF${index}`,
+        make: "Ford",
+        model: "Focus",
+        year: 2020,
+        vin: "WVWZZZ1JZXW000001",
+      },
+    });
+    expect(carResponse.status()).toBe(201);
+    const ownCar = (await carResponse.json()).vehicle;
+    await page.goto("/idopont?service=other");
+    await expect(page.getByLabel("Ügyfélnek foglalok")).not.toBeChecked();
+    await uiSlot(page);
+    await expect(page.getByLabel("Teljes név")).toHaveValue(user.name);
+    await expect(page.getByLabel("E-mail-cím")).toHaveValue(user.email);
+    await expect(page.getByLabel("Mobiltelefonszám")).toHaveValue(
+      "+36301234567",
+    );
+    await expect(page.getByLabel("Település")).toHaveValue("Pákozd");
+    await expect(page.getByLabel("Rendszám")).toHaveValue(`STAFF${index}`);
+    await expect(page.getByLabel("Alvázszám (VIN)")).toHaveValue(
+      "WVWZZZ1JZXW000001",
+    );
+    await page.getByRole("button", { name: "Foglalás áttekintése" }).click();
+    await page.getByRole("checkbox", { name: /Elfogadom az ÁSZF/ }).check();
+    const submitted = page.waitForResponse(
+      (r) =>
+        r.url().endsWith("/api/appointments") &&
+        r.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: "Időpontkérés elküldése" }).click();
+    const response = await submitted;
+    expect(response.status(), await response.text()).toBe(201);
+    const a = (await response.json()).appointment;
+    expect(a).toMatchObject({ owner: user.id, bookingFor: "self" });
+    expect(
+      (await (await page.request.get("/api/appointments")).json()).items.some(
+        (item: { id: string }) => item.id === a.id,
+      ),
+    ).toBe(true);
+    await page.goto("/idopont?for=customer&service=other");
+    await expect(page.getByLabel("Ügyfélnek foglalok")).toBeChecked();
+    await uiSlot(page);
+    await expect(page.getByLabel("Teljes név")).toHaveValue("");
+    await expect(page.getByLabel("E-mail-cím")).toHaveValue("");
+    await expect(page.getByLabel("Rendszám")).toHaveValue("");
+    expect(
+      (
+        await page.request.post("/api/appointments", {
+          headers,
+          data: {
+            ...(await payload(page.request)),
+            bookingFor: "customer",
+            vehicleId: ownCar.id,
+          },
+        })
+      ).status(),
+    ).toBe(400);
+    const onBehalf = await create(page.request, {
+      ...(await payload(page.request)),
+      bookingFor: "customer",
+    });
+    expect(onBehalf).toMatchObject({ owner: null, bookingFor: "customer" });
+  }
+});
+
+test("mail diagnostics and retry are admin-only; retry preserves sent messages and revoked recipients", async ({
+  page,
+  playwright,
+}) => {
+  const request = page.request;
+  expect((await request.get("/api/appointments/mail-status")).status()).toBe(
+    403,
+  );
+  const auth = await root(request);
+  expect(
+    (
+      await request.post(`${backend}/api/fairauto-test/mail`, {
+        headers: auth,
+        data: { clear: true, fail: true },
+      })
+    ).status(),
+  ).toBe(200);
+  await create(request, await payload(request));
+  await request.post(`${backend}/api/fairauto-test/mail`, {
+    headers: auth,
+    data: { fail: true },
+  });
+  const jobs = (
+    await (
+      await request.get(
+        `${backend}/api/collections/appointment_mail/records?perPage=100`,
+        { headers: auth },
+      )
+    ).json()
+  ).items;
+  expect(jobs).toHaveLength(3);
+  expect(
+    (
+      await request.patch(
+        `${backend}/api/collections/appointment_mail/records/${jobs[0].id}`,
+        { headers: auth, data: { status: "failed", attempts: 5 } },
+      )
+    ).status(),
+  ).toBe(200);
+  expect(
+    (
+      await request.patch(
+        `${backend}/api/collections/appointment_mail/records/${jobs[2].id}`,
+        {
+          headers: auth,
+          data: { status: "failed", errorCode: "recipient_changed" },
+        },
+      )
+    ).status(),
+  ).toBe(200);
+  const delivered = await request.post(
+    `${backend}/api/collections/appointment_mail/records`,
+    {
+      headers: auth,
+      data: {
+        appointment: jobs[0].appointment,
+        eventKey: crypto.randomUUID(),
+        event: "requested",
+        recipient: jobs[0].recipient,
+        snapshot: jobs[0].snapshot,
+        status: "sent",
+        attempts: 1,
+      },
+    },
+  );
+  expect(delivered.status()).toBe(200);
+  const deliveredJob = await delivered.json();
+  const unauthorized = await playwright.request.newContext({ baseURL: origin });
+  await login(unauthorized, "reception");
+  expect(
+    (await unauthorized.get("/api/appointments/mail-status")).status(),
+  ).toBe(403);
+  expect(
+    (
+      await unauthorized.post("/api/appointments/mail-retry", {
+        headers,
+        data: {},
+      })
+    ).status(),
+  ).toBe(403);
+  await unauthorized.dispose();
+  await login(request, "admin");
+  const result = await request.get("/api/appointments/mail-status");
+  expect(result.status(), await result.text()).toBe(200);
+  const diagnostic = await result.json();
+  expect(diagnostic).toMatchObject({
+    enabled: true,
+    transport: "sendmail",
+    workerRegistered: true,
+  });
+  expect(typeof diagnostic.workerRunning).toBe("boolean");
+  expect(JSON.stringify(diagnostic)).not.toContain("@fairauto.test");
+  expect(diagnostic).not.toHaveProperty("recipient");
+  expect(diagnostic).not.toHaveProperty("snapshot");
+  expect(
+    (
+      await request.post("/api/appointments/mail-retry", {
+        headers: { Origin: "https://attacker.invalid" },
+        data: {},
+      })
+    ).status(),
+  ).toBe(403);
+  await page.goto("/admin");
+  await page.getByText("E-mail értesítések állapota", { exact: true }).click();
+  const panel = page.locator(".mail-status-panel");
+  await expect(panel).toContainText("Bekapcsolva");
+  await panel
+    .getByRole("button", { name: "Sikertelen küldések újrapróbálása" })
+    .click();
+  await expect(panel).toContainText("2 értesítés újra küldésre vár");
+  const after = (
+    await (
+      await request.get(
+        `${backend}/api/collections/appointment_mail/records?perPage=100`,
+        { headers: auth },
+      )
+    ).json()
+  ).items;
+  expect(
+    after.find((job: { id: string }) => job.id === jobs[0].id),
+  ).toMatchObject({ status: "pending", attempts: 0, errorCode: "" });
+  expect(
+    after.find((job: { id: string }) => job.id === jobs[2].id),
+  ).toMatchObject({ status: "failed", errorCode: "recipient_changed" });
+  expect(
+    after.find((job: { id: string }) => job.id === deliveredJob.id),
+  ).toMatchObject({ status: "sent", attempts: 1 });
 });

@@ -18,6 +18,8 @@ import { roleLabels } from "@/lib/permissions";
 import type { Role } from "@/lib/demo";
 import { AccountAvatar } from "./account-avatar";
 
+import MailStatusPanel from "./mail-status";
+
 type Listing = {
   items: Account[];
   totalItems: number;
@@ -125,6 +127,7 @@ export default function Administration() {
           ) : undefined
         }
       />
+      {permitted && <MailStatusPanel key={user?.id} />}
       {!permitted ? (
         <Empty
           icon={<ShieldCheck size={32} />}

@@ -197,7 +197,10 @@ export default function AppointmentList({
                 : "Az ebben a böngészőben leadott vendégkéréseid. A böngészőadatok törlése után telefonon keresd a szervizt."
           }
           action={
-            <Link href="/idopont" className="button">
+            <Link
+              href={internal ? "/idopont?for=customer" : "/idopont"}
+              className="button"
+            >
               <Plus size={16} />
               {internal ? "Új időpont felvétele" : "Új időpontfoglalás"}
             </Link>

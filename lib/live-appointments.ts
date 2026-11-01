@@ -21,6 +21,7 @@ export type AppointmentPrice = {
   updatedAt: string;
 };
 export type LiveAppointment = Appointment & {
+  bookingFor: "self" | "customer";
   reference: string;
   revision: number;
   serviceName: string;

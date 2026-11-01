@@ -304,6 +304,10 @@ function dto(record, actor) {
   if (vehicle && typeof vehicle.vin !== "string") vehicle.vin = "";
   return {
     id: record.id,
+    bookingFor:
+      record.getString("owner") || record.getString("guestHash")
+        ? "self"
+        : "customer",
     reference: record.getString("reference"),
     owner: record.getString("owner") || null,
     organization: record.getBool("organization"),
@@ -434,7 +438,19 @@ function slot(app, day, time, duration, exclude) {
   if (!hasCapacity(occupied(app, day, exclude), start, duration))
     fail(409, "slot_taken");
 }
+function bookingFor(actor, data) {
+  const mode =
+    data.bookingFor === undefined
+      ? isStaff(actor)
+        ? "customer"
+        : "self"
+      : data.bookingFor;
+  if (["self", "customer"].indexOf(mode) < 0) fail(400, "invalid_details");
+  if (mode === "customer" && !isStaff(actor)) fail(403, "forbidden");
+  return mode;
+}
 function details(app, actor, data) {
+  const mode = bookingFor(actor, data);
   if (data.viewerId !== (actor.user ? actor.user.id : "guest"))
     fail(409, "session_changed");
   const service = cfg.services.find((item) => item.id === data.service);
@@ -465,7 +481,7 @@ function details(app, actor, data) {
   let car,
     vehicleId = "";
   if (data.vehicleId) {
-    if (!actor.user || isStaff(actor)) fail(400, "invalid_details");
+    if (!actor.user || mode !== "self") fail(400, "invalid_details");
     let saved;
     try {
       saved = app.findRecordById("vehicles", id(data.vehicleId));
@@ -532,7 +548,7 @@ function details(app, actor, data) {
   const time = txt(data.time, 5, 5),
     organization =
       actor.role === "partner" ||
-      (isStaff(actor) && data.organization === true);
+      (isStaff(actor) && mode === "customer" && data.organization === true);
   if (data.organization !== undefined && typeof data.organization !== "boolean")
     fail(400, "invalid_details");
   if (data.organization === true && !organization) fail(403, "forbidden");
@@ -617,6 +633,9 @@ function intent(data) {
     termsVersion: txt(data.termsVersion, 100, 1),
     organization: data.organization === true,
     companyName: txt(data.companyName || "", 120),
+    ...(data.bookingFor !== undefined
+      ? { bookingFor: txt(data.bookingFor, 8, 4) }
+      : {}),
   };
 }
 function scope(actor, all) {
@@ -670,6 +689,7 @@ exports.availabilityRoute = (e) => {
 };
 const detailKeys = [
   "viewerId",
+  "bookingFor",
   "service",
   "date",
   "time",
@@ -738,7 +758,10 @@ exports.createRoute = (e) => {
     );
     setDetails(record, clean);
     record.set("reference", "FA-" + record.id.toUpperCase());
-    record.set("owner", actor.user && !isStaff(actor) ? actor.user.id : "");
+    record.set(
+      "owner",
+      actor.user && bookingFor(actor, data) === "self" ? actor.user.id : "",
+    );
     record.set("createdBy", actor.user?.id || "");
     record.set("guestHash", !actor.user ? actor.guest : "");
     if (!actor.user)
@@ -770,6 +793,13 @@ exports.rescheduleRoute = (e) => {
     const actor = identity(tx, e),
       record = accessible(tx, actor, e.request.pathValue("id"));
     revision(data, record);
+    if (
+      isStaff(actor) &&
+      data.bookingFor !== undefined &&
+      data.bookingFor !==
+        (record.getString("owner") === actor.user.id ? "self" : "customer")
+    )
+      fail(403, "forbidden");
     if (
       ["requested", "confirmed"].indexOf(record.getString("status")) < 0 ||
       (!isStaff(actor) && !future(record))
@@ -1182,4 +1212,23 @@ exports.priceRoute = (e) => {
     result = dto(record, actor);
   });
   return e.json(200, { appointment: result });
+};
+
+exports.mailStatusRoute = (e) => {
+  setup($app);
+  const actor = guard($app, e, false);
+  if (actor.role !== "admin") fail(403, "forbidden");
+  return e.json(200, require(__hooks + "/fairauto-mail.js").status($app));
+};
+exports.mailRetryRoute = (e) => {
+  setup($app);
+  guard($app, e, true);
+  body(e, []);
+  let result;
+  $app.runInTransaction((tx) => {
+    const actor = identity(tx, e);
+    if (actor.role !== "admin") fail(403, "forbidden");
+    result = require(__hooks + "/fairauto-mail.js").retry(tx);
+  });
+  return e.json(200, result);
 };

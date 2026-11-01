@@ -215,6 +215,27 @@ function message(job, app) {
       "</div>",
   });
 }
+function transportCode(error) {
+  const message = String(error).toLowerCase();
+  if (message.indexOf("invalid mail sender") >= 0) return "invalid_sender";
+  if (
+    message.indexOf("locate a sendmail") >= 0 ||
+    message.indexOf("executable file not found") >= 0
+  )
+    return "sendmail_missing";
+  if (
+    message.indexOf("connection refused") >= 0 ||
+    message.indexOf("no such host") >= 0 ||
+    message.indexOf("i/o timeout") >= 0
+  )
+    return "smtp_connection_failed";
+  if (
+    message.indexOf("535") >= 0 ||
+    message.indexOf("authentication failed") >= 0
+  )
+    return "smtp_authentication_failed";
+  return "transport_failed";
+}
 function recipientAllowed(job, app) {
   if (!job.snapshot.staffUser) return true;
   try {
@@ -263,15 +284,17 @@ exports.process = (app) => {
       };
     });
     if (!job) break;
-    let success = false;
+    let success = false,
+      errorCode = "transport_failed";
     const allowed = recipientAllowed(job, app);
     try {
       if (allowed) {
         app.newMailClient().send(message(job, app));
         success = true;
       }
-    } catch {
-      /* The queue retries; never log mail bodies, addresses or transport credentials. */
+    } catch (error) {
+      errorCode = transportCode(error);
+      app.logger().warn("fairauto_mail_handoff_failed", "code", errorCode);
     }
     app.runInTransaction((tx) => {
       let record;
@@ -305,11 +328,90 @@ exports.process = (app) => {
               60000 * Math.pow(2, record.getInt("attempts") - 1),
             ),
         );
-        record.set("errorCode", "transport_failed");
+        record.set("errorCode", errorCode);
       }
       tx.save(record);
     });
     processed++;
   }
   return { processed };
+};
+
+// Admin diagnostics contain no addresses, bodies or credentials.
+exports.status = (app) => {
+  const active = enabled();
+  const counts = new DynamicModel({
+    pending: 0,
+    processing: 0,
+    sent: 0,
+    failed: 0,
+    retryable: 0,
+  });
+  app
+    .db()
+    .newQuery(
+      "SELECT COALESCE(SUM(status='pending'),0) AS pending,COALESCE(SUM(status='processing'),0) AS processing,COALESCE(SUM(status='sent'),0) AS sent,COALESCE(SUM(status='failed'),0) AS failed,COALESCE(SUM(status IN ('pending','failed') AND errorCode != '' AND errorCode != 'recipient_changed'),0) AS retryable FROM appointment_mail",
+    )
+    .one(counts);
+  const errors = arrayOf(new DynamicModel({ errorCode: "", attempts: 0 }));
+  app
+    .db()
+    .newQuery(
+      "SELECT errorCode,attempts FROM appointment_mail WHERE errorCode != '' ORDER BY created DESC,id DESC LIMIT 1",
+    )
+    .all(errors);
+  const errorCode = errors.length ? errors[0].errorCode : "";
+  let sendmailAvailable = false;
+  try {
+    sendmailAvailable = !$os.stat("/usr/sbin/sendmail").isDir();
+  } catch {}
+  return {
+    enabled: active,
+    configuration: active
+      ? "enabled"
+      : config && config.enabled === true
+        ? "invalid"
+        : "disabled",
+    transport: app.settings().smtp.enabled ? "smtp" : "sendmail",
+    senderConfigured: email(app.settings().meta.senderAddress),
+    sendmailAvailable,
+    workerRegistered: app
+      .cron()
+      .jobs()
+      .some((job) => job.id() === "fairauto-appointment-mail"),
+    workerRunning: app.cron().hasStarted(),
+    counts,
+    lastError: /^[a-z_]{1,50}$/.test(errorCode) ? errorCode : "",
+    attempts: errors.length ? errors[0].attempts : 0,
+  };
+};
+exports.retry = (app) => {
+  if (!enabled())
+    throw new ApiError(409, "Notifications disabled.", {
+      fairautoCode: new ValidationError(
+        "mail_disabled",
+        "Notifications disabled.",
+      ),
+    });
+  let requeued = 0;
+  app.runInTransaction((tx) => {
+    const rows = arrayOf(new DynamicModel({ id: "" }));
+    tx.db()
+      .newQuery(
+        "SELECT id FROM appointment_mail WHERE status IN ('pending','failed') AND errorCode IN ('transport_failed','attempts_exhausted','invalid_sender','sendmail_missing','smtp_connection_failed','smtp_authentication_failed','smtp_rejected') ORDER BY created,id LIMIT 100",
+      )
+      .all(rows);
+    for (const row of rows) {
+      const record = tx.findRecordById("appointment_mail", row.id);
+      record.set("status", "pending");
+      record.set("attempts", 0);
+      record.set("nextAttempt", Date.now());
+      record.set("lockedUntil", 0);
+      record.set("leaseToken", "");
+      record.set("errorCode", "");
+      tx.save(record);
+      requeued++;
+    }
+  });
+  return { requeued };
 };

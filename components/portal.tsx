@@ -334,7 +334,9 @@ function Shell({ view }: { view: View }) {
           ) : activeView === "overview" ? (
             <CustomerOverview />
           ) : activeView === "booking" ? (
-            <Booking key={user?.id || "guest"} />
+            <Booking
+              key={(user?.id || "guest") + ":" + (user?.role || "guest")}
+            />
           ) : activeView === "account" ? (
             <Account />
           ) : activeView === "vehicles" ? (

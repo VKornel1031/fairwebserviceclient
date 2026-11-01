@@ -59,3 +59,12 @@ routerAdd(
 cronAdd("fairauto-appointment-mail", "* * * * *", () =>
   require(__hooks + "/fairauto-mail.js").process($app),
 );
+routerAdd("GET", "/api/fairauto/appointments/mail-status", (e) =>
+  require(__hooks + "/fairauto-appointments.js").mailStatusRoute(e),
+);
+routerAdd(
+  "POST",
+  "/api/fairauto/appointments/mail-retry",
+  (e) => require(__hooks + "/fairauto-appointments.js").mailRetryRoute(e),
+  $apis.bodyLimit(1024),
+);

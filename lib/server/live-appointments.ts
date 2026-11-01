@@ -18,6 +18,8 @@ const guestCookie =
     : "fairauto_guest";
 const root = "/api/fairauto/appointments";
 const messages: Record<string, string> = {
+  mail_disabled:
+    "Az időpontértesítések ki vannak kapcsolva. Előbb engedélyezd a levelezést.",
   rate_limited: "Túl sok kérés. Várj egy percet, majd próbáld újra.",
   booking_setup_required:
     "Az időpontkezeléshez telepíteni kell a PocketBase migrációt és a foglalási hook fájlokat.",
@@ -113,19 +115,18 @@ export async function bookingContext(request: NextRequest) {
   const response = json({
     config,
     viewer: user?.id || "guest",
-    prefill:
-      user && ["customer", "partner"].includes(user.role)
-        ? {
-            contact: {
-              name: user.name,
-              email: user.email,
-              phone: user.phone,
-              city: user.city,
-              reminders: false,
-            },
-            companyName: user.companyName,
-          }
-        : null,
+    prefill: user
+      ? {
+          contact: {
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            city: user.city,
+            reminders: false,
+          },
+          companyName: user.companyName,
+        }
+      : null,
   });
   if (!auth.session)
     response.cookies.set(
@@ -143,6 +144,7 @@ export async function bookingContext(request: NextRequest) {
 }
 const createKeys = [
   "requestId",
+  "bookingFor",
   "service",
   "date",
   "time",
@@ -162,6 +164,8 @@ export async function appointmentProxy(
     | "list"
     | "availability"
     | "summary"
+    | "mailStatus"
+    | "mailRetry"
     | "dashboard"
     | "detail"
     | "create"
@@ -178,6 +182,7 @@ export async function appointmentProxy(
     "create",
     "reschedule",
     "status",
+    "mailRetry",
     "price",
     "close",
     "open",
@@ -203,6 +208,14 @@ export async function appointmentProxy(
       break;
     case "summary":
       path = "/summary";
+      break;
+    case "mailStatus":
+      path = "/mail-status";
+      break;
+    case "mailRetry":
+      path = "/mail-retry";
+      method = "POST";
+      payload = await body(request, []);
       break;
     case "dashboard":
       path = "/dashboard";

@@ -3988,3 +3988,25 @@ select {
     grid-template-columns: 1fr;
   }
 }
+.booking-for-customer {
+  margin: 0 0 24px;
+}
+.mail-status-panel {
+  margin-bottom: 20px;
+}
+.mail-status-panel > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+.mail-status-body {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+}
+.mail-status-body > p {
+  margin: 0;
+}
+.mail-status-body > button {
+  justify-self: start;
+}

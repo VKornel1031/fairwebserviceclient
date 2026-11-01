@@ -57,6 +57,7 @@ export default function Booking() {
     refreshSession,
   } = usePortal();
   const coordinator = canCoordinateAppointments(user?.role);
+  const [onBehalf, setOnBehalf] = useState(false);
   const [context, setContext] = useState<BookingContext | null>(null),
     [contextError, setContextError] = useState(""),
     [contextRevision, setContextRevision] = useState(0);
@@ -67,7 +68,7 @@ export default function Booking() {
     [day, setDay] = useState(""),
     [time, setTime] = useState("");
   const [contact, setContact] = useState<Profile>(
-    user && !coordinator
+    user && !onBehalf
       ? {
           name: user.name,
           email: user.email,
@@ -119,6 +120,7 @@ export default function Booking() {
           );
           if (controller.signal.aborted) return;
           const a = details.appointment;
+          setOnBehalf(coordinator && a.owner !== user?.id);
           if (!["requested", "confirmed"].includes(a.status))
             throw new Error("Ez az időpontkérés már nem módosítható.");
           vehicleTouched.current = true;
@@ -134,8 +136,18 @@ export default function Booking() {
           setStep(1);
           setMonth(a.date.slice(0, 7));
         } else {
-          setContact(result.prefill?.contact || blankContact);
-          setCompanyName(result.prefill?.companyName || "");
+          const forCustomer = coordinator && params.get("for") === "customer";
+          setOnBehalf(forCustomer);
+          setContact(
+            forCustomer
+              ? blankContact
+              : result.prefill?.contact || blankContact,
+          );
+          setCompanyName(forCustomer ? "" : result.prefill?.companyName || "");
+          if (forCustomer) {
+            setCar(blankCar);
+            setSavedCar("");
+          }
           const sid = params.get("service");
           if (result.config.services.some((item) => item.id === sid))
             setService(sid!);
@@ -161,7 +173,7 @@ export default function Booking() {
   useEffect(() => {
     if (
       !user ||
-      coordinator ||
+      onBehalf ||
       vehicleTouched.current ||
       new URLSearchParams(window.location.search).has("edit")
     )
@@ -171,7 +183,7 @@ export default function Booking() {
       setCar(preferred);
       setSavedCar(preferred.id);
     }
-  }, [garage.summary, user?.id, coordinator]);
+  }, [garage.summary, user?.id, onBehalf]);
   useEffect(() => {
     if (!context || !serviceId) return;
     const controller = new AbortController();
@@ -232,6 +244,7 @@ export default function Booking() {
     setError("");
     if (!requestId.current) requestId.current = crypto.randomUUID();
     const payload = {
+      bookingFor: onBehalf ? "customer" : "self",
       service: serviceId,
       date: day,
       time,
@@ -339,7 +352,7 @@ export default function Booking() {
           </div>
           <span className="eyebrow">KÉRÉS RÖGZÍTVE</span>
           <h2>
-            {coordinator
+            {onBehalf
               ? "Az ügyfél időpontkérését rögzítettük."
               : editId
                 ? "Az új időpontodat rögzítettük."
@@ -381,13 +394,13 @@ export default function Booking() {
           <div className="button-row">
             <Link
               href={
-                coordinator
+                onBehalf
                   ? `${user?.role === "reception" ? "/munkafelvetel" : "/muhely"}?appointment=${encodeURIComponent(success.id)}`
                   : "/foglalasaim"
               }
               className="button"
             >
-              {coordinator
+              {onBehalf
                 ? "Időpontkezelés megnyitása"
                 : "Foglalásaim megtekintése"}{" "}
               <ArrowRight size={17} />
@@ -412,15 +425,27 @@ export default function Booking() {
                 setConsent(false);
                 setNote("");
                 setError("");
-                setContact(context.prefill?.contact || blankContact);
+                setContact(
+                  onBehalf
+                    ? blankContact
+                    : context.prefill?.contact || blankContact,
+                );
+                setOrganization(!onBehalf && user?.role === "partner");
+                setCompanyName(
+                  onBehalf ? "" : context.prefill?.companyName || "",
+                );
                 const onlyCar =
-                  user && !coordinator && garage.summary?.totalItems === 1
+                  user && !onBehalf && garage.summary?.totalItems === 1
                     ? garage.summary.defaultVehicle
                     : null;
                 vehicleTouched.current = false;
                 setCar(onlyCar || blankCar);
                 setSavedCar(onlyCar?.id || "");
-                window.history.replaceState(null, "", "/idopont");
+                window.history.replaceState(
+                  null,
+                  "",
+                  onBehalf ? "/idopont?for=customer" : "/idopont",
+                );
               }}
             >
               Másik időpontot kérek
@@ -444,21 +469,61 @@ export default function Booking() {
         title={
           editId
             ? "Válassz új időpontot."
-            : coordinator
+            : onBehalf
               ? "Időpont felvétele ügyfélnek."
               : "Találjunk időt az autódra."
         }
         description={
-          coordinator
+          onBehalf
             ? "Add meg az ügyfél és a jármű adatait. A munka tartalmát és a végleges árat külön egyeztetitek."
             : "Néhány adat, egy jó időpont. A többit személyesen egyeztetjük."
         }
       />
+      {coordinator && !editId && (
+        <label className="checkbox-label booking-for-customer">
+          <input
+            type="checkbox"
+            checked={onBehalf}
+            disabled={busy}
+            onChange={(event) => {
+              const forCustomer = event.target.checked;
+              setOnBehalf(forCustomer);
+              setContact(
+                forCustomer
+                  ? blankContact
+                  : context.prefill?.contact || blankContact,
+              );
+              setCompanyName(
+                forCustomer ? "" : context.prefill?.companyName || "",
+              );
+              setOrganization(false);
+              vehicleTouched.current = false;
+              const onlyCar =
+                !forCustomer && garage.summary?.totalItems === 1
+                  ? garage.summary.defaultVehicle
+                  : null;
+              setCar(onlyCar || blankCar);
+              setSavedCar(onlyCar?.id || "");
+              setConsent(false);
+              setStep(0);
+              const params = new URLSearchParams(window.location.search);
+              if (forCustomer) params.set("for", "customer");
+              else params.delete("for");
+              window.history.replaceState(
+                null,
+                "",
+                "/idopont" + (params.size ? "?" + params : ""),
+              );
+            }}
+          />
+          <span>Ügyfélnek foglalok</span>
+        </label>
+      )}
       <div className="booking-progress" aria-label="Foglalási lépések">
         {[
           "Szolgáltatás",
           "Időpont",
-          coordinator ? "Ügyfél adatai" : "Adataid",
+          onBehalf ? "Ügyfél adatai" : "Adataid",
           "Áttekintés",
         ].map((label, i) => (
           <button
@@ -665,13 +730,13 @@ export default function Booking() {
           {step === 2 && (
             <form
               onSubmit={details}
-              autoComplete={user && !coordinator ? "on" : "off"}
+              autoComplete={user && !onBehalf ? "on" : "off"}
             >
               <div className="panel-title">
                 <span className="step-number">03 / 04</span>
                 <h2>Hogyan érhetünk el?</h2>
                 <p>
-                  {coordinator
+                  {onBehalf
                     ? "Add meg az ügyfél kapcsolattartási adatait."
                     : user
                       ? "Az elmentett adataidat előre kitöltöttük."
@@ -691,7 +756,7 @@ export default function Booking() {
                 <Field
                   label="Teljes név"
                   required
-                  autoComplete={user && !coordinator ? "name" : "off"}
+                  autoComplete={user && !onBehalf ? "name" : "off"}
                   maxLength={100}
                   value={contact.name}
                   placeholder="pl. Kovács Péter"
@@ -704,7 +769,7 @@ export default function Booking() {
                   label="Mobiltelefonszám"
                   required
                   type="tel"
-                  autoComplete={user && !coordinator ? "tel" : "off"}
+                  autoComplete={user && !onBehalf ? "tel" : "off"}
                   maxLength={25}
                   minLength={7}
                   pattern="[+0-9 \(\)\-]{7,25}"
@@ -719,7 +784,7 @@ export default function Booking() {
                   label="E-mail-cím"
                   required
                   type="email"
-                  autoComplete={user && !coordinator ? "email" : "off"}
+                  autoComplete={user && !onBehalf ? "email" : "off"}
                   maxLength={254}
                   value={contact.email}
                   placeholder="peter@example.com"
@@ -730,7 +795,7 @@ export default function Booking() {
                 <Field
                   label="Település"
                   required
-                  autoComplete={user && !coordinator ? "address-level2" : "off"}
+                  autoComplete={user && !onBehalf ? "address-level2" : "off"}
                   maxLength={100}
                   pattern=".*\S.*"
                   value={contact.city}
@@ -740,7 +805,7 @@ export default function Booking() {
                   }
                 />
               </div>
-              {coordinator && (
+              {onBehalf && (
                 <>
                   <label className="checkbox-label">
                     <input
@@ -767,7 +832,7 @@ export default function Booking() {
                 <CarFront size={19} />
                 <h3>Az autód adatai</h3>
               </div>
-              {user && !coordinator && (
+              {user && !onBehalf && (
                 <SavedVehiclePicker
                   selected={savedCar}
                   onChange={(vehicle) => {

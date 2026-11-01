@@ -22,7 +22,7 @@ Saved cars additionally need the single migration in [`docs/SAVED_VEHICLES.md`](
 
 ## Appointments
 
-Guest, customer and partner requests now persist in PocketBase. Saved contact details prefill the booking form. A single saved car fills automatically; multiple cars require a choice. New guest forms stay blank. Accounts can save a VIN with each car; every new appointment requires it. Customers manage their own requests; reception staff confirm by phone, cancel or reschedule, and managers/admins also start and complete work, manage closures and view real reports.
+Guest, customer and partner requests now persist in PocketBase. Saved contact details prefill the booking form for every signed-in role, including admins and staff. Staff use a separate “Ügyfélnek foglalok” option for blank customer intake. A single saved car fills automatically; multiple cars require a choice. New guest forms stay blank. Accounts can save a VIN with each car; every new appointment requires it. Customers manage their own requests; reception staff confirm by phone, cancel or reschedule, and managers/admins also start and complete work, manage closures and view real reports.
 
 **Pending requests do not reserve capacity. Phone confirmation reserves it atomically.** Concurrent confirmations cannot exceed workshop capacity. Rescheduling returns a request to awaiting confirmation. Availability, access rules and status changes are enforced in PocketBase, including direct API calls.
 
@@ -55,7 +55,7 @@ Production authentication requires HTTPS and `AUTH_APP_ORIGIN` matching the depl
 
 **Remaining:** shared company membership across multiple accounts, verified/reliable production mail setup and account email recovery, repair contracts, work orders and invoicing. A partner's fleet currently belongs to that individual account. There is no hard-delete control for appointment history.
 
-Optional appointment notifications use a durable PocketBase outbox and its native mail client; delivery defaults to **off**. Unix Sendmail setup and the CasaOS localhost fix are in [docs/LOCAL_SENDMAIL.md](./docs/LOCAL_SENDMAIL.md); activation and price details are in [docs/APPOINTMENT_PRICES_AND_MAIL.md](./docs/APPOINTMENT_PRICES_AND_MAIL.md). There is no email preview, verification mail or email password recovery. For now, an admin can reset another user's password after independently checking their identity. Mail workflow and remaining operator requirements are in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
+Optional appointment notifications use a durable PocketBase outbox and its native mail client; delivery defaults to **off**. Admins can view sanitized queue/transport status and retry failed handoffs without resending accepted messages. Unix Sendmail setup and the CasaOS localhost fix are in [docs/LOCAL_SENDMAIL.md](./docs/LOCAL_SENDMAIL.md); activation and price details are in [docs/APPOINTMENT_PRICES_AND_MAIL.md](./docs/APPOINTMENT_PRICES_AND_MAIL.md). There is no email preview, verification mail or email password recovery. For now, an admin can reset another user's password after independently checking their identity. Mail workflow and remaining operator requirements are in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
 
 ## Checks
 

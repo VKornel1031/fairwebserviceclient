@@ -6,13 +6,32 @@ A már működő időpontkezeléshez az új **`1793512800_prices_vin_and_mail.js
 
 A friss `content/booking.json` is szükséges: a tájékoztatók közös verziója `2026-11-01.4-draft`. Levelezés alapból ki van kapcsolva; az árkezelés ettől függetlenül működik.
 
+## Admin automatikus kitöltés és levelezési állapot javítása
+
+A korábbi változat az admin/vezető/munkafelvevő szerepeket ügyfélfelvételnek tekintette, ezért a saját adatokat szándékosan üresen hagyta. A javítás ezeket a fiókokat is kitölti; a külön ügyfélfelvétel választható marad. Ehhez a frontend frissítésén kívül a három hookfájlt is frissítsd. **Új migráció nincs**, a korábbi VIN/ár migráció továbbra szükséges. A meglévő `fairauto-mail.json` beállítást a következő blokk nem írja felül.
+
+```sh
+sudo curl -fL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/fairauto-appointments.js \
+  -o /DATA/AppData/pocketbase/pb_hooks/fairauto-appointments.js &&
+sudo curl -fL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/fairauto-mail.js \
+  -o /DATA/AppData/pocketbase/pb_hooks/fairauto-mail.js &&
+sudo curl -fL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/appointments.pb.js \
+  -o /DATA/AppData/pocketbase/pb_hooks/appointments.pb.js &&
+sudo docker cp /DATA/AppData/pocketbase/pb_hooks/fairauto-appointments.js pocketbase:/pocketbase/pb_hooks/fairauto-appointments.js &&
+sudo docker cp /DATA/AppData/pocketbase/pb_hooks/fairauto-mail.js pocketbase:/pocketbase/pb_hooks/fairauto-mail.js &&
+sudo docker cp /DATA/AppData/pocketbase/pb_hooks/appointments.pb.js pocketbase:/pocketbase/pb_hooks/appointments.pb.js &&
+sudo docker restart pocketbase
+```
+
+Az Adminisztráció oldalon az **E-mail értesítések állapota** lenyitható rész megmutatja a kapcsolót, ütemezőt, darabszámokat és a legutóbbi hiba típusát. Címeket, levéltörzset és jelszavakat nem ad vissza. Az admin a kapcsolat javítása után a **Sikertelen küldések újrapróbálása** gombbal legfeljebb 100 hibás átadású feladatot visszatehet a sorba. A korábban sikeresen átadott leveleket, aktívan küldött feladatokat és megszűnt munkatársi hozzáférés miatt kihagyott címzetteket nem indítja újra. Az újrapróbálás sorba állít; a következő worker-futás küld.
+
 ## Kitöltés
 
-- Bejelentkezett magánügyfél és partner: az aktuális fiók név-, e-mail-, telefon- és településadatait a szerver a foglaló indításakor adja át.
+- Minden bejelentkezett szerepkör – az admin, vezető és munkafelvevő is – alapból a saját adataival foglal: az aktuális fiók név-, e-mail-, telefon- és településadatait a szerver a foglaló indításakor adja át.
 - Egyetlen mentett autó esetén az autó automatikusan kitöltődik.
 - Több autó esetén a foglaló választást kér; a választó kereshető és lapozható. Kézzel másik autó adatai is megadhatók.
 - Új vendégfoglalás üres kapcsolattartási és járműmezőkkel indul; egy sikeres vendégfoglalás után a Másik időpontot kérek is üríti ezeket. A böngészőnek `autocomplete=off` jelzést adunk, de saját jelszókezelője vagy automatikuskitöltés-bővítménye ettől még felajánlhat adatot.
-- Meglévő kérés átütemezése a korábban rögzített adatmásolatot mutatja, vendégként is. Munkatársi ügyfélfelvételnél nem kerülnek a munkatárs saját adatai a mezőkbe.
+- Meglévő kérés átütemezése a korábban rögzített adatmásolatot mutatja, vendégként is. A munkatárs az „Ügyfélnek foglalok” kapcsolóval válthat üres ügyfélűrlapra. A Munkafelvétel / Műhely „Új időpont felvétele” gombja eleve ezt nyitja meg. A saját foglalás a saját fiókhoz kerül; ügyfélfelvételt nem rendelünk automatikusan az adott munkatárs fiókjához.
 
 ## Alvázszám (VIN)
 
