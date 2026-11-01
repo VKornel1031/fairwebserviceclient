@@ -2,6 +2,12 @@
 
 A gépen a Poste.io foglalta a 25-ös portot. Eltávolítása után a host Sendmail szolgáltatása elindult. A megmutatott új állapot: **host `127.0.0.1:25`**, a PocketBase konténerben pedig BusyBox `sendmail`, amely szintén `127.0.0.1` címre küld alapból. A két localhost külön gépet jelent, ezért a PocketBase tesztje `exit status 1` hibával leállhat akkor is, amikor a host szolgáltatása működik.
 
+## Bare carriage return (CR) not allowed / exit status 1
+
+A felhasználónál a privát kapcsolat telepítése után a napló `Bare carriage return (CR) not allowed, where=header` hibát jelzett. A PocketBase CRLF fejléceket ad át, a BusyBox sendmail pedig saját maga fűz CRLF sorvéget az input soraihoz. A korábbi indító így dupla CR-t továbbíthatott. A javított indító LF-re normalizálja a bemenetet, a BusyBox pedig helyes SMTP-sorvégeket állít elő. A Sendmail szigorú ellenőrzése marad bekapcsolva.
+
+A javítást valódi BusyBox 1.37 klienssel és kizárólag loopback címen futó, szigorú SMTP-próbafogadóval ellenőriztük. Frissítsd újra az alábbi két fájlt és futtasd a telepítőt, akkor is, ha a privát 2525-ös figyelő már működik. Meglévő telepítésnél a megjelölt beállításokat frissíti és új kliensindítót másol be.
+
 ## Másolható javítás
 
 Ez a segéd kizárólag ehhez az elrendezéshez készült: működő Debian/CasaOS Sendmail, `pocketbase` nevű, egy privát IPv4 Docker-hálózaton futó konténer és BusyBox kliens. A meglévő adatbázist és konténert használja. Nem állít át PocketBase URL-t, adatkönyvtárat, kötetet vagy Tunnelt.

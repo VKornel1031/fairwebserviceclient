@@ -8,6 +8,9 @@ from unittest.mock import patch
 import contextlib
 import io
 import sys
+import os
+import socketserver
+import threading
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("setup_mail", ROOT / "scripts/setup-local-sendmail.py")
@@ -16,6 +19,51 @@ spec.loader.exec_module(setup)
 
 
 class ConfigurationChecks(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get("BUSYBOX_BINARY"), "Set BUSYBOX_BINARY for the real BusyBox SMTP wire regression")
+    def test_real_busybox_accepts_pocketbase_headers_without_bare_carriage_returns(self):
+        binary = str(Path(os.environ["BUSYBOX_BINARY"]).resolve())
+        captures = []
+        class SMTP(socketserver.StreamRequestHandler):
+            def handle(self):
+                self.connection.settimeout(5)
+                self.wfile.write(b"220 localhost test SMTP\r\n")
+                while True:
+                    line = self.rfile.readline(8192)
+                    if not line: return
+                    verb = line.split(b" ", 1)[0].strip().upper()
+                    if verb in (b"EHLO", b"HELO", b"MAIL", b"RCPT"):
+                        self.wfile.write(b"250 OK\r\n")
+                    elif verb == b"DATA":
+                        self.wfile.write(b"354 Send data\r\n")
+                        body = b""
+                        while True:
+                            line = self.rfile.readline(8192)
+                            if not line: return
+                            if line == b".\r\n": break
+                            body += line
+                        captures.append(body)
+                        self.wfile.write(b"451 Bare carriage return not allowed\r\n" if b"\r\r\n" in body else b"250 Accepted by local test receiver\r\n")
+                    elif verb == b"QUIT":
+                        self.wfile.write(b"221 Goodbye\r\n"); return
+                    else: self.wfile.write(b"500 Unsupported command\r\n")
+        # PocketBase's Go mail client emits CRLF headers. BusyBox expects LF input.
+        message = b'Content-Type: text/html; charset=UTF-8\r\nFrom: Fair Auto <sender@example.test>\r\nTo: customer@example.test\r\nSubject: Local wire regression\r\n\r\n<p>Only a loopback test.</p>\r\n'
+        with tempfile.TemporaryDirectory() as directory:
+            with socketserver.TCPServer(("127.0.0.1", 0), SMTP) as server:
+                thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
+                try:
+                    address = "127.0.0.1:" + str(server.server_address[1])
+                    raw = subprocess.run([binary, "sendmail", "-w", "3", "-S", address, "-f", "sender@example.test", "customer@example.test"], input=message, capture_output=True, timeout=8)
+                    self.assertNotEqual(raw.returncode, 0)
+                    self.assertIn(b"\r\r\n", captures[-1])
+                    wrapper = Path(directory) / "sendmail"
+                    wrapper.write_text((ROOT / "pocketbase/sendmail-wrapper.sh").read_text().replace("busybox=/bin/busybox", "busybox=" + binary).replace("__FAIRAUTO_MAIL_SERVER__", address))
+                    fixed = subprocess.run(["sh", str(wrapper), "customer@example.test"], input=message, capture_output=True, timeout=8)
+                    self.assertEqual(fixed.returncode, 0, fixed.stderr.decode(errors="replace"))
+                    self.assertNotIn(b"\r\r\n", captures[-1])
+                    self.assertIn(b"Subject: Local wire regression\r\n", captures[-1])
+                finally:
+                    server.shutdown(); thread.join(timeout=2)
     def test_smtp_probe_waits_for_multiline_greeting_before_quit(self):
         program = '''
 import select, sys, time
@@ -95,7 +143,7 @@ fi
             msg = b'From: =?utf-8?q?Fair_Aut=C3=B3?= <hello@example.test>\r\nTo: customer@example.test\r\n\r\nBody\r\nFrom: forged@example.test\r\n'
             result = subprocess.run(["sh", str(wrapper), "customer@example.test"], input=msg, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual((root / "body").read_bytes(), msg)
+            self.assertEqual((root / "body").read_bytes(), msg.replace(b"\r\n", b"\n"))
             self.assertEqual((root / "args").read_text().splitlines(), ["-w", "45", "-S", "172.17.0.1:2525", "-f", "hello@example.test", "customer@example.test"])
             for recipient in ["-X/tmp/log@example.test", "test@example.test\nBcc: evil@example.test", "test@example.test;id"]:
                 self.assertNotEqual(subprocess.run(["sh", str(wrapper), recipient], input=msg, capture_output=True).returncode, 0)

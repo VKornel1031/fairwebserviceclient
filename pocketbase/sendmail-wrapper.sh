@@ -16,7 +16,9 @@ done
 umask 077
 message=$("$busybox" mktemp /tmp/fairauto-mail.XXXXXX)
 trap 'rm -f "$message"' EXIT HUP INT TERM
-cat > "$message"
+# PocketBase supplies CRLF headers; BusyBox adds CRLF itself when sending.
+# Feed it Unix lines so the SMTP receiver never sees CRCRLF/bare CR headers.
+"$busybox" sed 's/\r$//' > "$message"
 sender=$("$busybox" awk '/^\r?$/ { exit } /^[Ff][Rr][Oo][Mm]:/ { sub(/^[^:]*:[ \t]*/, ""); sub(/\r$/, ""); print; exit }' "$message")
 case "$sender" in
   *'<'*'>'*) sender=${sender##*<}; sender=${sender%%>*} ;;

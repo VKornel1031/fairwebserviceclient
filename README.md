@@ -66,6 +66,8 @@ npm run format:check
 PB_BINARY=/path/to/pocketbase npm test
 PB_BINARY=/path/to/pocketbase npm run test:migration
 python3 scripts/check-local-sendmail.py
+# Optional: exercise the real BusyBox client against a strict loopback SMTP receiver.
+BUSYBOX_BINARY=/path/to/busybox python3 scripts/check-local-sendmail.py
 ```
 
 Integration tests require Python 3, a separately installed PocketBase executable (tested with **0.26.6**) and Chromium (`/usr/bin/chromium`, or set `CHROMIUM_PATH`). They create a disposable SQLite database on **127.0.0.1:3101**, apply the real migrations and hooks, seed only test accounts and start a separate Next server on **3100**. They never reuse a running app or send test credentials to the homelab. Test data is removed when the server exits. Never run the test seeding script against a company database.
