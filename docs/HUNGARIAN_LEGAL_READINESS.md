@@ -2,9 +2,9 @@
 
 Forrásellenőrzés dátuma: **2026. október 30.**
 
-Technikai frissítés (2026. október 31.): a fiókkezelés PocketBase-t használ, a foglaló helyi bemutató maradt. A tájékoztató a fiókok szerveroldali tárolását, a munkamenetsütit és az e-mail nélküli működést is leírja. Az üzemeltetőnek a tényleges adattárolás előtt ki kell töltenie a megőrzést, szolgáltatókat és hivatalos cégadatokat; a mintajelölés továbbra is érvényes.
+Technikai frissítés (2026. november 1.): a fiókok, autók és időpontkérések PocketBase-t használnak. A tájékoztató a szerveroldali tárolást, az állapotelőzményeket, a telefonos megerősítést, a munkamenet- és vendég-hozzáférési sütit, valamint az e-mail nélküli működést is leírja. Az üzemeltetőnek a tényleges adattárolás előtt ki kell töltenie a megőrzést, szolgáltatókat és hivatalos cégadatokat; a mintajelölés továbbra is érvényes.
 
-A felhasználó által megerősített és jelenleg megvalósított modell: **a weboldal csak időpontot kér; a javítás tartalmát és végleges árát külön egyeztetik.** Ár megjelenítése önmagában nem dönti el, hogy létrejön-e javítási szerződés: a teljes folyamatot, a gombok és nyilatkozatok tartalmát kell vizsgálni. A rögzített árú online megrendelési modellre való átállást külön tisztázni és megvalósítani kell. A prototípus nem köt javítási szerződést, nem fizettet és nem küld valódi kérést. Az itt leírt módosítások jogi és technikai előkészítést jelentenek; nem tanúsítják egy későbbi éles vállalkozás teljes jogszabályi megfelelőségét.
+A felhasználó által megerősített és jelenleg megvalósított modell: **a weboldal csak időpontot kér; a javítás tartalmát és végleges árát külön egyeztetik.** Ár megjelenítése önmagában nem dönti el, hogy létrejön-e javítási szerződés: a teljes folyamatot, a gombok és nyilatkozatok tartalmát kell vizsgálni. A rögzített árú online megrendelési modellre való átállást külön tisztázni és megvalósítani kell. A portál valós időpontkérést rögzít, de nem köt javítási szerződést és nem fizettet. Az itt leírt módosítások jogi és technikai előkészítést jelentenek; nem tanúsítják egy későbbi éles vállalkozás teljes jogszabályi megfelelőségét.
 
 A dokumentumok a saját működéshez szerkeszthetők. A hiányzó hiteles cégadatok és adatkezelési döntések éles használat előtt kitöltendők, az éles szöveget a konkrét működés alapján magyar jogban jártas szakemberrel szükséges ellenőriztetni.
 
@@ -12,7 +12,7 @@ A dokumentumok a saját működéshez szerkeszthetők. A hiányzó hiteles céga
 
 | Dokumentum / funkció                            | Szerkeszthető forrás                   | Rendeltetés                                                                       |
 | ----------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------- |
-| Adatkezelési Tájékoztató                        | `content/legal.ts`                     | GDPR-tájékoztatás, érintetti jogok, demó és éles adatfolyamok elkülönítése        |
+| Adatkezelési Tájékoztató                        | `content/legal.ts`                     | GDPR-tájékoztatás, érintetti jogok, fiók-, jármű- és foglalási adatfolyamok       |
 | ÁSZF                                            | `content/legal.ts`                     | Időpontkérés menete, javítható adatbevitel, nyelv, szerződéses határ, lemondás    |
 | Süti- és tárhelytájékoztató                     | `content/legal.ts`                     | Helyi tárolás és tényleges külső kapcsolatok                                      |
 | Impresszum                                      | `content/legal.ts`, `content/site.ts`  | Üzemeltető, cégadatok és tárhelyadatok                                            |
@@ -29,7 +29,7 @@ A 2001. évi CVIII. törvény 4–6. § alapján a tényleges szolgáltató adat
 
 Az elektronikus szerződéses folyamatnál szükséges a technikai lépések, az adatbeviteli hibák kijavítása, a nyelv, az írásbeliség/iktatás/hozzáférhetőség és az esetleges magatartási kódex ismertetése. A megrendelés beérkezésének visszaigazolásához a törvény főszabály szerint legfeljebb 48 órás jogkövetkezményt kapcsol; a kézhezvétel és a megrendelés elfogadása külön esemény lehet.
 
-A megvalósított demó nem küld visszaigazoló e-mailt, és nincs éles szerződéses iktatása. A javítási szerződés létrejöttét a valós működés szerint kell eldönteni: önmagában a gomb felirata vagy egy ÁSZF-mondat nem változtatja meg egy ténylegesen szerződéskötésre működő folyamat jogi természetét.
+A portál nem küld visszaigazoló e-mailt, és nincs éles szerződéses iktatása. A javítási szerződés létrejöttét a valós működés szerint kell eldönteni: önmagában a gomb felirata vagy egy ÁSZF-mondat nem változtatja meg egy ténylegesen szerződéskötésre működő folyamat jogi természetét.
 
 ## 3. Panaszkezelés és békéltetés
 
@@ -47,7 +47,7 @@ A szolgáltató tényleges panaszkezelési levelezési címét és alávetési n
 
 ## 4. Elállás/felmondás: az időpontkérés és a szerződés különbözik
 
-A 45/2014. (II. 26.) Korm. rendelet szerinti kötelezettségek a rendelet hatálya alá tartozó fogyasztói szerződéshez kapcsolódnak. A jelenlegi, külön egyeztetést megelőző demó időpontkérése nem online javítási megrendelés. Az időpont lemondását ne nevezzük automatikusan törvényes elállásnak.
+A 45/2014. (II. 26.) Korm. rendelet szerinti kötelezettségek a rendelet hatálya alá tartozó fogyasztói szerződéshez kapcsolódnak. A jelenlegi, külön egyeztetést megelőző portál időpontkérése nem online javítási megrendelés. Az időpont lemondását ne nevezzük automatikusan törvényes elállásnak.
 
 Ha később online fogyasztói szolgáltatási szerződés jön létre, többek között:
 
@@ -77,10 +77,10 @@ A változtatások:
 - A betűkészletek helyi fájlokból töltődnek; a látogató nem kapcsolódik Google Fontshoz.
 - A nyilvános kezdőlap és tájékoztató megnyitása nem hoz létre demófiók-adatbázist.
 - A témát csak a felhasználó kért beállítása után mentjük.
-- Az új regisztráció és időpontkérés a feltételverziót, a rendelkezésre bocsátott adatkezelési tájékoztató verzióját és a helyi időbélyeget rögzíti. Ez **nem bizonyítja a tájékoztató elolvasását, nem marketing-hozzájárulás és nem hiteles szerveroldali bizonyíték**.
+- Az új regisztráció és időpontkérés a feltételverziót és szerveroldali időbélyeget rögzíti; az időpont az állapotváltozások előzményét is őrzi. Ez **nem bizonyítja a tájékoztató elolvasását, nem marketing-hozzájárulás és nem helyettesíti a korábbi dokumentumverziók változatlan megőrzését**.
 - Nincs analitika vagy marketingkövetés. Új hozzájárulásköteles eszközhöz előzetes, célonkénti választás és visszavonás szükséges.
 
-A localStorage-ra is kiterjedhetnek a végberendezési tárolás szabályai; a technológia neve nem mentesség. Eht. 155. § és az alkalmazandó uniós szabályok alapján a tényleges célokat kell értékelni. Az éles backend, tárhelynaplózás, hozzáférések, mentések, adatfeldolgozói szerződések és törlési folyamatok még ellenőrizendők. A szabad demószerepkörváltást nem szabad éles ügyféladatokkal használni.
+A localStorage-ra is kiterjedhetnek a végberendezési tárolás szabályai; a technológia neve nem mentesség. Eht. 155. § és az alkalmazandó uniós szabályok alapján a tényleges célokat kell értékelni. Az éles backend, tárhelynaplózás, hozzáférések, mentések, adatfeldolgozói szerződések és törlési folyamatok még ellenőrizendők. A szerepkört a PocketBase tárolja; a nyilvános demószerepkör-váltó megszűnt. A vendég-hozzáférés 120 napos időtartama nem adatmegőrzési vagy automatikus törlési határidő.
 
 ## 7. Akadálymentesség: hatályvizsgálat szükséges
 

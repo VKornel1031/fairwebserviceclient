@@ -17,12 +17,14 @@ export function downloadAppointments(rows: Appointment[], filename: string) {
       "Típus",
     ],
     ...rows.map((a) => [
-      a.id,
+      a.reference || a.id,
       a.date,
       a.time,
       a.vehicle.plate,
       `${a.vehicle.make} ${a.vehicle.model}`,
-      services.find((s) => s.id === a.service)?.name || a.service,
+      a.serviceName ||
+        services.find((s) => s.id === a.service)?.name ||
+        a.service,
       statusNames[a.status],
       a.contact.name,
       a.organization ? "Céges" : a.owner ? "Magánügyfél" : "Vendég",

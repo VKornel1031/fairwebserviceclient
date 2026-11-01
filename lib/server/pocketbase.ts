@@ -20,7 +20,10 @@ export const capabilities = (): AccountCapabilities => ({
   registration: process.env.AUTH_REGISTRATION_ENABLED === "true",
 });
 export class PocketBaseError extends Error {
-  constructor(public status: number) {
+  constructor(
+    public status: number,
+    public code?: string,
+  ) {
     super("PocketBase request failed");
   }
 }
@@ -54,6 +57,7 @@ async function pocketbaseResponse(
   data?: unknown,
   token?: string,
   accept = "application/json",
+  guestToken?: string,
 ): Promise<Response> {
   const headers: Record<string, string> = {
     Accept: accept,
@@ -63,6 +67,8 @@ async function pocketbaseResponse(
   if (data !== undefined && !(data instanceof FormData))
     headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = token;
+  if (guestToken && /^[a-f0-9]{64}$/.test(guestToken))
+    headers["X-Fairauto-Guest"] = guestToken;
   const clientId = process.env.CF_ACCESS_CLIENT_ID,
     clientSecret = process.env.CF_ACCESS_CLIENT_SECRET;
   if (!!clientId !== !!clientSecret)
@@ -104,8 +110,16 @@ export async function pb<T = Record<string, unknown>>(
   method = "POST",
   data?: unknown,
   token?: string,
+  options?: { guestToken?: string },
 ): Promise<T> {
-  const response = await pocketbaseResponse(path, method, data, token);
+  const response = await pocketbaseResponse(
+    path,
+    method,
+    data,
+    token,
+    "application/json",
+    options?.guestToken,
+  );
   if (response.status === 204) return {} as T;
   if (!response.headers.get("content-type")?.includes("application/json")) {
     const media = response.headers
@@ -145,9 +159,19 @@ export async function pb<T = Record<string, unknown>>(
   }
   if (!response.ok) {
     // Never expose upstream response bodies, credentials or internal URLs to the browser.
-    if (response.status >= 500)
+    const detail = await response.json().catch(() => null);
+    const code = detail?.data?.fairautoCode?.code;
+    if (
+      response.status >= 500 &&
+      !(typeof code === "string" && /^[a-z_]{1,60}$/.test(code))
+    )
       throw new AccountError(503, "A fiókszolgáltatás most nem érhető el.");
-    throw new PocketBaseError(response.status);
+    throw new PocketBaseError(
+      response.status,
+      typeof code === "string" && /^[a-z_]{1,60}$/.test(code)
+        ? code
+        : undefined,
+    );
   }
   try {
     return (await response.json()) as T;

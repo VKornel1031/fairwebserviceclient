@@ -1,6 +1,6 @@
 # Értesítések az éles változathoz – rögzített igények
 
-Ez a dokumentum a későbbi, valódi rendszer követelményeit rögzíti. A jelenlegi demó **nem küld e-mailt, nem készít e-mail-előnézeteket, és nem tartalmaz levelezési szolgáltatást**. A valódi hitelesítés és adatok bekötésekor kell megvalósítani.
+Ez a dokumentum a későbbi levelezés követelményeit rögzíti. A jelenlegi portál valódi PocketBase-fiókokat és időpontkéréseket kezel, de **nem küld e-mailt, nem készít e-mail-előnézeteket, és nem tartalmaz levelezési szolgáltatást**. Az alábbi értesítések még megvalósítandók.
 
 ## Időpontkérés beérkezése
 

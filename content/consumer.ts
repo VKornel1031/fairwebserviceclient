@@ -13,7 +13,7 @@ export const consumerDocument: LegalDocument = {
       id: "alkalmazasi-kor",
       title: "Mire vonatkozik ez a tájékoztató?",
       paragraphs: [
-        "A jelenlegi portál demó, amely időpontkérést mutat be. Nem köt javítási szerződést, nem fogad fizetést, és nem továbbít megrendelést a szerviznek. Az időpont lemondása és egy létrejött szerződéstől való elállás külön jognyilatkozat.",
+        "A portál a szerviz adatbázisában rögzíti az időpontkérést; a kiválasztott időpontot a szerviz telefonon igazolja vissza. A portál nem köt javítási szerződést és nem fogad fizetést. Az időpont lemondása és egy létrejött szerződéstől való elállás külön jognyilatkozat.",
         "Az alábbi fogyasztói szabályok a tényleges szolgáltatásra a törvényi feltételeik szerint alkalmazandók. A céges felhasználói szerep önmagában nem dönti el valamennyi jog alkalmazhatóságát; a békéltetés külön törvényi személyi körét is vizsgálni kell.",
       ],
     },
@@ -94,11 +94,11 @@ export const consumerDocument: LegalDocument = {
       id: "elallas",
       title: "Elállás és felmondás – mikor alkalmazható?",
       paragraphs: [
-        "A 45/2014. (II. 26.) Korm. rendelet hatálya alá tartozó, üzlethelyiségen kívül vagy távollévők között kötött fogyasztói szolgáltatási szerződésnél főszabály szerint a szerződés megkötésétől számított 14 napos indokolás nélküli elállási jog áll fenn; megkezdett szolgáltatás esetén felmondásról lehet szó. A jelenlegi demó időpontkérése önmagában nem ilyen javítási szerződés.",
+        "A 45/2014. (II. 26.) Korm. rendelet hatálya alá tartozó, üzlethelyiségen kívül vagy távollévők között kötött fogyasztói szolgáltatási szerződésnél főszabály szerint a szerződés megkötésétől számított 14 napos indokolás nélküli elállási jog áll fenn; megkezdett szolgáltatás esetén felmondásról lehet szó. A portál időpontkérése önmagában nem ilyen javítási szerződés.",
         "A jog egyértelmű nyilatkozattal is gyakorolható, nem csak formanyomtatványon. Az erre irányuló nyilatkozatot a vállalkozáshoz kell eljuttatni. A határidőn belüli elküldést a fogyasztónak kell tudnia igazolni. Az elállásra vagy felmondásra vonatkozó kötelező jogokat az ÁSZF nem zárhatja ki általánosan.",
         "Ha a fogyasztó kifejezetten kéri a szolgáltatás megkezdését a határidő lejárta előtt, azt külön kell rögzíteni, és a jogszabály szerinti tájékoztatást is meg kell adni. A teljesítés megkezdése önmagában nem jelenti minden elállási/felmondási jog elvesztését. Teljes teljesítésnél a jog elvesztésének feltételeit, illetve részleges teljesítésnél az arányos díj feltételeit a rendelet 13., 19., 26. és 29. § alapján kell vizsgálni.",
         "Jogos elállás esetén a vállalkozás a jogszabály szerinti összeget főszabály szerint az elállásról való tudomásszerzéstől számított 14 napon belül téríti vissza. A feltételek és kivételek az adott szerződéshez igazítandók; ez a prototípus nem kezel fizetést vagy visszatérítést.",
-        "A 2026-ban hatályos szabályok a távollévők közötti szerződésekre online elállási funkciót és tartós adathordozón küldött átvételi elismervényt is előírnak. Ha a portál később ilyen szerződést köt, a letölthető minta önmagában nem elegendő: a 22. § szerinti „elállás a szerződéstől” és „elállás megerősítése” folyamatot ténylegesen meg kell valósítani. A jelenlegi időpontkérő demó nem állítja ezt működőnek.",
+        "A 2026-ban hatályos szabályok a távollévők közötti szerződésekre online elállási funkciót és tartós adathordozón küldött átvételi elismervényt is előírnak. Ha a portál később ilyen szerződést köt, a letölthető minta önmagában nem elegendő: a 22. § szerinti „elállás a szerződéstől” és „elállás megerősítése” folyamatot ténylegesen meg kell valósítani. Az időpontkérő portál nem valósít meg ilyen szerződéskötési vagy elállási folyamatot.",
       ],
       links: [
         {

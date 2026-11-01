@@ -39,6 +39,13 @@ export type Status =
   "requested" | "confirmed" | "progress" | "completed" | "cancelled";
 export type Appointment = {
   id: string;
+  reference?: string;
+  serviceName?: string;
+  priceLabel?: string;
+  revision?: number;
+  companyName?: string;
+  vehicleId?: string;
+  updated?: string;
   owner: string | null;
   organization: boolean;
   service: string;

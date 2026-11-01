@@ -76,7 +76,7 @@ const names: Record<View, string> = {
   management: "Vezetői áttekintés",
 };
 function Shell({ view }: { view: View }) {
-  const { user, store, ready } = usePortal();
+  const { user, ready, appointments } = usePortal();
   const admin = canAdminister(user?.role);
   const management = canViewReports(user?.role);
   const reception = user?.role === "reception";
@@ -197,11 +197,7 @@ function Shell({ view }: { view: View }) {
       localStorage.setItem("fairauto-theme", v ? "dark" : "light");
     } catch {}
   }
-  const count = store.appointments.filter(
-    (a) =>
-      a.owner === (user?.id || null) &&
-      !["completed", "cancelled"].includes(a.status),
-  ).length;
+  const count = appointments.summary?.upcomingCount || 0;
   // No guest/customer navigation until the server has resolved the account.
   if (!ready)
     return (
@@ -331,41 +327,14 @@ function Shell({ view }: { view: View }) {
           </div>
         </header>
         <main id="main" className="main">
-          {ready &&
-            user &&
-            activeView !== "account" &&
-            activeView !== "vehicles" &&
-            activeView !== "admin" && (
-              <div className="info-box account-scope">
-                <strong>A fiókkezelés már elérhető.</strong>
-                <p>
-                  A járműveidet már elmentheted. Az időpontok és riportok
-                  bekötése a következő lépés; élő időpontkérés még nem történik.
-                </p>
-                <Link className="text-link" href="/fiok">
-                  Saját adatok kezelése
-                </Link>
-              </div>
-            )}
           {activeView === "admin" ? (
             <Administration />
           ) : activeView === "management" ? (
             <Management />
           ) : activeView === "overview" ? (
             <CustomerOverview />
-          ) : activeView === "booking" && user ? (
-            <div className="panel">
-              <h1>Hamarosan itt is foglalhatsz.</h1>
-              <p>
-                A fiókodat már használhatod. Az online időpontkérés bekötése még
-                folyamatban van.
-              </p>
-              <a className="button" href={site.contact.phoneHref}>
-                Telefonos időpontkérés
-              </a>
-            </div>
           ) : activeView === "booking" ? (
-            <Booking />
+            <Booking key={user?.id || "guest"} />
           ) : activeView === "account" ? (
             <Account />
           ) : activeView === "vehicles" ? (
@@ -413,12 +382,11 @@ function Shell({ view }: { view: View }) {
               <Clock3 size={18} /> {site.hours.long}
             </p>
             <div className="info-box">
-              <strong>A prototípus adatkezelése</strong>
+              <strong>A portál működése</strong>
               <p>
-                A fiókokat a PocketBase tárolja. A szerepköröket az
-                adminisztrátor kezeli. Az időpontfoglaló továbbra is helyi
-                bemutató: nem küld valódi kérést vagy levelet, ott csak
-                mintaadatokat adj meg.
+                A fiókokat, járműveket és időpontkéréseket a szerviz rendszere
+                tárolja. Az időpontot a telefonos visszaigazolás biztosítja; a
+                javításról és az árról külön egyeztetünk.
               </p>
             </div>
           </div>

@@ -158,8 +158,8 @@ function Welcome() {
           </div>
           <LegalLinks />
           <p className="home-demo-note">
-            Bemutató oldal · A foglalások ebben a böngészőben tárolódnak. Valódi
-            időpontkérés vagy e-mail-küldés nem történik.
+            Az időpontkérés telefonos visszaigazolásra vár. A javításról és a
+            végleges árról külön egyeztetünk.
           </p>
         </div>
       </footer>
@@ -168,7 +168,7 @@ function Welcome() {
 }
 export default function Home() {
   return (
-    <Provider initializeDemo={false}>
+    <Provider workspace={false}>
       <Welcome />
     </Provider>
   );

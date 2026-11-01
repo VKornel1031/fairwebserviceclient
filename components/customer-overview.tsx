@@ -13,20 +13,10 @@ import { PageHeading } from "./ui";
 import { dateLabel, endTime, services, statusNames, today } from "@/lib/demo";
 
 export default function CustomerOverview() {
-  const { user, store, garage } = usePortal();
-  const upcoming = store.appointments
-    .filter(
-      (a) =>
-        a.owner === (user?.id || null) &&
-        a.date >= today() &&
-        !["cancelled", "completed"].includes(a.status),
-    )
-    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
-  const cars = store.vehicles.filter((v) => v.owner === user?.id);
-  const car = user
-    ? garage.summary?.defaultVehicle
-    : cars.find((v) => v.isDefault) || cars[0];
-  const vehicleCount = user ? garage.summary?.totalItems || 0 : cars.length;
+  const { user, garage, appointments } = usePortal();
+  const upcoming = appointments.summary?.next;
+  const car = garage.summary?.defaultVehicle;
+  const vehicleCount = garage.summary?.totalItems || 0;
   return (
     <div className="customer-overview">
       <PageHeading
@@ -56,7 +46,7 @@ export default function CustomerOverview() {
                   {dateLabel(upcoming.date, { month: "long", day: "numeric" })}{" "}
                   · {upcoming.time}
                 </h2>
-                <p>{services.find((s) => s.id === upcoming.service)?.name}</p>
+                <p>{upcoming.serviceName}</p>
                 <span className="muted">
                   {upcoming.vehicle.make} {upcoming.vehicle.model} ·{" "}
                   {upcoming.vehicle.plate}
@@ -83,8 +73,11 @@ export default function CustomerOverview() {
               Amikor szükséged van ránk, itt vagyunk.
             </h2>
             <p className="customer-empty-copy">
-              Még nincs közelgő időpontod. Válassz szolgáltatást és egy neked
-              megfelelő napot.
+              {appointments.loading && !appointments.summary
+                ? "Időpontkérések betöltése…"
+                : appointments.error
+                  ? "Az időpontok most nem tölthetők be. Nyisd meg a Foglalásaim oldalt az újrapróbáláshoz."
+                  : "Még nincs közelgő időpontod. Válassz szolgáltatást és egy neked megfelelő napot."}
             </p>
             <span className="customer-location">
               {site.shortName} · {locationLabel}

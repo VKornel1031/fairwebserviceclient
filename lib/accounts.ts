@@ -22,6 +22,16 @@ export type Account = {
 };
 export type AccountCapabilities = { registration: boolean };
 
+export class AccountRequestError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+  ) {
+    super(message);
+  }
+}
+
 export async function accountRequest<T>(
   path: string,
   method = "GET",
@@ -48,8 +58,10 @@ export async function accountRequest<T>(
   if (!response.ok) {
     if (data?.code === "session_expired" && typeof window !== "undefined")
       window.dispatchEvent(new Event("fairauto-session-expired"));
-    throw new Error(
+    throw new AccountRequestError(
       data?.error || "A fiókművelet most nem érhető el. Próbáld újra.",
+      response.status,
+      typeof data?.code === "string" ? data.code : undefined,
     );
   }
   return data as T;

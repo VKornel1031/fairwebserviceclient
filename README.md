@@ -18,7 +18,15 @@ Accounts now use **PocketBase**, without SMTP or email verification:
 
 **Setup is required on your PocketBase and Vercel deployment.** Follow [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md), including the versioned migration, first normal `users` admin, and environment settings. No superuser credentials or API keys belong in this app. No avatar setup is needed for the current UI. Public registration defaults to disabled until explicitly enabled after migration.
 
-Saved cars additionally need the single migration in [`docs/SAVED_VEHICLES.md`](./docs/SAVED_VEHICLES.md). It uses native PocketBase permissions and does **not** require custom hooks, SMTP, or new Vercel credentials. Appointment submission remains a separate next step.
+Saved cars additionally need the single migration in [`docs/SAVED_VEHICLES.md`](./docs/SAVED_VEHICLES.md). It uses native PocketBase permissions and does **not** require custom hooks, SMTP, or new Vercel credentials. Appointment setup is described below.
+
+## Appointments
+
+Guest, customer and partner requests now persist in PocketBase. Saved contact details and cars prefill the booking form. Customers manage their own requests; reception staff confirm by phone, cancel or reschedule, and managers/admins also start and complete work, manage closures and view real reports.
+
+**Pending requests do not reserve capacity. Phone confirmation reserves it atomically.** Concurrent confirmations cannot exceed workshop capacity. Rescheduling returns a request to awaiting confirmation. Availability, access rules and status changes are enforced in PocketBase, including direct API calls.
+
+Install the migration and three hook/config files using the **copy-and-paste, in-place CasaOS commands in [docs/APPOINTMENTS.md](./docs/APPOINTMENTS.md)**. They use the existing running container and `/pocketbase/pb_data`; no data redirection, new container, credentials or environment variables are required. Until that backend installation is complete, the portal shows a setup message instead of saving fake local requests.
 
 ## Run locally
 
@@ -41,9 +49,9 @@ Production authentication requires HTTPS and `AUTH_APP_ORIGIN` matching the depl
 
 ## Current scope
 
-**Real:** registration, login/logout, account/profile management, admin account CRUD, suspension and role assignment.
+**Real:** account/profile management, role assignment, private garages, guest/customer/partner appointment requests, phone confirmation, workshop status tracking, cancellation/rescheduling, history, closures and aggregate reports. Guest access uses an HttpOnly capability cookie; account access follows the stored PocketBase role. Requests and personal data are not kept in localStorage.
 
-**Still a prototype:** bookings, shared access to a fleet from multiple accounts, workshop operations and reports. Accounts, individual garages and partner vehicle lists use PocketBase. The remaining operational mutations are blocked until their backend is built. Guest booking remains a separate local demonstration using sample details, with availability checks, calendar downloads, rescheduling and cancellation. It does not notify the garage or send email. Accounts never receive this browser's demo data as real company records.
+**Remaining:** shared company membership across multiple accounts, email delivery/recovery, repair contracts, work orders and invoicing. A partner's fleet currently belongs to that individual account. There is no hard-delete control for appointment history.
 
 There is no SMTP, email preview, verification mail or email password recovery. For now, an admin can reset another user's password after independently checking their identity. Future mail requirements remain in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
 
@@ -57,18 +65,18 @@ PB_BINARY=/path/to/pocketbase npm test
 PB_BINARY=/path/to/pocketbase npm run test:migration
 ```
 
-Integration tests require Python 3, a separately installed PocketBase executable (tested with **0.26.3**) and Chromium (`/usr/bin/chromium`, or set `CHROMIUM_PATH`). They create a disposable SQLite database on **127.0.0.1:3101**, apply the real migration, seed only test accounts and start a separate Next server on **3100**. They never reuse a running app or send test credentials to the homelab. Test data is removed when the server exits. Never run the test seeding script against a company database.
+Integration tests require Python 3, a separately installed PocketBase executable (tested with **0.26.6**) and Chromium (`/usr/bin/chromium`, or set `CHROMIUM_PATH`). They create a disposable SQLite database on **127.0.0.1:3101**, apply the real migrations and hooks, seed only test accounts and start a separate Next server on **3100**. They never reuse a running app or send test credentials to the homelab. Test data is removed when the server exits. Never run the test seeding script against a company database.
 
-Coverage includes account registration/login/profile persistence, cookie isolation, native PocketBase permissions, CSRF and input rejection, admin CRUD, role changes, suspended/deleted access, email/password updates, protected admin handling and login throttling. Saved-car persistence, owner isolation, native owner/default forgery rejection, defaults, duplicate plates, fleet pagination/search, concurrent selections and account-deletion cleanup are tested against a disposable PocketBase. Guest booking, capacity, calendar, confirmation rules, legal links, home navigation, mobile layout and themes remain covered.
+Coverage includes account registration/login/profile persistence, cookie isolation, native PocketBase permissions, CSRF and input rejection, admin CRUD, role changes, suspended/deleted access, email/password updates, protected admin handling and login throttling. Saved-car persistence, owner isolation, native owner/default forgery rejection, defaults, duplicate plates, fleet pagination/search, concurrent selections and account-deletion cleanup are tested against a disposable PocketBase. Appointment coverage includes native API write restrictions, ownership, guest expiry, idempotent retries after later edits, concurrent confirmations, duration overlaps, closures, legal acceptance, saved-car prefill, staff UI actions, rescheduling, calendar downloads and recovering from a slot becoming full during checkout. Legal links, home navigation, mobile layout and themes remain covered.
 
 ## Editable content and legal documents
 
-Business/contact details, services and booking defaults: [`content/site.ts`](./content/site.ts). Legal document text: [`content/legal.ts`](./content/legal.ts). Consumer information and editable downloads: `content/consumer.ts` and `content/consumer-forms.ts`. The footer links to privacy, ÁSZF, storage, imprint and consumer information using the site's theme.
+Business/contact details: [`content/site.ts`](./content/site.ts). Shared service/schedule configuration: [`content/booking.json`](./content/booking.json), also copied into PocketBase as described in the appointment guide. Legal document text: [`content/legal.ts`](./content/legal.ts). Consumer information and editable downloads: `content/consumer.ts` and `content/consumer-forms.ts`. The footer links to privacy, ÁSZF, storage, imprint and consumer information using the site's theme.
 
-The documents describe real PocketBase accounts alongside the local booking demonstration. They remain **draft templates** until official business details, retention, processors and operational reviews are completed. [`docs/HUNGARIAN_LEGAL_READINESS.md`](./docs/HUNGARIAN_LEGAL_READINESS.md) lists outstanding operator work. `npm run legal:check` intentionally fails while those requirements are incomplete; it is not a compliance certificate. Editing instructions: [`docs/CONTENT_EDITING.md`](./docs/CONTENT_EDITING.md).
+The documents describe real PocketBase accounts, vehicles, appointment storage, phone confirmation and guest access cookies. They remain **draft templates** until official business details, retention, processors and operational reviews are completed. [`docs/HUNGARIAN_LEGAL_READINESS.md`](./docs/HUNGARIAN_LEGAL_READINESS.md) lists outstanding operator work. `npm run legal:check` intentionally fails while those requirements are incomplete; it is not a compliance certificate. Editing instructions: [`docs/CONTENT_EDITING.md`](./docs/CONTENT_EDITING.md).
 
 ## Next integration steps
 
-PocketBase manages SQLite internally. Remaining work includes company membership and appointment collections with independent access rules, transactional server-side capacity reservations, guest management tokens, status history and notification jobs. The existing appointment confirmation workflow remains the basis for the later backend. Browser storage or client-side permissions must never authorize these future operations.
+PocketBase manages SQLite internally. Company membership across multiple accounts and server-side notification jobs remain future work. Browser storage and client-side permissions never authorize appointment operations.
 
 Before company production use, upgrade the old homelab PocketBase, enable backend/edge rate limits, protect superuser routes, test backup restoration and complete the legal/operator settings. See the security boundaries in the setup guide.

@@ -41,21 +41,19 @@ test("guest booking persists, downloads a calendar file, reschedules and cancels
     site.booking.requestNotice,
   );
   await page.getByRole("checkbox").check();
+  const created = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/appointments") &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "Időpontkérés elküldése" }).click();
   await expect(
     page.getByRole("heading", { name: "Köszönjük a bizalmat!" }),
   ).toBeVisible();
-  const request = await page.evaluate(() =>
-    JSON.parse(
-      localStorage.getItem("fairauto-prototype-v1")!,
-    ).appointments.find(
-      (appointment: { contact: { email: string } }) =>
-        appointment.contact.email === "teszt@example.com",
-    ),
-  );
+  const request = (await (await created).json()).appointment;
   expect(request.status).toBe("requested");
   expect(request.legalAcknowledgement.termsVersion).toBe(site.legal.version);
-  expect(request.legalAcknowledgement.mode).toBe("demo");
+  expect(request.legalAcknowledgement.mode).toBe("live");
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Naptárba mentés" }).click();
   expect((await download).suggestedFilename()).toMatch(/^FA-.*\.ics$/);
@@ -79,54 +77,6 @@ test("guest booking persists, downloads a calendar file, reschedules and cancels
   await page.getByRole("button", { name: "Időpont lemondása" }).click();
   await expect(page.locator(".status-cancelled")).toBeVisible();
   expect(errors).toEqual([]);
-});
-test("booking submission rechecks capacity after another tab takes the slot", async ({
-  page,
-}) => {
-  await ready(page, "/idopont?service=diagnostics");
-  await page.getByRole("button", { name: "Tovább az időpontokhoz" }).click();
-  await chooseSlot(page);
-  await fillDetails(page);
-  await page.getByRole("button", { name: "Foglalás áttekintése" }).click();
-  await page.getByRole("checkbox").check();
-  await page.evaluate(() => {
-    const key = "fairauto-prototype-v1";
-    const s = JSON.parse(localStorage.getItem(key)!);
-    const day = document.querySelector(".review-group strong")?.textContent;
-    void day;
-    const summary = document.querySelectorAll(".summary-item");
-    const time = summary[1].querySelector("span")!.textContent!.slice(0, 5);
-    const monthText = summary[1].querySelector("strong")!.textContent!;
-    const formatter = new Intl.DateTimeFormat("sv-SE", {
-      timeZone: "Europe/Budapest",
-    });
-    let date = formatter.format(new Date());
-    for (let i = 0; i < 95; i++) {
-      const d = new Date(date + "T12:00:00");
-      if (
-        d.toLocaleDateString("hu-HU", { month: "long", day: "numeric" }) ===
-        monthText
-      )
-        break;
-      d.setDate(d.getDate() + 1);
-      date = formatter.format(d);
-    }
-    for (let i = 0; i < 2; i++)
-      s.appointments.push({
-        ...s.appointments[0],
-        id: "RACE" + i,
-        date,
-        time,
-        duration: 60,
-        status: "confirmed",
-      });
-    localStorage.setItem(key, JSON.stringify(s));
-  });
-  await page.getByRole("button", { name: "Időpontkérés elküldése" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Mikor találkozzunk?" }),
-  ).toBeVisible();
-  await expect(page.locator("main [role=alert]")).toBeVisible();
 });
 test("desktop and mobile navigation, theme and no horizontal overflow", async ({
   page,

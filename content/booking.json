@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "termsVersion": "2026-11-01.3-draft",
+  "guestCookieDays": 120,
+  "schedule": {
+    "opensAt": "06:00",
+    "closesAt": "17:00",
+    "slotMinutes": 60,
+    "closedWeekdays": [0, 6],
+    "capacity": 2,
+    "horizonDays": 90,
+    "timeZone": "Europe/Budapest",
+    "requestNotice": "Az időpontkérés nem jelent javítási megrendelést. A munka tartalmát és a végleges árat a műhellyel külön egyeztetitek.",
+    "reservationPolicy": "phone-confirmation"
+  },
+  "services": [
+    {
+      "id": "maintenance",
+      "name": "Karbantartás és javítás",
+      "short": "Karbantartás",
+      "description": "Olajcsere, időszakos szerviz, megelőző gondoskodás.",
+      "duration": 90,
+      "icon": "wrench",
+      "tag": "A mindennapok biztonsága",
+      "priceLabel": ""
+    },
+    {
+      "id": "inspection",
+      "name": "Műszaki vizsga",
+      "short": "Műszaki vizsga",
+      "description": "Felkészítés és helyszíni vizsgáztatás, egy helyen.",
+      "duration": 60,
+      "icon": "shield",
+      "tag": "Nyugodtan tovább",
+      "priceLabel": ""
+    },
+    {
+      "id": "diagnostics",
+      "name": "Diagnosztika",
+      "short": "Diagnosztika",
+      "description": "Pontos hibafeltárás korszerű diagnosztikai eszközökkel.",
+      "duration": 60,
+      "icon": "scan",
+      "tag": "Tisztán látni",
+      "priceLabel": ""
+    },
+    {
+      "id": "tyres",
+      "name": "Gumi- és futóműszerviz",
+      "short": "Gumi és futómű",
+      "description": "Szezonális gumicsere, centrírozás és futóműellenőrzés.",
+      "duration": 60,
+      "icon": "wheel",
+      "tag": "Biztos úttartás",
+      "priceLabel": ""
+    },
+    {
+      "id": "other",
+      "name": "Egyéb szervizigény",
+      "short": "Egyéb szerviz",
+      "description": "Mondd el, miben segíthetünk az autóddal kapcsolatban.",
+      "duration": 60,
+      "icon": "wrench",
+      "tag": "Beszéljük meg",
+      "priceLabel": ""
+    }
+  ],
+  "guestPendingLimit": 3,
+  "accountPendingLimit": 20
+}

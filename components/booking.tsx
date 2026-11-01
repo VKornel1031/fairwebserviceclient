@@ -1,7 +1,15 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { legalAcknowledgement } from "@/lib/legal";
+import { accountRequest, AccountRequestError } from "@/lib/accounts";
+import {
+  prepareBooking,
+  type BookingContext,
+  type Availability,
+  type LiveAppointment,
+  type AppointmentDetail,
+} from "@/lib/live-appointments";
+import SavedVehiclePicker from "./saved-vehicle-picker";
 import { site, locationLabel } from "@/content/site";
 import {
   ArrowLeft,
@@ -24,16 +32,12 @@ import { PageHeading, ServiceIcon } from "./ui";
 import { Field } from "./fields";
 import { calendarFile } from "@/lib/calendar";
 import {
-  services,
-  times,
   today,
   addDays,
   nextBusinessDay,
-  available,
   dateLabel,
-  id,
   endTime,
-  type Appointment,
+  statusNames,
   type Profile,
 } from "@/lib/demo";
 const blankContact: Profile = {
@@ -45,12 +49,23 @@ const blankContact: Profile = {
 };
 const blankCar = { plate: "", make: "", model: "", year: "" };
 export default function Booking() {
-  const { store, user, mutate } = usePortal();
+  const {
+    user,
+    garage,
+    appointmentsChanged,
+    refreshAppointments,
+    refreshSession,
+  } = usePortal();
   const coordinator = canCoordinateAppointments(user?.role);
-  const [step, setStep] = useState(0);
-  const [serviceId, setService] = useState("");
-  const [day, setDay] = useState("");
-  const [time, setTime] = useState("");
+  const [context, setContext] = useState<BookingContext | null>(null),
+    [contextError, setContextError] = useState(""),
+    [contextRevision, setContextRevision] = useState(0);
+  const [availability, setAvailability] = useState<Availability | null>(null),
+    [availabilityRevision, setAvailabilityRevision] = useState(0);
+  const [step, setStep] = useState(0),
+    [serviceId, setService] = useState(""),
+    [day, setDay] = useState(""),
+    [time, setTime] = useState("");
   const [contact, setContact] = useState<Profile>(
     user && !coordinator
       ? {
@@ -58,71 +73,138 @@ export default function Booking() {
           email: user.email,
           phone: user.phone,
           city: user.city,
-          reminders: user.reminders,
+          reminders: false,
         }
       : blankContact,
   );
-  const [car, setCar] = useState(blankCar);
-  const [note, setNote] = useState("");
-  const [consent, setConsent] = useState(false);
-  const [savedCar, setSavedCar] = useState("");
-  const [editId, setEditId] = useState<string | null>(null);
-  const [success, setSuccess] = useState<Appointment | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const ownCars = coordinator
-    ? []
-    : store.vehicles.filter((v) => v.owner === user?.id);
-  const service = services.find((s) => s.id === serviceId);
-  const duration = service?.duration || 60;
+  const [car, setCar] = useState(blankCar),
+    [savedCar, setSavedCar] = useState("");
+  const [note, setNote] = useState(""),
+    [consent, setConsent] = useState(false),
+    [editId, setEditId] = useState<string | null>(null),
+    [editRevision, setEditRevision] = useState(0);
+  const [organization, setOrganization] = useState(user?.role === "partner"),
+    [companyName, setCompanyName] = useState(user?.companyName || "");
+  const [success, setSuccess] = useState<LiveAppointment | null>(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
   const [month, setMonth] = useState(() => nextBusinessDay().slice(0, 7));
+  const vehicleTouched = useRef(false),
+    requestId = useRef("");
+  const services = context?.config.services || [],
+    times = availability?.times || [];
+  const service = services.find((item) => item.id === serviceId),
+    duration = service?.duration || 60;
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const editing = params.get("edit");
-    if (editing) {
-      const a = store.appointments.find(
-        (a) =>
-          a.id === editing && (a.owner === (user?.id || null) || coordinator),
-      );
-      if (a && !["cancelled", "completed", "progress"].includes(a.status)) {
-        setEditId(a.id);
-        setService(a.service);
-        setCar(a.vehicle);
-        setContact(a.contact);
-        setNote(a.note);
-        setStep(1);
-      } else setError("Ez a foglalás nem módosítható ebben a fiókban.");
-      return;
-    }
-    const sid = params.get("service");
-    if (services.some((s) => s.id === sid)) setService(sid!);
-    const d = params.get("date");
-    const t = params.get("time");
+    const controller = new AbortController();
+    setContext(null);
+    setContextError("");
+    prepareBooking(controller.signal)
+      .then(async (result) => {
+        if (controller.signal.aborted) return;
+        if (result.viewer !== (user?.id || "guest")) {
+          void refreshSession();
+          throw new Error(
+            "A bejelentkezett fiók megváltozott. Frissítsd az oldalt.",
+          );
+        }
+        const params = new URLSearchParams(window.location.search),
+          editing = params.get("edit");
+        if (editing) {
+          const details = await accountRequest<AppointmentDetail>(
+            "/api/appointments/" + encodeURIComponent(editing),
+            "GET",
+            undefined,
+            controller.signal,
+          );
+          if (controller.signal.aborted) return;
+          const a = details.appointment;
+          if (!["requested", "confirmed"].includes(a.status))
+            throw new Error("Ez az időpontkérés már nem módosítható.");
+          vehicleTouched.current = true;
+          setEditId(a.id);
+          setEditRevision(a.revision);
+          setService(a.service);
+          setCar(a.vehicle);
+          setSavedCar("");
+          setContact(a.contact);
+          setNote(a.note);
+          setOrganization(a.organization);
+          setCompanyName(a.companyName);
+          setStep(1);
+          setMonth(a.date.slice(0, 7));
+        } else {
+          const sid = params.get("service");
+          if (result.config.services.some((item) => item.id === sid))
+            setService(sid!);
+          const date = params.get("date"),
+            time = params.get("time");
+          if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            setDay(date);
+            setMonth(date.slice(0, 7));
+            if (time) setTime(time);
+          }
+        }
+        setContext(result);
+        void refreshAppointments();
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted)
+          setContextError(
+            e instanceof Error ? e.message : "A foglalás most nem indítható.",
+          );
+      });
+    return () => controller.abort();
+  }, [contextRevision, user?.id]);
+  useEffect(() => {
     if (
-      d &&
-      /^\d{4}-\d{2}-\d{2}$/.test(d) &&
-      d >= today() &&
-      d <= addDays(today(), site.booking.horizonDays)
-    ) {
-      setDay(d);
-      setMonth(d.slice(0, 7));
-      if (t && times.includes(t)) setTime(t);
+      !user ||
+      coordinator ||
+      vehicleTouched.current ||
+      new URLSearchParams(window.location.search).has("edit")
+    )
+      return;
+    const preferred = garage.summary?.defaultVehicle;
+    if (preferred) {
+      setCar(preferred);
+      setSavedCar(preferred.id);
     }
-    const defaultCar =
-      ownCars.find((v) => v.id === params.get("vehicle")) ||
-      ownCars.find((v) => v.isDefault) ||
-      ownCars[0];
-    if (defaultCar) {
-      setCar(defaultCar);
-      setSavedCar(defaultCar.id);
-    }
-    // The route mounts with an already hydrated store.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  function changeService(sid: string) {
-    setService(sid);
+  }, [garage.summary, user?.id, coordinator]);
+  useEffect(() => {
+    if (!context || !serviceId) return;
+    const controller = new AbortController();
+    setAvailability(null);
+    const params = new URLSearchParams({ service: serviceId });
+    if (editId) params.set("exclude", editId);
+    accountRequest<Availability>(
+      "/api/appointments/availability?" + params,
+      "GET",
+      undefined,
+      controller.signal,
+    )
+      .then((result) => {
+        if (!controller.signal.aborted) {
+          setAvailability(result);
+        }
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted)
+          setError(
+            e instanceof Error ? e.message : "Az időpontok nem tölthetők be.",
+          );
+      });
+    return () => controller.abort();
+  }, [context, serviceId, editId, availabilityRevision]);
+  function changeService(value: string) {
+    setAvailability(null);
+    setService(value);
     setTime("");
     setError("");
+  }
+  function changeCar(next: typeof blankCar) {
+    vehicleTouched.current = true;
+    setSavedCar("");
+    setCar(next);
   }
   function next() {
     setError("");
@@ -130,95 +212,73 @@ export default function Booking() {
       setError("Válassz egy szolgáltatást a folytatáshoz.");
       return;
     }
-    if (
-      step === 1 &&
-      (!day ||
-        !time ||
-        !available(store, day, time, duration, editId || undefined))
-    ) {
+    if (step === 1 && !availability?.days[day]?.includes(time)) {
       setError("Válassz egy elérhető napot és időpontot.");
       return;
     }
     setStep(step + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  function details(e: FormEvent) {
-    e.preventDefault();
+  function details(event: FormEvent) {
+    event.preventDefault();
     next();
   }
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!service || !day || !time || !consent) return;
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (busy || !context || !service || !day || !time || !consent) return;
     setBusy(true);
     setError("");
-    let result: Appointment | undefined;
-    const save = () => {
-      const ok = mutate((s) => {
-        if (!available(s, day, time, duration, editId || undefined))
-          throw new Error(
-            "Ez az időpont közben betelt. Kérjük, válassz másikat.",
-          );
-        const existing = editId
-          ? s.appointments.find((a) => a.id === editId)
-          : undefined;
-        if (
-          editId &&
-          (!existing ||
-            ["cancelled", "completed", "progress"].includes(existing.status))
-        )
-          throw new Error(
-            "A foglalás állapota megváltozott, már nem módosítható.",
-          );
-        result = {
-          id: editId || id(),
-          owner: existing
-            ? existing.owner
-            : coordinator
-              ? null
-              : (user?.id ?? null),
-          organization: existing?.organization ?? user?.role === "partner",
-          service: serviceId,
-          date: day,
-          time,
-          duration,
-          contact: {
-            ...contact,
-            name: contact.name.trim(),
-            email: contact.email.trim().toLowerCase(),
-            city: contact.city.trim(),
-          },
-          vehicle: {
-            plate: car.plate.trim().toUpperCase(),
-            make: car.make.trim(),
-            model: car.model.trim(),
-            year: car.year,
-          },
-          note: note.trim(),
-          status: "requested",
-          created: existing?.created || new Date().toISOString(),
-          legalAcknowledgement: legalAcknowledgement(),
-        };
-        return {
-          ...s,
-          appointments: editId
-            ? s.appointments.map((a) => (a.id === editId ? result! : a))
-            : [...s.appointments, result],
-        };
-      });
-      if (ok && result) setSuccess(result);
-      else {
-        setError(
-          "Nem sikerült lefoglalni az időpontot. Ellenőrizd az elérhetőséget és a tárhelyet.",
-        );
-        setStep(1);
-      }
+    if (!requestId.current) requestId.current = crypto.randomUUID();
+    const payload = {
+      service: serviceId,
+      date: day,
+      time,
+      contact,
+      vehicle: {
+        plate: car.plate,
+        make: car.make,
+        model: car.model,
+        year: car.year,
+      },
+      vehicleId: savedCar || undefined,
+      note,
+      acceptTerms: true,
+      termsVersion: context.config.termsVersion,
+      viewerId: context.viewer,
+      organization,
+      companyName,
+      ...(editId
+        ? { revision: editRevision }
+        : { requestId: requestId.current }),
     };
     try {
-      if (navigator.locks)
-        await navigator.locks.request("fairauto-booking", save);
-      else save();
-    } catch {
-      setError("A foglalás nem menthető. Próbáld újra.");
+      const result = await accountRequest<{ appointment: LiveAppointment }>(
+        editId ? `/api/appointments/${editId}` : "/api/appointments",
+        editId ? "PATCH" : "POST",
+        payload,
+      );
+      setSuccess(result.appointment);
+      appointmentsChanged();
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "A kérés nem menthető. Próbáld újra.",
+      );
+      if (
+        e instanceof AccountRequestError &&
+        ["slot_taken", "slot_unavailable"].includes(e.code || "")
+      ) {
+        setStep(1);
+        setTime("");
+        setAvailabilityRevision((value) => value + 1);
+      }
+      if (
+        e instanceof AccountRequestError &&
+        ["vehicle_changed", "vehicle_missing"].includes(e.code || "")
+      ) {
+        setStep(2);
+        setSavedCar("");
+        setConsent(false);
+      }
     } finally {
       setBusy(false);
     }
@@ -235,13 +295,40 @@ export default function Booking() {
     d.setMonth(d.getMonth() + delta);
     setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
+  if (!context || contextError)
+    return (
+      <>
+        <PageHeading
+          eyebrow="IDŐPONTFOGLALÁS"
+          title="Találjunk időt az autódra."
+          description="Időpontkérés telefonos visszaigazolással."
+        />
+        <section className="panel">
+          {contextError ? (
+            <>
+              <p className="form-error" role="alert">
+                {contextError}
+              </p>
+              <button
+                className="button button-outline"
+                onClick={() => setContextRevision((value) => value + 1)}
+              >
+                Újrapróbálás
+              </button>
+            </>
+          ) : (
+            <p role="status">A foglalási lehetőségek betöltése…</p>
+          )}
+        </section>
+      </>
+    );
   if (success)
     return (
       <>
         <PageHeading
           eyebrow="IDŐPONTFOGLALÁS"
           title="Egy lépéssel közelebb a gondtalan úthoz."
-          description="A demófoglalásodat elmentettük ebbe a böngészőbe."
+          description="Az időpontkérésedet elmentettük a szerviz rendszerében."
         />
         <section className="success-card">
           <div className="success-symbol">
@@ -256,12 +343,12 @@ export default function Booking() {
                 : "Köszönjük a bizalmat!"}
           </h2>
           <p className="muted">
-            Az időpontkérés telefonos egyeztetésre vár. A demóban ezt a
-            munkafelvevő vagy a vezető igazolhatja vissza. A prototípus nem küld
-            e-mailt és nem továbbít kérést a szerviznek.
+            {success.status === "requested"
+              ? "Az időpontkérés telefonos egyeztetésre vár. A szerviz a megadott mobiltelefonszámon egyeztet veled. A kiválasztott időpontot a telefonos visszaigazolás biztosítja."
+              : `A mentett időpontkérés aktuális állapota: ${statusNames[success.status]}. A részleteket az időpontkezelésben találod.`}
           </p>
           <div className="confirmation-id">
-            FOGLALÁSI AZONOSÍTÓ <strong>{success.id}</strong>
+            FOGLALÁSI AZONOSÍTÓ <strong>{success.reference}</strong>
           </div>
           <div className="confirmation-details">
             <p>
@@ -283,8 +370,8 @@ export default function Booking() {
             <p>
               <ShieldCheck size={19} />
               <span>
-                {service?.name}
-                <strong>Telefonos egyeztetésre vár</strong>
+                {success.serviceName}
+                <strong>{statusNames[success.status]}</strong>
               </span>
             </p>
           </div>
@@ -307,6 +394,25 @@ export default function Booking() {
               onClick={() => calendarFile(success)}
             >
               <Download size={16} /> Naptárba mentés
+            </button>
+            <button
+              className="text-button"
+              onClick={() => {
+                requestId.current = "";
+                setSuccess(null);
+                setEditId(null);
+                setEditRevision(0);
+                setStep(0);
+                setDay("");
+                setTime("");
+                setService("");
+                setConsent(false);
+                setNote("");
+                setError("");
+                window.history.replaceState(null, "", "/idopont");
+              }}
+            >
+              Másik időpontot kérek
             </button>
           </div>
           {!user && (
@@ -346,7 +452,7 @@ export default function Booking() {
         ].map((label, i) => (
           <button
             key={label}
-            disabled={i > step}
+            disabled={busy || i > step}
             onClick={() => {
               setStep(i);
               setError("");
@@ -387,7 +493,10 @@ export default function Booking() {
                     <span>
                       <strong>{s.name}</strong>
                       <small>{s.description}</small>
-                      <em>kb. {s.duration} perc</em>
+                      <em>
+                        kb. {s.duration} perc
+                        {s.priceLabel && ` · ${s.priceLabel}`}
+                      </em>
                     </span>
                     <span className="radio-mark">
                       {serviceId === s.id && <span />}
@@ -412,6 +521,19 @@ export default function Booking() {
                 <h2>Mikor találkozzunk?</h2>
                 <p>Válassz munkanapot, majd egy szabad érkezési időpontot.</p>
               </div>
+              {!availability && (
+                <p className="hint-box" role="status">
+                  A szabad időpontok betöltése…
+                </p>
+              )}
+              {!availability && error && (
+                <button
+                  className="button button-outline"
+                  onClick={() => setAvailabilityRevision((value) => value + 1)}
+                >
+                  Időpontok frissítése
+                </button>
+              )}
               <div className="calendar">
                 <div className="calendar-heading">
                   <h3>
@@ -453,14 +575,11 @@ export default function Booking() {
                   ))}
                   {Array.from({ length: daysInMonth }, (_, i) => {
                     const d = `${month}-${String(i + 1).padStart(2, "0")}`;
-                    const enabled =
-                      d <= addDays(today(), site.booking.horizonDays) &&
-                      times.some((t) =>
-                        available(store, d, t, duration, editId || undefined),
-                      );
+                    const enabled = !!availability?.days[d]?.length;
                     return (
                       <button
                         key={d}
+                        data-date={d}
                         aria-label={dateLabel(d, {
                           year: "numeric",
                           month: "long",
@@ -503,15 +622,7 @@ export default function Booking() {
                     {times.map((t) => (
                       <button
                         key={t}
-                        disabled={
-                          !available(
-                            store,
-                            day,
-                            t,
-                            duration,
-                            editId || undefined,
-                          )
-                        }
+                        disabled={!availability?.days[day]?.includes(t)}
                         aria-pressed={time === t}
                         className={time === t ? "selected" : ""}
                         onClick={() => {
@@ -548,7 +659,7 @@ export default function Booking() {
                 <p>
                   {user
                     ? "Az elmentett adataidat előre kitöltöttük."
-                    : "Fiók nélkül is foglalhatsz. Kérjük, a demóban mintaadatokat adj meg."}
+                    : "Fiók nélkül is kérhetsz időpontot. Add meg az egyeztetéshez használható elérhetőségeidet."}
                 </p>
               </div>
               {!user && (
@@ -593,7 +704,7 @@ export default function Booking() {
                   required
                   type="email"
                   autoComplete="email"
-                  maxLength={150}
+                  maxLength={254}
                   value={contact.email}
                   placeholder="peter@example.com"
                   onChange={(e) =>
@@ -613,35 +724,42 @@ export default function Booking() {
                   }
                 />
               </div>
+              {coordinator && (
+                <>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={organization}
+                      onChange={(event) =>
+                        setOrganization(event.target.checked)
+                      }
+                    />
+                    <span>Céges időpontkérés</span>
+                  </label>
+                  {organization && (
+                    <Field
+                      label="Cégnév"
+                      required
+                      maxLength={120}
+                      value={companyName}
+                      onChange={(event) => setCompanyName(event.target.value)}
+                    />
+                  )}
+                </>
+              )}
               <div className="form-section-title">
                 <CarFront size={19} />
                 <h3>Az autód adatai</h3>
               </div>
-              {ownCars.length > 0 && (
-                <label className="field saved-select">
-                  <span>
-                    {user?.role === "partner"
-                      ? "Jármű a céges flottából"
-                      : "Mentett jármű kiválasztása"}
-                  </span>
-                  <select
-                    value={savedCar}
-                    onChange={(e) => {
-                      setSavedCar(e.target.value);
-                      setCar(
-                        ownCars.find((v) => v.id === e.target.value) ||
-                          blankCar,
-                      );
-                    }}
-                  >
-                    <option value="">Másik jármű adatait adom meg</option>
-                    {ownCars.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.make} {v.model} · {v.plate}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              {user && !coordinator && (
+                <SavedVehiclePicker
+                  selected={savedCar}
+                  onChange={(vehicle) => {
+                    vehicleTouched.current = true;
+                    setSavedCar(vehicle?.id || "");
+                    setCar(vehicle || blankCar);
+                  }}
+                />
               )}
               <div className="form-grid">
                 <Field
@@ -654,18 +772,18 @@ export default function Booking() {
                   className="plate-input"
                   placeholder="ABC-123"
                   onChange={(e) =>
-                    setCar({ ...car, plate: e.target.value.toUpperCase() })
+                    changeCar({ ...car, plate: e.target.value.toUpperCase() })
                   }
                 />
                 <Field
                   label="Gyártási év"
                   required
                   type="number"
-                  min={1950}
+                  min={1886}
                   max={new Date().getFullYear() + 1}
                   value={car.year}
                   placeholder="2018"
-                  onChange={(e) => setCar({ ...car, year: e.target.value })}
+                  onChange={(e) => changeCar({ ...car, year: e.target.value })}
                 />
                 <Field
                   label="Márka"
@@ -674,7 +792,7 @@ export default function Booking() {
                   pattern=".*\S.*"
                   value={car.make}
                   placeholder="Volkswagen"
-                  onChange={(e) => setCar({ ...car, make: e.target.value })}
+                  onChange={(e) => changeCar({ ...car, make: e.target.value })}
                 />
                 <Field
                   label="Modell"
@@ -683,7 +801,7 @@ export default function Booking() {
                   pattern=".*\S.*"
                   value={car.model}
                   placeholder="Golf VII"
-                  onChange={(e) => setCar({ ...car, model: e.target.value })}
+                  onChange={(e) => changeCar({ ...car, model: e.target.value })}
                 />
                 <label className="field field-wide">
                   <span>
@@ -721,7 +839,7 @@ export default function Booking() {
               <div className="panel-title">
                 <span className="step-number">04 / 04</span>
                 <h2>Minden a helyén?</h2>
-                <p>Ellenőrizd az adatokat, és küldd el a demó időpontkérést.</p>
+                <p>Ellenőrizd az adatokat, és küldd el az időpontkérést.</p>
               </div>
               <div className="review-group">
                 <div className="section-title">
@@ -765,8 +883,9 @@ export default function Booking() {
               <div className="info-box">
                 <Info size={18} />
                 <p>
-                  {site.booking.requestNotice} Ez a demó nem küld valódi
-                  foglalást vagy e-mailt.
+                  {context.config.schedule.requestNotice} A kért időpont
+                  telefonos visszaigazolásig nem jelent biztosított
+                  műhelykapacitást.
                 </p>
               </div>
               <label className="checkbox-label">
@@ -777,9 +896,10 @@ export default function Booking() {
                   onChange={(e) => setConsent(e.target.checked)}
                 />
                 <span>
-                  Megértettem, hogy ez egy helyi prototípus, és az adataim ebben
-                  a böngészőben tárolódnak. Mintaadatokat használok. Elfogadom a
-                  demó használatára vonatkozó ÁSZF-et.
+                  Elfogadom az ÁSZF-et, megismertem az Adatkezelési
+                  Tájékoztatót, és tudomásul veszem, hogy az időpont telefonos
+                  visszaigazolásra vár. A javításról és a végleges árról külön
+                  állapodunk meg.
                 </span>
               </label>
               <p className="form-legal-note">
@@ -873,8 +993,9 @@ export default function Booking() {
             </p>
           </div>
           <p className="demo-footnote">
-            DEMÓ · Nincs szükség API-kulcsra.
-            <br />A mentések csak ebben a böngészőben érhetők el.
+            Az időpontot a telefonos visszaigazolás biztosítja. Vendégként az
+            itt leadott kéréseidet ebben a böngészőben tudod kezelni. A
+            böngészőadatok törlése után telefonon keresd a szervizt.
           </p>
         </aside>
       </div>

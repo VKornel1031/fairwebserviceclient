@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { site } from "@/content/site";
 import {
@@ -12,6 +12,9 @@ import {
   Search,
 } from "lucide-react";
 import { usePortal } from "./provider";
+import { accountRequest } from "@/lib/accounts";
+import type { AppointmentDashboard } from "@/lib/live-appointments";
+import AppointmentList from "./appointment-list";
 import { PageHeading } from "./ui";
 import { Empty } from "./fields";
 import {
@@ -27,10 +30,46 @@ import { downloadAppointments } from "@/lib/reports";
 import { canViewReports } from "@/lib/permissions";
 
 export default function Management() {
-  const { user, store } = usePortal();
+  const { user } = usePortal();
   const [period, setPeriod] = useState("7");
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
+  const [revision, setRevision] = useState(0),
+    [state, setState] = useState({
+      key: "",
+      data: null as AppointmentDashboard | null,
+      error: "",
+    });
+  const key =
+    (user?.id || "") + ":" + (user?.role || "") + ":" + period + ":" + revision;
+  useEffect(() => {
+    if (!canViewReports(user?.role)) return;
+    const controller = new AbortController();
+    accountRequest<AppointmentDashboard>(
+      "/api/appointments/dashboard?days=" + period,
+      "GET",
+      undefined,
+      controller.signal,
+    )
+      .then((data) => {
+        if (!controller.signal.aborted) setState({ key, data, error: "" });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setState({
+            key,
+            data: null,
+            error:
+              error instanceof Error
+                ? error.message
+                : "A riport nem tölthető be.",
+          });
+      });
+    return () => controller.abort();
+  }, [key]);
+  useEffect(() => {
+    const refresh = () => setRevision((value) => value + 1);
+    window.addEventListener("fairauto-appointments", refresh);
+    return () => window.removeEventListener("fairauto-appointments", refresh);
+  }, []);
   if (!canViewReports(user?.role))
     return (
       <>
@@ -50,55 +89,47 @@ export default function Management() {
         </Empty>
       </>
     );
-  const start = today();
-  const end = addDays(start, Number(period) - 1);
-  const periodRows = store.appointments.filter(
-    (a) => a.date >= start && a.date <= end,
-  );
-  const active = periodRows.filter((a) => a.status !== "cancelled");
-  const waiting = store.appointments.filter((a) => a.status === "requested");
-  const list = periodRows
-    .filter(
-      (a) =>
-        (status === "all" || a.status === status) &&
-        `${a.contact.name} ${a.vehicle.plate} ${a.vehicle.make} ${a.id}`
-          .toLocaleLowerCase("hu")
-          .includes(query.toLocaleLowerCase("hu")),
-    )
-    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const summary = state.key === key ? state.data : null;
+  if (!summary)
+    return (
+      <>
+        <PageHeading
+          eyebrow="VEZETŐI ÁTTEKINTÉS"
+          title="A részletekből teljes kép."
+          description="A mentett időpontkérések összesítése."
+        />
+        {state.key === key && state.error ? (
+          <div className="info-box" role="alert">
+            <p>{state.error}</p>
+            <button
+              className="button button-outline"
+              onClick={() => setRevision((value) => value + 1)}
+            >
+              Újrapróbálás
+            </button>
+          </div>
+        ) : (
+          <p role="status" className="muted">
+            Riport betöltése…
+          </p>
+        )}
+      </>
+    );
+  const { start, end, waiting } = summary,
+    minutes = summary.totals.minutes;
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  const peak = Math.max(
-    1,
-    ...days.map((day) => active.filter((a) => a.date === day).length),
-  );
-  const workingDays = Array.from({ length: Number(period) }, (_, i) =>
-    addDays(start, i),
-  ).filter(
-    (day) =>
-      !site.booking.closedWeekdays.includes(weekday(day)) &&
-      !store.blockedDates.includes(day),
-  ).length;
-  const minutes = active.reduce((n, a) => n + a.duration, 0);
-  const utilization = workingDays
+  const peak = Math.max(1, ...summary.days.map((row) => row.total));
+  const utilization = summary.workingDays
     ? Math.round(
-        (minutes /
-          (workingDays *
-            (clockMinutes(site.booking.closesAt) -
-              clockMinutes(site.booking.opensAt)) *
-            site.booking.capacity)) *
+        (summary.totals.reservedMinutes /
+          (summary.workingDays * summary.workMinutes * summary.capacity)) *
           100,
       )
     : null;
   const types = [
-    {
-      name: "Céges partner",
-      count: active.filter((a) => a.organization).length,
-    },
-    {
-      name: "Magánügyfél",
-      count: active.filter((a) => !a.organization && a.owner).length,
-    },
-    { name: "Vendég", count: active.filter((a) => !a.owner).length },
+    { name: "Céges partner", count: summary.totals.partners },
+    { name: "Magánügyfél", count: summary.totals.customers },
+    { name: "Vendég", count: summary.totals.guests },
   ];
   return (
     <div className="management-overview">
@@ -133,7 +164,7 @@ export default function Management() {
         <article>
           <span>Időszak foglalásai</span>
           <strong>
-            {active.length}
+            {summary.totals.active}
             <CalendarDays size={21} />
           </strong>
           <small>Lemondott időpontok nélkül</small>
@@ -141,7 +172,7 @@ export default function Management() {
         <Link href="/muhely?filter=requests">
           <span>Jóváhagyásra vár</span>
           <strong>
-            {waiting.length}
+            {waiting}
             <Clock3 size={21} />
           </strong>
           <small>
@@ -149,7 +180,7 @@ export default function Management() {
           </small>
         </Link>
         <article>
-          <span>Tervezett munkaidő</span>
+          <span>Igényelt szervizidő</span>
           <strong>
             {(minutes / 60).toLocaleString("hu-HU", {
               maximumFractionDigits: 1,
@@ -159,7 +190,7 @@ export default function Management() {
           <small>Óra · becsült szervizidőtartam</small>
         </article>
         <article>
-          <span>Demókapacitás lekötése</span>
+          <span>Műhelykapacitás lekötése</span>
           <strong>
             {utilization === null ? "—" : `${utilization}%`}
             <BarChart3 size={21} />
@@ -177,12 +208,11 @@ export default function Management() {
           </div>
           <div className="workload-bars">
             {days.map((day) => {
-              const count = store.appointments.filter(
-                (a) => a.date === day && a.status !== "cancelled",
-              ).length;
+              const count =
+                summary.days.find((row) => row.date === day)?.total || 0;
               const closed =
                 site.booking.closedWeekdays.includes(weekday(day)) ||
-                store.blockedDates.includes(day);
+                summary.closures.includes(day);
               return (
                 <Link
                   key={day}
@@ -221,114 +251,16 @@ export default function Management() {
             </div>
           ))}
           <p className="report-note">
-            A helyi demóadatok összesítése. Pénzügyi vagy bevételi adatokat nem
-            tartalmaz.
+            A mentett időpontkérések és visszaigazolások összesítése. A
+            kapacitást a visszaigazolt időpontok foglalják.
           </p>
         </section>
       </div>
       <section className="management-bookings">
         <div className="section-title">
           <h2>Foglalási riport</h2>
-          <button
-            className="button button-outline"
-            disabled={!list.length}
-            onClick={() =>
-              downloadAppointments(list, `fairauto-vezetes-${start}-${end}.csv`)
-            }
-          >
-            <Download size={15} /> Riport letöltése
-          </button>
         </div>
-        <div className="report-filters">
-          <label className="search-input">
-            <Search size={16} />
-            <input
-              aria-label="Riport keresése"
-              placeholder="Név, rendszám vagy azonosító"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
-          <label className="report-status">
-            Állapot
-            <select
-              aria-label="Riport állapota"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="all">Minden állapot</option>
-              {Object.entries(statusNames).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <span className="small muted">{list.length} találat</span>
-        </div>
-        {list.length ? (
-          <div className="staff-table-wrap">
-            <table className="staff-table">
-              <thead>
-                <tr>
-                  <th>Időpont</th>
-                  <th>Ügyfél / jármű</th>
-                  <th>Szolgáltatás</th>
-                  <th>Állapot</th>
-                  <th>
-                    <span className="sr-only">Megnyitás</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((a) => (
-                  <tr key={a.id}>
-                    <td>
-                      <strong>{a.time}</strong>
-                      <span>
-                        {dateLabel(a.date, { month: "short", day: "numeric" })}
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{a.contact.name}</strong>
-                      <span>
-                        {a.vehicle.plate} ·{" "}
-                        {a.organization
-                          ? "Céges partner"
-                          : a.owner
-                            ? "Magánügyfél"
-                            : "Vendég"}
-                      </span>
-                    </td>
-                    <td>
-                      {services.find((s) => s.id === a.service)?.short}
-                      <span>{a.id}</span>
-                    </td>
-                    <td>
-                      <span className={`status status-${a.status}`}>
-                        <span />
-                        {statusNames[a.status]}
-                      </span>
-                    </td>
-                    <td>
-                      <Link
-                        href={`/muhely?date=${a.date}&appointment=${a.id}`}
-                        className="icon-button"
-                        aria-label={`${a.id} megnyitása`}
-                      >
-                        <ArrowUpRight size={18} />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="report-empty">
-            Ebben az időszakban nincs a szűrésnek megfelelő foglalás.
-          </div>
-        )}
+        <AppointmentList mode="report" embedded from={start} to={end} />
       </section>
     </div>
   );

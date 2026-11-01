@@ -3862,3 +3862,54 @@ select {
   font-size: 11px;
   text-align: left;
 }
+.appointment-day {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.appointment-day .field {
+  max-width: 240px;
+  flex: 1;
+}
+.appointment-status-filter {
+  min-width: min(220px, 100%);
+}
+.appointment-history {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 16px;
+}
+.appointment-history summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+.appointment-history ol {
+  padding-left: 20px;
+}
+.appointment-history li {
+  padding: 8px 0;
+  font-size: 12px;
+}
+.appointment-history li span {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.saved-vehicle-picker {
+  margin-bottom: 20px;
+}
+.saved-vehicle-picker .search-input {
+  margin-top: 12px;
+}
+.booking-detail-top {
+  flex-wrap: wrap;
+}
+.detail-grid > div {
+  min-width: 0;
+}
+.detail-title,
+.appointment-info {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}

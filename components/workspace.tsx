@@ -1,7 +1,6 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { site } from "@/content/site";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -9,334 +8,67 @@ import {
   CarFront,
   CalendarDays,
   Building2,
-  Wrench,
   Check,
   Pencil,
-  Trash2,
-  Download,
-  Clock3,
-  ChevronLeft,
-  ChevronRight,
-  Search,
   ShieldCheck,
-  X,
-  SlidersHorizontal,
-  ClipboardList,
 } from "lucide-react";
+import { accountRequest, type Account as AccountRecord } from "@/lib/accounts";
 import { usePortal } from "./provider";
+import { Field } from "./fields";
 import { Modal, PageHeading } from "./ui";
-import { Field, Empty } from "./fields";
-import { calendarFile } from "@/lib/calendar";
-import { changeAppointmentStatus } from "@/lib/appointments";
-import ConfirmationNote from "./confirmation-note";
-import { downloadAppointments } from "@/lib/reports";
-import {
-  canManageWorkshop,
-  canCoordinateAppointments,
-} from "@/lib/permissions";
-import {
-  services,
-  statusNames,
-  dateLabel,
-  today,
-  addDays,
-  nextBusinessDay,
-  endTime,
-  type Status,
-} from "@/lib/demo";
-
-export { Account } from "./account";
-
-export { default as Vehicles } from "./vehicles";
 import Vehicles from "./vehicles";
-
+import AppointmentList from "./appointment-list";
+export { Account } from "./account";
+export { default as Vehicles } from "./vehicles";
 export function Appointments({ embedded = false }: { embedded?: boolean }) {
-  const { user, store, mutate, notify } = usePortal();
-  const [filter, setFilter] = useState("upcoming");
-  const [detail, setDetail] = useState<string | null>(null);
-  const [cancel, setCancel] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const own = store.appointments.filter((a) => a.owner === (user?.id || null));
-  const list = own
-    .filter((a) => {
-      const past =
-        ["completed", "cancelled"].includes(a.status) || a.date < today();
-      return (
-        (filter === "all" || (filter === "past" ? past : !past)) &&
-        (statusFilter === "all" || a.status === statusFilter) &&
-        `${a.vehicle.plate} ${a.vehicle.make} ${a.vehicle.model} ${a.id}`
-          .toLowerCase()
-          .includes(query.toLowerCase())
-      );
-    })
-    .sort(
-      (a, b) =>
-        (filter === "past" ? -1 : 1) *
-        (a.date + a.time).localeCompare(b.date + b.time),
-    );
-  const selected = store.appointments.find((a) => a.id === detail);
-  return (
-    <>
-      {!embedded && (
-        <PageHeading
-          eyebrow="FOGLALÁSAIM"
-          title="A következő találkozásunk."
-          description={
-            user
-              ? "Tervezd meg, kövesd nyomon, vagy módosítsd az időpontjaidat."
-              : "Az ebben a böngészőben leadott vendégfoglalásaid. A demó nem küld valódi időpontkérést."
-          }
-          action={
-            <Link href="/idopont" className="button">
-              <Plus size={17} /> Új időpontfoglalás
-            </Link>
-          }
-        />
-      )}
-      <div className="list-toolbar">
-        <div className="tabs">
-          <button
-            className={filter === "upcoming" ? "active" : ""}
-            onClick={() => setFilter("upcoming")}
-          >
-            Közelgő{" "}
-            <span>
-              {
-                own.filter(
-                  (a) =>
-                    a.date >= today() &&
-                    !["cancelled", "completed"].includes(a.status),
-                ).length
-              }
-            </span>
-          </button>
-          <button
-            className={filter === "past" ? "active" : ""}
-            onClick={() => setFilter("past")}
-          >
-            Korábbi
-          </button>
-          <button
-            className={filter === "all" ? "active" : ""}
-            onClick={() => setFilter("all")}
-          >
-            Összes
-          </button>
-        </div>
-        <label className="search-input">
-          <Search size={16} />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rendszám vagy jármű keresése"
-            aria-label="Foglalások keresése"
-          />
-        </label>
-      </div>
-      {user?.role === "partner" && (
-        <div className="partner-report-tools">
-          <label>
-            Állapot
-            <select
-              aria-label="Céges foglalások állapota"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">Minden állapot</option>
-              {Object.entries(statusNames).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <span className="muted small">
-            {list.length} találat · csak a saját céged foglalásai
-          </span>
-          <button
-            className="button button-outline"
-            disabled={!list.length}
-            onClick={() =>
-              downloadAppointments(list, "fairauto-ceges-foglalasok.csv")
-            }
-          >
-            <Download size={15} /> Foglalások exportálása
-          </button>
-        </div>
-      )}
-      {list.length ? (
-        <div className="appointment-list">
-          {list.map((a) => (
-            <article className="appointment-card" key={a.id}>
-              <div className="appointment-date">
-                <span>{dateLabel(a.date, { month: "short" })}</span>
-                <strong>{Number(a.date.slice(-2))}</strong>
-                <small>{dateLabel(a.date, { weekday: "short" })}</small>
-              </div>
-              <div className="appointment-info">
-                <span className={`status status-${a.status}`}>
-                  <span />
-                  {statusNames[a.status]}
-                </span>
-                <h3>{services.find((s) => s.id === a.service)?.name}</h3>
-                <p>
-                  <CarFront size={14} /> {a.vehicle.make} {a.vehicle.model}
-                  <i /> {a.vehicle.plate}
-                </p>
-                <span className="muted small">
-                  <Clock3 size={13} /> {a.time} – {endTime(a.time, a.duration)}{" "}
-                  · {site.contact.street}
-                </span>
-              </div>
-              <button
-                className="button button-outline"
-                onClick={() => setDetail(a.id)}
-              >
-                Részletek <ArrowUpRight size={16} />
-              </button>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <Empty
-          icon={<CalendarDays size={32} />}
-          title={
-            query ? "Nincs találat." : "Itt lesz a következő találkozásunk."
-          }
-          description={
-            query
-              ? "Próbálj másik rendszámot vagy járműnevet."
-              : "Ebben a nézetben még nincs foglalásod. Válassz egy megfelelő időpontot."
-          }
-        >
-          {!query && (
-            <Link href="/idopont" className="button">
-              Időpontot foglalok <ArrowUpRight size={17} />
-            </Link>
-          )}
-        </Empty>
-      )}
-      {selected && (
-        <Modal title="A foglalás részletei" close={() => setDetail(null)}>
-          <div className="modal-form">
-            <div className="booking-detail-top">
-              <span className={`status status-${selected.status}`}>
-                <span />
-                {statusNames[selected.status]}
-              </span>
-              <code>{selected.id}</code>
-            </div>
-            <h2 className="detail-title">
-              {services.find((s) => s.id === selected.service)?.name}
-            </h2>
-            <div className="detail-grid">
-              <div>
-                <small>Időpont</small>
-                <strong>{dateLabel(selected.date)}</strong>
-                <span>
-                  {selected.time} – {endTime(selected.time, selected.duration)}
-                </span>
-              </div>
-              <div>
-                <small>Jármű</small>
-                <strong>
-                  {selected.vehicle.make} {selected.vehicle.model}
-                </strong>
-                <span>
-                  {selected.vehicle.plate} · {selected.vehicle.year}
-                </span>
-              </div>
-              <div>
-                <small>Kapcsolattartó</small>
-                <strong>{selected.contact.name}</strong>
-                <span>{selected.contact.phone}</span>
-                <span>{selected.contact.email}</span>
-              </div>
-              <div>
-                <small>Település</small>
-                <strong>{selected.contact.city}</strong>
-                <span>Helyszín: {site.contact.street}</span>
-              </div>
-            </div>
-            {selected.note && <div className="hint-box">{selected.note}</div>}
-            <ConfirmationNote appointment={selected} />
-            <div className="button-row">
-              <button
-                className="button button-outline"
-                onClick={() => calendarFile(selected)}
-              >
-                <Download size={16} /> Naptárba
-              </button>
-              {!["cancelled", "completed", "progress"].includes(
-                selected.status,
-              ) &&
-                selected.date >= today() && (
-                  <>
-                    <Link
-                      className="button"
-                      href={`/idopont?edit=${selected.id}`}
-                    >
-                      Új időpont <ArrowRight size={16} />
-                    </Link>
-                    <button
-                      className="text-button danger-text"
-                      onClick={() => setCancel(selected.id)}
-                    >
-                      Lemondás
-                    </button>
-                  </>
-                )}
-            </div>
-          </div>
-        </Modal>
-      )}
-      {cancel && (
-        <Modal title="Lemondod az időpontot?" close={() => setCancel(null)}>
-          <div className="modal-form">
-            <p className="muted">
-              A foglalást lemondottra állítjuk, és az időpont újra elérhetővé
-              válik a demóban.
-            </p>
-            <div className="panel-actions">
-              <button className="text-button" onClick={() => setCancel(null)}>
-                Mégse
-              </button>
-              <button
-                className="button danger"
-                onClick={() => {
-                  if (
-                    mutate((s) => ({
-                      ...s,
-                      appointments: s.appointments.map((a) =>
-                        a.id === cancel ? { ...a, status: "cancelled" } : a,
-                      ),
-                    }))
-                  ) {
-                    setCancel(null);
-                    notify("Az időpontot lemondtuk.");
-                  }
-                }}
-              >
-                Időpont lemondása <X size={16} />
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-    </>
-  );
+  return <AppointmentList embedded={embedded} />;
 }
-
+export function Workshop() {
+  return <AppointmentList mode="workshop" />;
+}
+export function Reception() {
+  return <AppointmentList mode="reception" />;
+}
 export function Partners() {
-  const { user, store, mutate, notify, garage } = usePortal();
+  const { user, notify, garage, appointments, acceptAccount } = usePortal();
+  const [companyBusy, setCompanyBusy] = useState(false),
+    [companyError, setCompanyError] = useState("");
   const [settings, setSettings] = useState(false);
   const [tab, setTab] = useState("fleet");
-  const company = store.companies[user?.id || ""] || {
-    name: "",
-    tax: "",
-    city: "",
+  const company = {
+    name: user?.companyName || "",
+    tax: user?.companyTax || "",
+    city: user?.companyCity || "",
   };
+  async function saveCompany(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (companyBusy) return;
+    const fields = new FormData(event.currentTarget);
+    setCompanyBusy(true);
+    setCompanyError("");
+    try {
+      const result = await accountRequest<{ user: AccountRecord }>(
+        "/api/account",
+        "PATCH",
+        {
+          companyName: String(fields.get("name") || "").trim(),
+          companyTax: String(fields.get("tax") || "").trim(),
+          companyCity: String(fields.get("city") || "").trim(),
+        },
+      );
+      acceptAccount(result.user);
+      setSettings(false);
+      notify("Céges adatok mentve.");
+    } catch (error) {
+      setCompanyError(
+        error instanceof Error
+          ? error.message
+          : "Nem sikerült menteni a céges adatokat.",
+      );
+    } finally {
+      setCompanyBusy(false);
+    }
+  }
   if (user?.role !== "partner" && user?.role !== "admin")
     return (
       <>
@@ -398,12 +130,7 @@ export function Partners() {
       </>
     );
   const vehicleCount = garage.summary?.totalItems || 0;
-  const bookings = store.appointments.filter(
-    (a) =>
-      a.owner === user.id &&
-      a.date >= today() &&
-      !["cancelled", "completed"].includes(a.status),
-  );
+  const upcomingCount = appointments.summary?.upcomingCount || 0;
   return (
     <>
       <PageHeading
@@ -432,7 +159,9 @@ export function Partners() {
         <div>
           <span>Közelgő időpont</span>
           <strong>
-            {bookings.length.toString().padStart(2, "0")}
+            {appointments.loading && !appointments.summary
+              ? "…"
+              : upcomingCount.toString().padStart(2, "0")}
             <CalendarDays size={24} />
           </strong>
           <small>A következő szervizek tervezéséhez</small>
@@ -468,30 +197,21 @@ export function Partners() {
         közös hozzáférése egy későbbi változatban lesz elérhető.
       </p>
       {settings && (
-        <Modal title="Céges adatok" close={() => setSettings(false)}>
+        <Modal
+          title="Céges adatok"
+          close={() => {
+            if (!companyBusy) setSettings(false);
+          }}
+        >
           <form
             className="modal-form stack-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              if (
-                mutate((s) => ({
-                  ...s,
-                  companies: {
-                    ...s.companies,
-                    [user.id]: {
-                      name: String(f.get("name")).trim(),
-                      tax: String(f.get("tax")).trim(),
-                      city: String(f.get("city")).trim(),
-                    },
-                  },
-                }))
-              ) {
-                setSettings(false);
-                notify("Céges adatok mentve.");
-              }
-            }}
+            onSubmit={(event) => void saveCompany(event)}
           >
+            {companyError && (
+              <p className="form-error" role="alert">
+                {companyError}
+              </p>
+            )}
             <Field
               name="name"
               label="Cégnév"
@@ -512,435 +232,10 @@ export function Partners() {
               maxLength={100}
               defaultValue={company.city}
             />
-            <button className="button" type="submit">
+            <button className="button" type="submit" disabled={companyBusy}>
               Adatok mentése <Check size={17} />
             </button>
           </form>
-        </Modal>
-      )}
-    </>
-  );
-}
-
-export function Workshop() {
-  return <AppointmentDesk />;
-}
-export function Reception() {
-  return <AppointmentDesk reception />;
-}
-function AppointmentDesk({ reception = false }: { reception?: boolean }) {
-  const { user, store, mutate, notify } = usePortal();
-  const permitted = reception
-    ? canCoordinateAppointments(user?.role)
-    : canManageWorkshop(user?.role);
-  const operational = !reception && canManageWorkshop(user?.role);
-  const [day, setDay] = useState(nextBusinessDay);
-  const [filter, setFilter] = useState("day");
-  const [selected, setSelected] = useState<string | null>(null);
-  const [closure, setClosure] = useState(false);
-  useEffect(() => {
-    if (!permitted) return;
-    const params = new URLSearchParams(window.location.search);
-    const date = params.get("date");
-    if (
-      date &&
-      /^\d{4}-\d{2}-\d{2}$/.test(date) &&
-      !Number.isNaN(new Date(`${date}T12:00:00`).getTime())
-    )
-      setDay(date);
-    if (params.get("filter") === "requests") setFilter("requests");
-    const appointment = params.get("appointment");
-    if (appointment && store.appointments.some((a) => a.id === appointment))
-      setSelected(appointment);
-  }, [user?.role, reception]);
-  if (!permitted)
-    return (
-      <>
-        <PageHeading
-          eyebrow={reception ? "MUNKAFELVÉTEL" : "MŰHELY"}
-          title="A szerviz napja, átláthatóan."
-          description={
-            reception
-              ? "Ügyfélfogadás, időpontkérések és napi egyeztetések."
-              : "Vezetői nézet a foglalások jóváhagyásához és a napi munkához."
-          }
-        />
-        <Empty
-          icon={reception ? <ClipboardList size={32} /> : <Wrench size={32} />}
-          title={
-            reception
-              ? "Itt kezdődik az ügyfélfogadás."
-              : "Ez a vezetői műhelynézet."
-          }
-          description={
-            reception
-              ? "A munkafelvételhez munkafelvevői, vezetői vagy adminisztrátori hozzáférés szükséges."
-              : "A munkafelvevői feladatokat a Munkafelvétel oldalon találod. A műhelyfolyamatok és a zárvatartás kezelése a vezetői nézethez tartozik."
-          }
-        >
-          {user?.role === "reception" ? (
-            <Link className="button" href="/munkafelvetel">
-              Munkafelvétel megnyitása <ArrowRight size={17} />
-            </Link>
-          ) : (
-            <Link className="button" href="/fiok">
-              Bejelentkezés <ArrowRight size={17} />
-            </Link>
-          )}
-        </Empty>
-      </>
-    );
-  const requests = store.appointments.filter((a) => a.status === "requested");
-  const list = store.appointments
-    .filter((a) =>
-      filter === "requests"
-        ? a.status === "requested"
-        : filter === "all"
-          ? true
-          : a.date === day,
-    )
-    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-  const a = store.appointments.find((x) => x.id === selected);
-  function status(next: Status) {
-    if (!selected || !user) return;
-    const ok = mutate((s) =>
-      changeAppointmentStatus(s, selected, next, user.id),
-    );
-    if (ok) notify("A foglalás állapotát frissítettük.");
-  }
-  return (
-    <>
-      <PageHeading
-        eyebrow={reception ? "MUNKAFELVEVŐI MUNKATÉR" : "MŰHELY ÉS NAPTÁR"}
-        title={
-          reception ? "Munkafelvétel, egyszerűen." : "Jó munkát, jó napot!"
-        }
-        description={
-          reception
-            ? "Beérkező kérések, ügyféladatok és napi időpontegyeztetés."
-            : "Időpontok, jóváhagyások és műhelyfeladatok egy helyen."
-        }
-        action={
-          reception ? (
-            <Link className="button" href="/idopont">
-              Új időpont felvétele <Plus size={17} />
-            </Link>
-          ) : (
-            <button
-              className="button button-outline"
-              onClick={() => setClosure(true)}
-            >
-              <SlidersHorizontal size={16} /> Zárvatartás kezelése
-            </button>
-          )
-        }
-      />
-      <div className="stats-grid">
-        <div>
-          <span>Telefonos egyeztetésre vár</span>
-          <strong>
-            {requests.length.toString().padStart(2, "0")}
-            <Clock3 size={24} />
-          </strong>
-          <small>Ügyfél- és partnerkérések</small>
-        </div>
-        <div>
-          <span>Kiválasztott nap foglalásai</span>
-          <strong>
-            {store.appointments
-              .filter((a) => a.date === day && a.status !== "cancelled")
-              .length.toString()
-              .padStart(2, "0")}
-            <CalendarDays size={24} />
-          </strong>
-          <small>{dateLabel(day)}</small>
-        </div>
-        <div>
-          <span>{reception ? "Visszaigazolt időpontok" : "Demókapacitás"}</span>
-          <strong>
-            {(reception
-              ? store.appointments.filter(
-                  (a) => a.date === day && a.status === "confirmed",
-                ).length
-              : site.booking.capacity
-            )
-              .toString()
-              .padStart(2, "0")}
-            {reception ? <Check size={24} /> : <Wrench size={24} />}
-          </strong>
-          <small>
-            {reception
-              ? "Érkezésre váró ügyfelek a kiválasztott napon"
-              : `Egyszerre ${site.booking.capacity} időpont · ${site.hours.short}`}
-          </small>
-        </div>
-      </div>
-      <div className="list-toolbar">
-        <div className="tabs">
-          <button
-            className={filter === "day" ? "active" : ""}
-            onClick={() => setFilter("day")}
-          >
-            Napi naptár
-          </button>
-          <button
-            className={filter === "requests" ? "active" : ""}
-            onClick={() => setFilter("requests")}
-          >
-            Kérések <span>{requests.length}</span>
-          </button>
-          <button
-            className={filter === "all" ? "active" : ""}
-            onClick={() => setFilter("all")}
-          >
-            Összes
-          </button>
-        </div>
-        {filter === "day" && (
-          <div className="date-picker">
-            <button
-              className="icon-button"
-              aria-label="Előző nap"
-              onClick={() => setDay(addDays(day, -1))}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <input
-              type="date"
-              aria-label="Naptár napja"
-              value={day}
-              onChange={(e) => e.target.value && setDay(e.target.value)}
-            />
-            <button
-              className="icon-button"
-              aria-label="Következő nap"
-              onClick={() => setDay(addDays(day, 1))}
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        )}
-      </div>
-      {store.blockedDates.includes(day) && filter === "day" && (
-        <div className="info-box">
-          Ez a nap új foglalások előtt le van zárva. A korábbi időpontok
-          változatlanul megmaradnak.
-        </div>
-      )}
-      {list.length ? (
-        <div className="staff-table-wrap">
-          <table className="staff-table">
-            <thead>
-              <tr>
-                <th>Időpont</th>
-                <th>Ügyfél / jármű</th>
-                <th>Szolgáltatás</th>
-                <th>Állapot</th>
-                <th>
-                  <span className="sr-only">Művelet</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <strong>{a.time}</strong>
-                    <span>
-                      {dateLabel(a.date, { month: "short", day: "numeric" })}
-                    </span>
-                  </td>
-                  <td>
-                    <strong>
-                      {a.contact.name}
-                      {a.organization && <Building2 size={13} />}
-                    </strong>
-                    <span>
-                      {a.vehicle.plate} · {a.vehicle.make} {a.vehicle.model}
-                    </span>
-                  </td>
-                  <td>
-                    {services.find((s) => s.id === a.service)?.short}
-                    <span>{a.duration} perc</span>
-                  </td>
-                  <td>
-                    <span className={`status status-${a.status}`}>
-                      <span />
-                      {statusNames[a.status]}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="icon-button"
-                      aria-label={`${a.id} kezelése`}
-                      onClick={() => setSelected(a.id)}
-                    >
-                      <ArrowUpRight size={19} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <Empty
-          icon={<CalendarDays size={30} />}
-          title="Szabad a pálya."
-          description="Ebben a nézetben nincs foglalás. A vendégként vagy ügyfélként leadott kérések itt jelennek meg."
-        />
-      )}
-      {a && (
-        <Modal title="Foglalás kezelése" close={() => setSelected(null)}>
-          <div className="modal-form">
-            <div className="booking-detail-top">
-              <span className={`status status-${a.status}`}>
-                <span />
-                {statusNames[a.status]}
-              </span>
-              <code>{a.id}</code>
-            </div>
-            <h2 className="detail-title">{a.contact.name}</h2>
-            <div className="detail-grid">
-              <div>
-                <small>Szolgáltatás</small>
-                <strong>
-                  {services.find((s) => s.id === a.service)?.name}
-                </strong>
-                <span>
-                  {dateLabel(a.date)} · {a.time}
-                </span>
-              </div>
-              <div>
-                <small>Jármű</small>
-                <strong>
-                  {a.vehicle.make} {a.vehicle.model} ({a.vehicle.year})
-                </strong>
-                <span>{a.vehicle.plate}</span>
-              </div>
-              <div>
-                <small>Elérhetőség</small>
-                <strong>
-                  <a href={`tel:${a.contact.phone.replace(/[^+\d]/g, "")}`}>
-                    {a.contact.phone}
-                  </a>
-                </strong>
-                <a href={`mailto:${a.contact.email}`}>{a.contact.email}</a>
-                <span>{a.contact.city}</span>
-              </div>
-              <div>
-                <small>Típus</small>
-                <strong>
-                  {a.organization
-                    ? "Céges partner"
-                    : a.owner
-                      ? "Regisztrált ügyfél"
-                      : "Vendégfoglalás"}
-                </strong>
-                <span>{a.demo ? "Mintaidőpont" : "Helyi demófoglalás"}</span>
-              </div>
-            </div>
-            {a.note && <div className="hint-box">{a.note}</div>}
-            <ConfirmationNote appointment={a} internal />
-            <div className="button-row">
-              {a.status === "requested" && (
-                <button className="button" onClick={() => status("confirmed")}>
-                  <Check size={17} /> Visszaigazolás
-                </button>
-              )}
-              {operational && a.status === "confirmed" && (
-                <button className="button" onClick={() => status("progress")}>
-                  <Wrench size={17} /> Munka indítása
-                </button>
-              )}
-              {operational && a.status === "progress" && (
-                <button className="button" onClick={() => status("completed")}>
-                  <Check size={17} /> Elkészült
-                </button>
-              )}
-              {["requested", "confirmed"].includes(a.status) && (
-                <Link
-                  className="button button-outline"
-                  href={`/idopont?edit=${encodeURIComponent(a.id)}`}
-                >
-                  Új időpont egyeztetése <CalendarDays size={17} />
-                </Link>
-              )}
-              {["requested", "confirmed"].includes(a.status) && (
-                <button
-                  className="button button-outline danger-text"
-                  onClick={() => status("cancelled")}
-                >
-                  Lemondás / elutasítás
-                </button>
-              )}
-            </div>
-            <p className="demo-footnote">
-              Az állapotváltások helyben mentődnek; a demó nem küld értesítést
-              az ügyfélnek.
-            </p>
-          </div>
-        </Modal>
-      )}
-      {operational && closure && (
-        <Modal title="Zárvatartás kezelése" close={() => setClosure(false)}>
-          <div className="modal-form">
-            <p className="muted">
-              A lezárt napokra nem lehet új időpontot kérni. A meglévő
-              foglalásokat külön kell egyeztetni.
-            </p>
-            <form
-              className="closure-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const d = String(new FormData(e.currentTarget).get("date"));
-                if (
-                  mutate((s) => ({
-                    ...s,
-                    blockedDates: [...new Set([...s.blockedDates, d])],
-                  }))
-                )
-                  notify("A napot lezártuk új foglalások előtt.");
-              }}
-            >
-              <Field
-                name="date"
-                label="Lezárandó nap"
-                type="date"
-                min={today()}
-                required
-                defaultValue={day < today() ? today() : day}
-              />
-              <button className="button" type="submit">
-                Nap lezárása
-              </button>
-            </form>
-            <div className="closure-list">
-              {store.blockedDates.length ? (
-                [...store.blockedDates].sort().map((d) => (
-                  <div key={d}>
-                    <span>{dateLabel(d)}</span>
-                    <button
-                      className="text-button"
-                      onClick={() => {
-                        if (
-                          mutate((s) => ({
-                            ...s,
-                            blockedDates: s.blockedDates.filter((x) => x !== d),
-                          }))
-                        )
-                          notify("A nap újra foglalható.");
-                      }}
-                    >
-                      Újranyitás <X size={14} />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="muted small">Nincs külön lezárt nap.</p>
-              )}
-            </div>
-          </div>
         </Modal>
       )}
     </>

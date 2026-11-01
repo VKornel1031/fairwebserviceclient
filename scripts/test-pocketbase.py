@@ -42,6 +42,7 @@ with tempfile.TemporaryDirectory(prefix="fair-pb-tests-") as directory:
     shutil.copytree(Path(__file__).resolve().parents[1] / "pocketbase/pb_migrations", migrations)
     hooks = root / "pb_hooks"
     shutil.copytree(Path(__file__).resolve().parents[1] / "pocketbase/pb_hooks", hooks)
+    shutil.copy2(Path(__file__).resolve().parents[1] / "content/booking.json", hooks / "fairauto-booking.json")
     # Test-only: emulate a successful public creation response with internal fields redacted.
     # This temporary hook is never installed on the homelab or included in production pb_hooks.
     (hooks / "registration-response.pb.js").write_text('''

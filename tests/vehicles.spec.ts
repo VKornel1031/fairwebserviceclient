@@ -342,7 +342,9 @@ test("customer and partner screens save cars, edit and delete them, update summa
     .click();
   await expect(page.locator(".customer-car-row")).toContainText("Škoda Superb");
   expect(
-    await page.evaluate(() => localStorage.getItem("fairauto-prototype-v1")),
+    await page.evaluate(
+      () => localStorage.getItem("fairauto-prototype-v1") || "",
+    ),
   ).not.toContain("Superb");
   await page
     .locator(".sidebar")

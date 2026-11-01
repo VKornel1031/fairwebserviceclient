@@ -9,21 +9,83 @@ import {
   type ReactNode,
 } from "react";
 import {
-  initialStore,
-  readStore,
-  writeStore,
-  SESSION_KEY,
-  type Store,
-} from "@/lib/demo";
-import {
   accountRequest,
   type Account,
   type AccountCapabilities,
 } from "@/lib/accounts";
 import type { GarageSummary } from "@/lib/vehicles";
+import type { AppointmentSummary } from "@/lib/live-appointments";
+
+type Resource<T> = { summary: T | null; loading: boolean; error: string };
+function useResource<T extends { viewer?: string; ownerId?: string }>(
+  path: string,
+  viewer: string,
+  key: string,
+  enabled: boolean,
+  event: string,
+) {
+  const [state, setState] = useState<Resource<T> & { key: string }>({
+    key: "",
+    summary: null,
+    loading: false,
+    error: "",
+  });
+  const epoch = useRef(0);
+  const refresh = useCallback(async () => {
+    if (!enabled) return;
+    const revision = ++epoch.current;
+    setState((old) => ({
+      key,
+      summary: old.key === key ? old.summary : null,
+      loading: true,
+      error: "",
+    }));
+    try {
+      const result = await accountRequest<T>(path);
+      if (revision !== epoch.current) return;
+      if ((result.viewer ?? result.ownerId) !== viewer)
+        throw new Error(
+          "A bejelentkezett fiók megváltozott. Frissítsd az oldalt.",
+        );
+      setState({ key, summary: result, loading: false, error: "" });
+    } catch (error) {
+      if (revision === epoch.current)
+        setState({
+          key,
+          summary: null,
+          loading: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Az adatok most nem tölthetők be.",
+        });
+    }
+  }, [enabled, key, path, viewer]);
+  useEffect(() => {
+    void refresh();
+    const focus = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    const timer = setInterval(focus, 60000);
+    window.addEventListener("focus", focus);
+    window.addEventListener(event, focus);
+    return () => {
+      ++epoch.current;
+      clearInterval(timer);
+      window.removeEventListener("focus", focus);
+      window.removeEventListener(event, focus);
+    };
+  }, [refresh, event]);
+  return {
+    resource:
+      enabled && state.key === key
+        ? state
+        : { summary: null, loading: enabled, error: "" },
+    refresh,
+  };
+}
 
 type Context = {
-  store: Store;
   user: Account | null;
   capabilities: AccountCapabilities;
   ready: boolean;
@@ -31,88 +93,49 @@ type Context = {
   acceptAccount: (account: Account) => void;
   refreshSession: () => Promise<void>;
   logout: () => Promise<void>;
-  mutate: (fn: (s: Store) => Store) => boolean;
-  notify: (text: string) => void;
-  garage: { summary: GarageSummary | null; loading: boolean; error: string };
+  notify: (message: string) => void;
+  garage: Resource<GarageSummary>;
   refreshGarage: (broadcast?: boolean) => Promise<void>;
+  appointments: Resource<AppointmentSummary>;
+  refreshAppointments: () => Promise<void>;
+  appointmentsChanged: () => void;
 };
 const PortalContext = createContext<Context>(null!);
 export function usePortal() {
   return useContext(PortalContext);
 }
-
 export function Provider({
   children,
-  initializeDemo = true,
+  workspace = true,
 }: {
   children: ReactNode;
-  initializeDemo?: boolean;
+  workspace?: boolean;
 }) {
-  const [store, setStore] = useState<Store>(initialStore);
   const [user, setUser] = useState<Account | null>(null);
   const [capabilities, setCapabilities] = useState<AccountCapabilities>({
     registration: false,
   });
-  const [ready, setReady] = useState(false);
-  const [sessionError, setSessionError] = useState("");
-  const [toast, setToast] = useState("");
-  const epoch = useRef(0);
-  const channel = useRef<BroadcastChannel | null>(null);
-  const garageEpoch = useRef(0);
-  const [garage, setGarage] = useState({
-    ownerId: "",
-    summary: null as GarageSummary | null,
-    loading: false,
-    error: "",
-  });
-  const ownerId = user?.id || "";
-  const refreshGarage = useCallback(
-    async (broadcast = false) => {
-      if (!ownerId) return;
-      if (broadcast) channel.current?.postMessage("vehicles");
-      const revision = ++garageEpoch.current;
-      setGarage((current) => ({
-        ownerId,
-        summary: current.ownerId === ownerId ? current.summary : null,
-        loading: true,
-        error: "",
-      }));
-      try {
-        const summary = await accountRequest<GarageSummary>(
-          "/api/vehicles/summary",
-        );
-        if (revision === garageEpoch.current && summary.ownerId === ownerId)
-          setGarage({ ownerId, summary, loading: false, error: "" });
-      } catch (error) {
-        if (revision === garageEpoch.current)
-          setGarage({
-            ownerId,
-            summary: null,
-            loading: false,
-            error:
-              error instanceof Error
-                ? error.message
-                : "A járművek most nem tölthetők be.",
-          });
-      }
-    },
-    [ownerId],
+  const [ready, setReady] = useState(false),
+    [sessionError, setSessionError] = useState(""),
+    [toast, setToast] = useState("");
+  const epoch = useRef(0),
+    channel = useRef<BroadcastChannel | null>(null);
+  const viewer = user?.id || "guest",
+    key = viewer + ":" + (user?.role || "guest");
+  const garage = useResource<GarageSummary>(
+    "/api/vehicles/summary",
+    viewer,
+    key,
+    workspace && !!user,
+    "fairauto-vehicles",
   );
-  useEffect(() => {
-    void refreshGarage();
-    const refresh = () => {
-      if (document.visibilityState === "visible") void refreshGarage();
-    };
-    window.addEventListener("focus", refresh);
-    window.addEventListener("fairauto-vehicles", refresh);
-    const timer = setInterval(refresh, 60_000);
-    return () => {
-      ++garageEpoch.current;
-      clearInterval(timer);
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("fairauto-vehicles", refresh);
-    };
-  }, [refreshGarage]);
+  const appointments = useResource<AppointmentSummary>(
+    "/api/appointments/summary",
+    viewer,
+    key,
+    workspace && ready,
+    "fairauto-appointments",
+  );
   const refreshSession = useCallback(async () => {
     const revision = ++epoch.current;
     try {
@@ -137,21 +160,10 @@ export function Provider({
     }
   }, []);
   useEffect(() => {
-    // Old local demo identities can never establish a real account session.
     try {
-      localStorage.removeItem(SESSION_KEY);
-      const saved = readStore();
-      if (initializeDemo) writeStore(saved);
-      setStore(saved);
-    } catch {
-      setToast("A böngésző helyi demótárhelye nem érhető el.");
-    }
+      localStorage.removeItem("fairauto-session-v1");
+    } catch {}
     void refreshSession();
-    const sync = () => {
-      try {
-        setStore(readStore());
-      } catch {}
-    };
     const focus = () => {
       if (document.visibilityState === "visible") void refreshSession();
     };
@@ -163,15 +175,13 @@ export function Provider({
     if (typeof BroadcastChannel !== "undefined") {
       channel.current = new BroadcastChannel("fairauto-account");
       channel.current.onmessage = (event) => {
-        if (event.data === "vehicles")
-          window.dispatchEvent(new Event("fairauto-vehicles"));
+        if (event.data === "vehicles" || event.data === "appointments")
+          window.dispatchEvent(new Event("fairauto-" + event.data));
         else void refreshSession();
       };
     }
-    const timer = setInterval(focus, 60_000);
+    const timer = setInterval(focus, 60000);
     window.addEventListener("focus", focus);
-    window.addEventListener("storage", sync);
-    window.addEventListener("fairauto-store", sync);
     window.addEventListener("fairauto-session-expired", expired);
     return () => {
       ++epoch.current;
@@ -179,11 +189,9 @@ export function Provider({
       channel.current?.close();
       channel.current = null;
       window.removeEventListener("focus", focus);
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("fairauto-store", sync);
       window.removeEventListener("fairauto-session-expired", expired);
     };
-  }, [initializeDemo, refreshSession]);
+  }, [refreshSession]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 6000);
@@ -203,61 +211,30 @@ export function Provider({
     setSessionError("");
     channel.current?.postMessage("changed");
   }
-  function mutate(fn: (s: Store) => Store) {
-    if (user) {
-      setToast(
-        "A foglalások adatbázisos kezelése a következő lépés. A járműveid a Járművek oldalon, fiókadataid a Saját fiók oldalon menthetők.",
-      );
-      return false;
-    }
-    try {
-      const next = fn(readStore());
-      writeStore(next);
-      setStore(next);
-      return true;
-    } catch (error) {
-      setToast(
-        error instanceof Error
-          ? error.message
-          : "Nem sikerült menteni a módosítást.",
-      );
-      return false;
-    }
+  async function refreshGarage(broadcast = false) {
+    if (broadcast) channel.current?.postMessage("vehicles");
+    await garage.refresh();
+  }
+  function appointmentsChanged() {
+    window.dispatchEvent(new Event("fairauto-appointments"));
+    channel.current?.postMessage("appointments");
   }
   return (
     <PortalContext.Provider
       value={{
-        store: user
-          ? {
-              version: 1,
-              rolesRevision: 2,
-              users: [user],
-              vehicles: [],
-              appointments: [],
-              blockedDates: [],
-              companies: {
-                [user.id]: {
-                  name: user.companyName,
-                  tax: user.companyTax,
-                  city: user.companyCity,
-                },
-              },
-            }
-          : store,
         user,
-        ready,
         capabilities,
+        ready,
         sessionError,
         acceptAccount,
         refreshSession,
         logout,
-        mutate,
         notify: setToast,
-        garage:
-          user && garage.ownerId === user.id
-            ? garage
-            : { summary: null, loading: !!user, error: "" },
+        garage: garage.resource,
         refreshGarage,
+        appointments: appointments.resource,
+        refreshAppointments: appointments.refresh,
+        appointmentsChanged,
       }}
     >
       {children}

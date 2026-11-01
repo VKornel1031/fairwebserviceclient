@@ -53,7 +53,7 @@ export type LegalAcknowledgement = {
   termsVersion: string;
   privacyNoticeVersion: string;
   acceptedAt: string;
-  mode: "demo";
+  mode: "demo" | "live";
 };
 export function legalAcknowledgement(): LegalAcknowledgement {
   return {
