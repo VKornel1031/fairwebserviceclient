@@ -1,14 +1,33 @@
 import type booking from "@/content/booking.json";
-import type { Appointment } from "./demo";
+import type { Appointment, Profile } from "./demo";
 import { accountRequest } from "./accounts";
 export type BookingConfiguration = typeof booking;
-export type BookingContext = { config: BookingConfiguration; viewer: string };
+export type BookingContext = {
+  config: BookingConfiguration;
+  viewer: string;
+  prefill: { contact: Profile; companyName: string } | null;
+};
+export type PriceItem = {
+  kind: "part" | "labour" | "other";
+  description: string;
+  quantity: number;
+  unitPriceHuf: number;
+};
+export type AppointmentPrice = {
+  mode: "total" | "itemized";
+  totalHuf: number;
+  items: PriceItem[];
+  note: string;
+  updatedAt: string;
+};
 export type LiveAppointment = Appointment & {
   reference: string;
   revision: number;
   serviceName: string;
   companyName: string;
   priceLabel: string;
+  price: AppointmentPrice | null;
+  vehicle: Appointment["vehicle"] & { vin: string };
 };
 export type AppointmentPage = {
   items: LiveAppointment[];

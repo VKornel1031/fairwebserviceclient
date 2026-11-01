@@ -1,6 +1,10 @@
 import type { Vehicle } from "./demo";
 
-export type SavedVehicle = Vehicle & { ownerName: string; updated: string };
+export type SavedVehicle = Vehicle & {
+  vin: string;
+  ownerName: string;
+  updated: string;
+};
 export type VehicleList = {
   items: SavedVehicle[];
   page: number;

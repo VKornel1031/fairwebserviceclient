@@ -47,7 +47,7 @@ const blankContact: Profile = {
   city: "",
   reminders: true,
 };
-const blankCar = { plate: "", make: "", model: "", year: "" };
+const blankCar = { plate: "", make: "", model: "", year: "", vin: "" };
 export default function Booking() {
   const {
     user,
@@ -126,7 +126,7 @@ export default function Booking() {
           setEditRevision(a.revision);
           setService(a.service);
           setCar(a.vehicle);
-          setSavedCar("");
+          setSavedCar("manual");
           setContact(a.contact);
           setNote(a.note);
           setOrganization(a.organization);
@@ -134,6 +134,8 @@ export default function Booking() {
           setStep(1);
           setMonth(a.date.slice(0, 7));
         } else {
+          setContact(result.prefill?.contact || blankContact);
+          setCompanyName(result.prefill?.companyName || "");
           const sid = params.get("service");
           if (result.config.services.some((item) => item.id === sid))
             setService(sid!);
@@ -165,7 +167,7 @@ export default function Booking() {
     )
       return;
     const preferred = garage.summary?.defaultVehicle;
-    if (preferred) {
+    if (preferred && garage.summary?.totalItems === 1) {
       setCar(preferred);
       setSavedCar(preferred.id);
     }
@@ -203,7 +205,7 @@ export default function Booking() {
   }
   function changeCar(next: typeof blankCar) {
     vehicleTouched.current = true;
-    setSavedCar("");
+    setSavedCar("manual");
     setCar(next);
   }
   function next() {
@@ -239,8 +241,9 @@ export default function Booking() {
         make: car.make,
         model: car.model,
         year: car.year,
+        vin: car.vin,
       },
-      vehicleId: savedCar || undefined,
+      vehicleId: savedCar && savedCar !== "manual" ? savedCar : undefined,
       note,
       acceptTerms: true,
       termsVersion: context.config.termsVersion,
@@ -409,6 +412,14 @@ export default function Booking() {
                 setConsent(false);
                 setNote("");
                 setError("");
+                setContact(context.prefill?.contact || blankContact);
+                const onlyCar =
+                  user && !coordinator && garage.summary?.totalItems === 1
+                    ? garage.summary.defaultVehicle
+                    : null;
+                vehicleTouched.current = false;
+                setCar(onlyCar || blankCar);
+                setSavedCar(onlyCar?.id || "");
                 window.history.replaceState(null, "", "/idopont");
               }}
             >
@@ -652,14 +663,19 @@ export default function Booking() {
             </>
           )}
           {step === 2 && (
-            <form onSubmit={details}>
+            <form
+              onSubmit={details}
+              autoComplete={user && !coordinator ? "on" : "off"}
+            >
               <div className="panel-title">
                 <span className="step-number">03 / 04</span>
                 <h2>Hogyan érhetünk el?</h2>
                 <p>
-                  {user
-                    ? "Az elmentett adataidat előre kitöltöttük."
-                    : "Fiók nélkül is kérhetsz időpontot. Add meg az egyeztetéshez használható elérhetőségeidet."}
+                  {coordinator
+                    ? "Add meg az ügyfél kapcsolattartási adatait."
+                    : user
+                      ? "Az elmentett adataidat előre kitöltöttük."
+                      : "Fiók nélkül is kérhetsz időpontot. Add meg az egyeztetéshez használható elérhetőségeidet."}
                 </p>
               </div>
               {!user && (
@@ -675,7 +691,7 @@ export default function Booking() {
                 <Field
                   label="Teljes név"
                   required
-                  autoComplete="name"
+                  autoComplete={user && !coordinator ? "name" : "off"}
                   maxLength={100}
                   value={contact.name}
                   placeholder="pl. Kovács Péter"
@@ -688,7 +704,7 @@ export default function Booking() {
                   label="Mobiltelefonszám"
                   required
                   type="tel"
-                  autoComplete="tel"
+                  autoComplete={user && !coordinator ? "tel" : "off"}
                   maxLength={25}
                   minLength={7}
                   pattern="[+0-9 \(\)\-]{7,25}"
@@ -703,7 +719,7 @@ export default function Booking() {
                   label="E-mail-cím"
                   required
                   type="email"
-                  autoComplete="email"
+                  autoComplete={user && !coordinator ? "email" : "off"}
                   maxLength={254}
                   value={contact.email}
                   placeholder="peter@example.com"
@@ -714,7 +730,7 @@ export default function Booking() {
                 <Field
                   label="Település"
                   required
-                  autoComplete="address-level2"
+                  autoComplete={user && !coordinator ? "address-level2" : "off"}
                   maxLength={100}
                   pattern=".*\S.*"
                   value={contact.city}
@@ -756,7 +772,7 @@ export default function Booking() {
                   selected={savedCar}
                   onChange={(vehicle) => {
                     vehicleTouched.current = true;
-                    setSavedCar(vehicle?.id || "");
+                    setSavedCar(vehicle?.id || "manual");
                     setCar(vehicle || blankCar);
                   }}
                 />
@@ -802,6 +818,23 @@ export default function Booking() {
                   value={car.model}
                   placeholder="Golf VII"
                   onChange={(e) => changeCar({ ...car, model: e.target.value })}
+                />
+                <Field
+                  label="Alvázszám (VIN)"
+                  required
+                  wide
+                  minLength={17}
+                  maxLength={17}
+                  pattern="[A-HJ-NPR-Z0-9]{17}"
+                  autoComplete="off"
+                  hint="17 karakter, I, O és Q nélkül. Az alvázszám a forgalmi engedély E mezőjében található."
+                  value={car.vin}
+                  onChange={(event) =>
+                    changeCar({
+                      ...car,
+                      vin: event.target.value.toUpperCase().replace(/\s/g, ""),
+                    })
+                  }
                 />
                 <label className="field field-wide">
                   <span>

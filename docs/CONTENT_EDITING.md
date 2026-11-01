@@ -23,7 +23,7 @@ A nyitvatartási feliratokat a `site.ts` fájlban is igazítsd a foglalási ór�
 
 ## `content/legal.ts` – a jogi oldalak szövege
 
-Az alapdokumentumok minden bekezdése, felsorolása és adatblokkja itt található. A fogyasztói tájékoztató külön a `content/consumer.ts`, a letölthető nyilatkozatok szövege a `content/consumer-forms.ts` fájlban szerkeszthető. A szöveg a PocketBase-fiókkezelést, mentett autókat, időpontkéréseket, telefonos megerősítést és vendég-hozzáférési sütit írja le. A levelezés még nincs bekötve.
+Az alapdokumentumok minden bekezdése, felsorolása és adatblokkja itt található. A fogyasztói tájékoztató külön a `content/consumer.ts`, a letölthető nyilatkozatok szövege a `content/consumer-forms.ts` fájlban szerkeszthető. A szöveg a PocketBase-fiókkezelést, mentett autókat, időpontkéréseket, telefonos megerősítést és vendég-hozzáférési sütit írja le. Az opcionális időpontértesítés alapból ki van kapcsolva; a helyi `fairauto-mail.json` kapcsolóval indítható, működő levélkiszolgáló ellenőrzése után. Az árkezelés és levélbeállítás részletei: [APPOINTMENT_PRICES_AND_MAIL.md](./APPOINTMENT_PRICES_AND_MAIL.md).
 
 Útvonalak:
 

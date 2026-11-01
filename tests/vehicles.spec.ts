@@ -8,6 +8,7 @@ const car = {
   make: "Toyota",
   model: "Corolla",
   year: "2020",
+  vin: "WVWZZZ1JZXW000001",
 };
 async function login(api: APIRequestContext, email: string) {
   const result = await api.post("/api/auth/login", {
@@ -59,6 +60,7 @@ test("saved cars persist across sessions; duplicates, defaults and default delet
     owner: user.id,
     plate: "ABCD123",
     year: "2020",
+    vin: car.vin,
   });
   expect(
     (
@@ -520,4 +522,51 @@ test("changing accounts never shows the previous account's cars while the new ga
     "Mentsd el a járműved",
   );
   await other.dispose();
+});
+
+test("VIN can be added to an older saved record, survives edits, and malformed values are rejected by PocketBase too", async ({
+  request,
+}) => {
+  const { email } = await customer(request);
+  const legacy = await request.post("/api/vehicles", {
+    headers,
+    data: { plate: "VIN123", make: "Ford", model: "Focus", year: 2018 },
+  });
+  expect(legacy.status()).toBe(201);
+  const id = (await legacy.json()).vehicle.id;
+  let response = await request.patch(`/api/vehicles/${id}`, {
+    headers,
+    data: { ...car, plate: "VIN123", vin: "wvwzzz1jzxw000001" },
+  });
+  expect(response.status()).toBe(200);
+  expect((await response.json()).vehicle.vin).toBe(car.vin);
+  const { vin: _, ...withoutVin } = car;
+  response = await request.patch(`/api/vehicles/${id}`, {
+    headers,
+    data: { ...withoutVin, plate: "VIN123", model: "Updated" },
+  });
+  expect((await response.json()).vehicle.vin).toBe(car.vin);
+  const results = await (
+    await request.get("/api/vehicles?q=wvwzzz1jzxw000001")
+  ).json();
+  expect(results.items[0].vin).toBe(car.vin);
+  const auth = await native(request, email);
+  for (const vin of ["TOOSHORT", "WVWZZZ1JZXW00000I", "WVWZZZ1JZXW00000Q"]) {
+    expect(
+      (
+        await request.patch(`/api/vehicles/${id}`, {
+          headers,
+          data: { ...car, plate: "VIN123", vin },
+        })
+      ).status(),
+    ).toBe(400);
+    expect(
+      (
+        await request.patch(
+          `${backend}/api/collections/vehicles/records/${id}`,
+          { headers: auth, data: { vin } },
+        )
+      ).status(),
+    ).toBe(400);
+  }
 });

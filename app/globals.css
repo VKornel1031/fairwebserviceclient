@@ -3913,3 +3913,78 @@ select {
   overflow-wrap: anywhere;
   min-width: 0;
 }
+.appointment-price {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 22px;
+}
+.appointment-price h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.price-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+}
+.price-total > strong {
+  font-size: 26px;
+  letter-spacing: -1px;
+}
+.price-total > span,
+.price-line span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.price-lines {
+  margin: 16px 0;
+}
+.price-line {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+  font-size: 13px;
+}
+.price-line > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.price-line > strong {
+  flex-shrink: 0;
+}
+.price-line span {
+  display: block;
+  margin-top: 5px;
+}
+.price-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.price-editor {
+  margin-top: 20px;
+}
+.price-editor fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+.price-item-editor {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+@media (max-width: 480px) {
+  .price-item-editor .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

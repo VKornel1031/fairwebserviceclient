@@ -34,6 +34,7 @@ export type Vehicle = {
   model: string;
   year: string;
   isDefault: boolean;
+  vin?: string;
 };
 export type Status =
   "requested" | "confirmed" | "progress" | "completed" | "cancelled";

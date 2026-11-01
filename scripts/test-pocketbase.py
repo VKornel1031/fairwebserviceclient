@@ -43,6 +43,38 @@ with tempfile.TemporaryDirectory(prefix="fair-pb-tests-") as directory:
     hooks = root / "pb_hooks"
     shutil.copytree(Path(__file__).resolve().parents[1] / "pocketbase/pb_hooks", hooks)
     shutil.copy2(Path(__file__).resolve().parents[1] / "content/booking.json", hooks / "fairauto-booking.json")
+    # Optional notifications are enabled only with a test-only mail interceptor: no external delivery.
+    mail_config = json.loads((Path(__file__).resolve().parents[1] / "pocketbase/mail.example.json").read_text())
+    mail_config["enabled"] = True
+    (hooks / "fairauto-mail.json").write_text(json.dumps(mail_config))
+    (migrations / "1793512801_test_mail_capture.js").write_text('''
+migrate((app) => {
+  const c = new Collection({ name: "test_mail_capture", type: "base" });
+  c.fields.add(new TextField({ name: "recipient", max: 254 }));
+  c.fields.add(new TextField({ name: "subject", max: 500 }));
+  c.fields.add(new TextField({ name: "html", max: 50000 }));
+  app.save(c);
+}, () => {});
+''')
+    (hooks / "mail-interceptor.pb.js").write_text('''
+onMailerSend((e) => {
+  if ($app.store().get("fairauto_test_mail_failure")) throw new Error("Simulated transport failure");
+  const r = new Record($app.findCollectionByNameOrId("test_mail_capture"));
+  r.set("recipient", e.message.to[0].address); r.set("subject", e.message.subject); r.set("html", e.message.html);
+  $app.save(r);
+  // Intentionally do not call e.next(): this fixture never sends email.
+});
+routerAdd("POST", "/api/fairauto-test/mail", (e) => {
+  const input = e.requestInfo().body;
+  $app.store().set("fairauto_test_mail_failure", input.fail === true);
+  if (input.clear === true) {
+    $app.db().newQuery("DELETE FROM appointment_mail").execute();
+    $app.db().newQuery("DELETE FROM test_mail_capture").execute();
+    return e.json(200, { cleared: true });
+  }
+  return e.json(200, require(__hooks + "/fairauto-mail.js").process($app));
+}, $apis.requireSuperuserAuth());
+''')
     # Test-only: emulate a successful public creation response with internal fields redacted.
     # This temporary hook is never installed on the homelab or included in production pb_hooks.
     (hooks / "registration-response.pb.js").write_text('''

@@ -35,6 +35,7 @@ function vehicle(record: RecordData, defaultId = ""): SavedVehicle {
     make: field("make"),
     model: field("model"),
     year: String(record.year ?? ""),
+    vin: field("vin"),
     isDefault: record.id === defaultId,
     updated: field("updated"),
     ownerName:
@@ -124,7 +125,7 @@ export async function listVehicles(request: NextRequest) {
   let filter =
     scope === "all" ? 'id != ""' : `owner = ${filterValue(session.user.id)}`;
   if (query)
-    filter += ` && (plate ~ ${filterValue(normalisePlate(query))} || make ~ ${filterValue(query)} || model ~ ${filterValue(query)})`;
+    filter += ` && (plate ~ ${filterValue(normalisePlate(query))} || vin ~ ${filterValue(normalisePlate(query))} || make ~ ${filterValue(query)} || model ~ ${filterValue(query)})`;
   const [result, summary] = await Promise.all([
     list(session, filter, page, 24, scope === "all"),
     ownSummary(session),
@@ -161,7 +162,7 @@ async function editable(session: Session, id: string) {
   return record;
 }
 async function details(request: NextRequest) {
-  const input = await body(request, ["plate", "make", "model", "year"]);
+  const input = await body(request, ["plate", "make", "model", "year", "vin"]);
   const plate = normalisePlate(text(input, "plate", 30, 3));
   const make = text(input, "make", 60, 1),
     model = text(input, "model", 60, 1);
@@ -177,7 +178,16 @@ async function details(request: NextRequest) {
     year > new Date().getFullYear() + 1
   )
     throw new AccountError(400, "Ellenőrizd a rendszámot és a gyártási évet.");
-  return { plate, make, model, year };
+  const vin =
+    input.vin === undefined
+      ? undefined
+      : text(input, "vin", 30).toUpperCase().replace(/\s/g, "");
+  if (vin && !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin))
+    throw new AccountError(
+      400,
+      "Az alvázszám 17 betű vagy szám; az I, O és Q betű nem használható.",
+    );
+  return { plate, make, model, year, ...(vin !== undefined ? { vin } : {}) };
 }
 async function writeVehicle(
   session: Session,

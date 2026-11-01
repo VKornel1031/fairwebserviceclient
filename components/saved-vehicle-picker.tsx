@@ -20,6 +20,7 @@ export default function SavedVehiclePicker({
   const [query, setQuery] = useState(""),
     [search, setSearch] = useState(""),
     [page, setPage] = useState(1),
+    [chosen, setChosen] = useState<SavedVehicle | null>(null),
     [data, setData] = useState<VehicleList | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -57,6 +58,12 @@ export default function SavedVehiclePicker({
   const items = [...(data?.items || [])];
   if (defaultCar && !items.some((car) => car.id === defaultCar.id))
     items.unshift(defaultCar);
+  if (
+    chosen &&
+    chosen.id === selected &&
+    !items.some((car) => car.id === chosen.id)
+  )
+    items.unshift(chosen);
   return (
     <div className="saved-vehicle-picker">
       <label className="field">
@@ -67,11 +74,17 @@ export default function SavedVehiclePicker({
         </span>
         <select
           value={selected}
-          onChange={(event) =>
-            onChange(items.find((car) => car.id === event.target.value) || null)
-          }
+          onChange={(event) => {
+            const car =
+              items.find((car) => car.id === event.target.value) || null;
+            setChosen(car);
+            onChange(car);
+          }}
         >
-          <option value="">Másik jármű adatait adom meg</option>
+          <option value="" disabled>
+            Válassz járművet
+          </option>
+          <option value="manual">Másik jármű adatait adom meg</option>
           {items.map((car) => (
             <option key={car.id} value={car.id}>
               {car.make} {car.model} · {displayPlate(car.plate)}
@@ -79,6 +92,11 @@ export default function SavedVehiclePicker({
           ))}
         </select>
       </label>
+      {garage.summary?.totalItems === 1 && selected === defaultCar?.id && (
+        <p className="small muted">
+          Az egyetlen mentett járműved adatait kitöltöttük.
+        </p>
+      )}
       {(garage.summary?.totalItems || 0) > 24 && (
         <>
           <label className="search-input">
@@ -86,7 +104,7 @@ export default function SavedVehiclePicker({
             <input
               aria-label="Mentett járművek keresése"
               maxLength={100}
-              placeholder="Rendszám, márka vagy modell"
+              placeholder="Rendszám, VIN, márka vagy modell"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {

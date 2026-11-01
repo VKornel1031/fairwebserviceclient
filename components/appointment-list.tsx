@@ -38,6 +38,7 @@ import { usePortal } from "./provider";
 import { Empty, Field } from "./fields";
 import { Modal, PageHeading } from "./ui";
 import ConfirmationNote from "./confirmation-note";
+import AppointmentPrice from "./appointment-price";
 
 export default function AppointmentList({
   mode = "own",
@@ -646,6 +647,7 @@ function AppointmentModal({
                 <span>
                   {a.vehicle.plate} · {a.vehicle.year}
                 </span>
+                {a.vehicle.vin && <span>VIN: {a.vehicle.vin}</span>}
               </div>
               <div>
                 <small>Kapcsolattartó</small>
@@ -671,6 +673,19 @@ function AppointmentModal({
             </div>
             {a.note && <div className="hint-box">{a.note}</div>}
             <ConfirmationNote appointment={a} internal={internal} />
+            <AppointmentPrice
+              appointment={a}
+              editable={internal}
+              disabled={busy}
+              onConflict={() => void refresh()}
+              onSaved={(appointment) => {
+                ++epoch.current;
+                setDetail((old) => (old ? { ...old, appointment } : old));
+                appointmentsChanged();
+                notify("Az árat elmentettük.");
+                void refresh();
+              }}
+            />
             <div className="button-row">
               {internal && a.status === "requested" && (
                 <button
@@ -729,11 +744,13 @@ function AppointmentModal({
                 {detail.history.map((item, index) => (
                   <li key={index}>
                     <strong>
-                      {item.action === "rescheduled"
-                        ? "Új időpont kérve"
-                        : item.action === "requested"
-                          ? "Kérés rögzítve"
-                          : statusNames[item.action as Status] || item.action}
+                      {item.action === "price_updated"
+                        ? "Ár frissítve"
+                        : item.action === "rescheduled"
+                          ? "Új időpont kérve"
+                          : item.action === "requested"
+                            ? "Kérés rögzítve"
+                            : statusNames[item.action as Status] || item.action}
                     </strong>
                     <span>
                       {new Date(item.at).toLocaleString("hu-HU", {

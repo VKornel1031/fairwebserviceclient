@@ -22,11 +22,13 @@ Saved cars additionally need the single migration in [`docs/SAVED_VEHICLES.md`](
 
 ## Appointments
 
-Guest, customer and partner requests now persist in PocketBase. Saved contact details and cars prefill the booking form. Customers manage their own requests; reception staff confirm by phone, cancel or reschedule, and managers/admins also start and complete work, manage closures and view real reports.
+Guest, customer and partner requests now persist in PocketBase. Saved contact details prefill the booking form. A single saved car fills automatically; multiple cars require a choice. New guest forms stay blank. Accounts can save a VIN with each car; every new appointment requires it. Customers manage their own requests; reception staff confirm by phone, cancel or reschedule, and managers/admins also start and complete work, manage closures and view real reports.
 
 **Pending requests do not reserve capacity. Phone confirmation reserves it atomically.** Concurrent confirmations cannot exceed workshop capacity. Rescheduling returns a request to awaiting confirmation. Availability, access rules and status changes are enforced in PocketBase, including direct API calls.
 
-Install the migration and three hook/config files using the **copy-and-paste, in-place CasaOS commands in [docs/APPOINTMENTS.md](./docs/APPOINTMENTS.md)**. They use the existing running container and `/pocketbase/pb_data`; no data redirection, new container, credentials or environment variables are required. Until that backend installation is complete, the portal shows a setup message instead of saving fake local requests.
+Staff can add a gross HUF estimate after confirmation, either a single total or an itemized parts/labour breakdown. Customers and partners see it in their appointment details. Rescheduling clears the current estimate.
+
+Install the migrations and hook/config files using the **copy-and-paste, in-place CasaOS commands in [docs/APPOINTMENTS.md](./docs/APPOINTMENTS.md)**. They use the existing running container and `/pocketbase/pb_data`; no data redirection, new container, credentials or environment variables are required. Until that backend installation is complete, the portal shows a setup message instead of saving fake local requests.
 
 ## Run locally
 
@@ -51,9 +53,9 @@ Production authentication requires HTTPS and `AUTH_APP_ORIGIN` matching the depl
 
 **Real:** account/profile management, role assignment, private garages, guest/customer/partner appointment requests, phone confirmation, workshop status tracking, cancellation/rescheduling, history, closures and aggregate reports. Guest access uses an HttpOnly capability cookie; account access follows the stored PocketBase role. Requests and personal data are not kept in localStorage.
 
-**Remaining:** shared company membership across multiple accounts, email delivery/recovery, repair contracts, work orders and invoicing. A partner's fleet currently belongs to that individual account. There is no hard-delete control for appointment history.
+**Remaining:** shared company membership across multiple accounts, verified/reliable production mail setup and account email recovery, repair contracts, work orders and invoicing. A partner's fleet currently belongs to that individual account. There is no hard-delete control for appointment history.
 
-There is no SMTP, email preview, verification mail or email password recovery. For now, an admin can reset another user's password after independently checking their identity. Future mail requirements remain in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
+Optional appointment notifications use a durable PocketBase outbox and its native mail client; delivery defaults to **off**. Unix Sendmail setup and the CasaOS localhost fix are in [docs/LOCAL_SENDMAIL.md](./docs/LOCAL_SENDMAIL.md); activation and price details are in [docs/APPOINTMENT_PRICES_AND_MAIL.md](./docs/APPOINTMENT_PRICES_AND_MAIL.md). There is no email preview, verification mail or email password recovery. For now, an admin can reset another user's password after independently checking their identity. Mail workflow and remaining operator requirements are in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
 
 ## Checks
 
@@ -63,11 +65,12 @@ npm run build
 npm run format:check
 PB_BINARY=/path/to/pocketbase npm test
 PB_BINARY=/path/to/pocketbase npm run test:migration
+python3 scripts/check-local-sendmail.py
 ```
 
 Integration tests require Python 3, a separately installed PocketBase executable (tested with **0.26.6**) and Chromium (`/usr/bin/chromium`, or set `CHROMIUM_PATH`). They create a disposable SQLite database on **127.0.0.1:3101**, apply the real migrations and hooks, seed only test accounts and start a separate Next server on **3100**. They never reuse a running app or send test credentials to the homelab. Test data is removed when the server exits. Never run the test seeding script against a company database.
 
-Coverage includes account registration/login/profile persistence, cookie isolation, native PocketBase permissions, CSRF and input rejection, admin CRUD, role changes, suspended/deleted access, email/password updates, protected admin handling and login throttling. Saved-car persistence, owner isolation, native owner/default forgery rejection, defaults, duplicate plates, fleet pagination/search, concurrent selections and account-deletion cleanup are tested against a disposable PocketBase. Appointment coverage includes native API write restrictions, ownership, guest expiry, idempotent retries after later edits, concurrent confirmations, duration overlaps, closures, legal acceptance, saved-car prefill, staff UI actions, rescheduling, calendar downloads and recovering from a slot becoming full during checkout. Legal links, home navigation, mobile layout and themes remain covered.
+Coverage includes account registration/login/profile persistence, cookie isolation, native PocketBase permissions, CSRF and input rejection, admin CRUD, role changes, suspended/deleted access, email/password updates, protected admin handling and login throttling. Saved-car persistence, owner isolation, native owner/default forgery rejection, defaults, duplicate plates, fleet pagination/search, concurrent selections and account-deletion cleanup are tested against a disposable PocketBase. Appointment coverage includes native API write restrictions, ownership, guest expiry, idempotent retries after later edits, concurrent confirmations, duration overlaps, closures, legal acceptance, saved-car prefill, staff UI actions, rescheduling, calendar downloads and recovering from a slot becoming full during checkout. VIN persistence and validation, pricing permissions, computed totals, edit conflicts, multi-car selection, blank guest forms and durable mail retries are covered. Mail tests intercept messages locally and never deliver them to a real recipient. Legal links, home navigation, mobile layout and themes remain covered.
 
 ## Editable content and legal documents
 
@@ -77,6 +80,6 @@ The documents describe real PocketBase accounts, vehicles, appointment storage, 
 
 ## Next integration steps
 
-PocketBase manages SQLite internally. Company membership across multiple accounts and server-side notification jobs remain future work. Browser storage and client-side permissions never authorize appointment operations.
+PocketBase manages SQLite internally. Company membership across multiple accounts, scheduled reminders and account email recovery remain future work. Browser storage and client-side permissions never authorize appointment operations.
 
 Before company production use, upgrade the old homelab PocketBase, enable backend/edge rate limits, protect superuser routes, test backup restoration and complete the legal/operator settings. See the security boundaries in the setup guide.

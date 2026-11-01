@@ -44,7 +44,7 @@ export const legalDocuments: LegalDocument[] = [
         title: "A portál jelenlegi működése",
         paragraphs: [
           "A regisztráció, bejelentkezés, profilmódosítás, mentett járművek és adminisztrátori fiókkezelés a szerviz PocketBase-adatbázisával működik, a szükséges migrációk telepítése után. Az adatokat a webhely szervere továbbítja a homelabon működő PocketBase felé, HTTPS-kapcsolaton keresztül.",
-          "A vendégként, ügyfélként vagy partnerként leadott időpontkérés a szerviz adatbázisába kerül. A kérés a munkafelvevő, vezető vagy adminisztrátor telefonos visszaigazolásával foglal műhelykapacitást. Jelenleg nincs automatikus e-mail-küldés, címellenőrzés vagy e-mailes jelszó-visszaállítás.",
+          "A vendégként, ügyfélként vagy partnerként leadott időpontkérés a szerviz adatbázisába kerül. A kérés a munkafelvevő, vezető vagy adminisztrátor telefonos visszaigazolásával foglal műhelykapacitást. Az üzemeltető által külön bekapcsolható időpontértesítések alapértelmezetten ki vannak kapcsolva. Címellenőrzés és e-mailes jelszó-visszaállítás továbbra nincs.",
         ],
       },
       {
@@ -52,8 +52,9 @@ export const legalDocuments: LegalDocument[] = [
         title: "Milyen adatokat kezel a portál?",
         items: [
           "Fiók: név, e-mail-cím, opcionális mobiltelefonszám és település, szerepkör, aktív/letiltott állapot és fiókazonosító. Az ÁSZF elfogadott verzióját és időpontját a szerver rögzíti.",
-          "Mentett jármű: rendszám, márka, modell, gyártási év, tulajdonos fiókazonosítója, létrehozási és módosítási időpont, valamint az alapértelmezett jármű kiválasztása. A listát a saját fiókod és az adminisztrátor kezelheti; más ügyfél, partner, munkafelvevő vagy vezető a saját fiókjához tartozó járműveket kezeli.",
-          "Időpontkérés: szolgáltatás és annak mentett neve, becsült időtartam és esetleges árjelzés, nap, időpont, megjegyzés és állapot; kapcsolattartási és járműadatok másolata; partnernél cégnév. A szerver rögzíti az elfogadott feltételverziót, időpontot, módosítási sorszámot és állapotelőzményeket. A telefonos visszaigazoláshoz a művelet ideje és a jogosult munkatárs azonosítása tartozik; ezt az ügyfélnek adott nézet nem mutatja.",
+          "Mentett jármű: rendszám, márka, modell, gyártási év, opcionális alvázszám (VIN), tulajdonos fiókazonosítója, létrehozási és módosítási időpont, valamint az alapértelmezett jármű kiválasztása. A listát a saját fiókod és az adminisztrátor kezelheti; más ügyfél, partner, munkafelvevő vagy vezető a saját fiókjához tartozó járműveket kezeli.",
+          "Időpontkérés: szolgáltatás és annak mentett neve, becsült időtartam és esetleges árjelzés, nap, időpont, megjegyzés és állapot; kapcsolattartási és járműadatok másolata, új kérésnél kötelező alvázszám (VIN); partnernél cégnév. A szerver rögzíti az elfogadott feltételverziót, időpontot, módosítási sorszámot és állapotelőzményeket. A telefonos visszaigazoláshoz a művelet ideje és a jogosult munkatárs azonosítása tartozik; ezt az ügyfélnek adott nézet nem mutatja.",
+          "Opcionális értesítések: külön címzettenként tárolt e-mail-cím, az időpont eseménykori adatmásolata, küldési próbálkozások, ütemezés és technikai állapot. Az ügyfél és az aktív munkafelvevői/vezetői fiókok külön levelet kaphatnak. Nem osztjuk meg a többi címzett címét az ügyféllel. Az értesítések nem marketingüzenetek; megőrzésüket és kézbesítési naplóikat az üzemeltetőnek kell meghatároznia.",
           "Korábban feltöltött opcionális profilkép: a users.avatar fájlmezőben tárolt, védett kép. A képfeltöltő backend 512 × 512 pixeles keretbe igazítja, WebP formátumra alakítja és eltávolítja a fotó metaadatait, például az EXIF-helyadatokat. A jelenlegi webes felület kezdőbetűket jelenít meg, profilképet nem kér és nem tölt be.",
           "Céges profiladatok: opcionális cégnév, adószám és céges település. A partnerfiókhoz saját mentett járműlista tartozik; több külön fiók közös flottakezelése még nem érhető el.",
           "Hitelesítés: a jelszó lenyomatát PocketBase tárolja, a jelszó TLS-kapcsolaton jut el a kiszolgálókhoz. A böngésző HttpOnly munkamenetsütit kap; az alkalmazás nem tárol valódi jelszót vagy hitelesítési tokent a localStorage-ban.",
@@ -185,7 +186,7 @@ export const legalDocuments: LegalDocument[] = [
         ],
         paragraphs: [
           "A portál nyelve magyar. A szolgáltatás és időpont kiválasztását adatmegadás és áttekintés követi. Az adatbeviteli hibák a végleges elküldés előtt a visszalépési és módosítási lehetőségekkel javíthatók.",
-          "A jelenlegi modellben időpontkérés történik; a javítás tartalmát és végleges árát külön kell egyeztetni. A portál nem köt és nem iktat írásbeli javítási szerződést. A sikeres beérkezést az oldalon megjelenő azonosító és összesítés jelzi; a kérés a Foglalásaim oldalon visszaidézhető. Jelenleg nem küldünk automatikus e-mailt.",
+          "A jelenlegi modellben időpontkérés történik; a javítás tartalmát és végleges árát külön kell egyeztetni. A portál nem köt és nem iktat írásbeli javítási szerződést. A sikeres beérkezést az oldalon megjelenő azonosító és összesítés jelzi; a kérés a Foglalásaim oldalon visszaidézhető. Ha az üzemeltető bekapcsolja a levelezést, az időpontkérésről, telefonos visszaigazolásról, átütemezésről, lemondásról, árváltozásról és elkészült munkáról külön szolgáltatási értesítés küldhető. A webes mentés sikere nem igazolja a levél kézbesítését.",
           "Éles elektronikus megrendelés esetén a 2001. évi CVIII. törvény szerinti beérkezési visszaigazolást és a szerződéses folyamatot ténylegesen biztosítani kell; az automatikus átvételi visszaigazolás és a megrendelés elfogadása nem feltétlenül ugyanaz. Az elküldött megrendelés visszaigazolásának elmaradásához a törvény főszabály szerint legfeljebb 48 órán belüli jogkövetkezményt kapcsol. A pontos alkalmazhatóságot a megvalósított üzleti modell szerint kell ellenőrizni.",
           "A feltételek megismerhetők és az oldalról szöveges fájlként letölthetők. A regisztrációnál és az időpontkérésnél a szerver PocketBase-ben rögzíti az elfogadott feltételverziót és időpontot. A korábbi hatályos dokumentumváltozatok megőrzését az üzemeltetőnek biztosítania kell.",
         ],
@@ -202,6 +203,7 @@ export const legalDocuments: LegalDocument[] = [
         paragraphs: [
           site.booking.requestNotice,
           "A szolgáltatás mellett esetleg feltüntetett ár nem válik az időpontkérés elküldésével elfogadott javítási árajánlattá. A kijelzett összegnél egyértelműen jelezni kell, hogy meghatározott tartalmú fix bruttó díj, induló (–tól) ár vagy becslés, mit tartalmaz, és milyen további költség merülhet fel. Fogyasztói árnál az áfát és az elkerülhetetlen díjakat tartalmazó összeget kell világosan feltüntetni. A tényleges árképzési tájékoztatást a fenti adatmezőben, a konkrét szolgáltatásokhoz igazítva kell kitölteni.",
+          "Telefonos visszaigazolás után a munkafelvevő, vezető vagy adminisztrátor bruttó forintban árbecslést rögzíthet, egy összegben vagy alkatrész-, munkadíj- és egyéb tételekre bontva. A saját időpont részleteiben az ügyfél is látja. Átütemezéskor a korábbi becslés érvényét veszti. Ez nem számla, elfogadott javítási ajánlat vagy fizetési kötelezettséget létrehozó megrendelés.",
           "A felületen megadott időtartamok tájékoztató becslések. A javítási megrendelés és az esetleges többletmunka feltételeit külön kell egyeztetni. A prototípus nem kezel fizetést, számlázást vagy árajánlat-elfogadást.",
         ],
       },
@@ -344,7 +346,7 @@ export const legalDocuments: LegalDocument[] = [
           },
         ],
         paragraphs: [
-          "A frontend Vercelen, a PocketBase az üzemeltető homelabján, Cloudflare Tunnel közvetítésével működik. A szolgáltatók pontos jogi adatait, adatfeldolgozói szerepeit, földrajzi helyét és továbbítási garanciáit az üzemeltetőnek a tényleges telepítés szerint ki kell töltenie. Jelenleg nincs e-mail-küldő szolgáltatás.",
+          "A frontend Vercelen, a PocketBase az üzemeltető homelabján, Cloudflare Tunnel közvetítésével működik. A szolgáltatók pontos jogi adatait, adatfeldolgozói szerepeit, földrajzi helyét és továbbítási garanciáit az üzemeltetőnek a tényleges telepítés szerint ki kell töltenie. Az opcionális levelezés az üzemeltető által beállított PocketBase-levélklienst és saját vagy választott levelezőkiszolgálót használja; a tényleges szolgáltatót és adatkezelést az üzemeltetőnek meg kell neveznie.",
         ],
       },
     ],

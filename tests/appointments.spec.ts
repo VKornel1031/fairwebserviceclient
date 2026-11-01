@@ -75,7 +75,13 @@ async function payload(
       city: "Székesfehérvár",
       reminders: false,
     },
-    vehicle: { plate: "TST123", make: "Ford", model: "Focus", year: "2020" },
+    vehicle: {
+      plate: "TST123",
+      make: "Ford",
+      model: "Focus",
+      year: "2020",
+      vin: "WVWZZZ1JZXW000001",
+    },
     note: "Teszt szervizigény\nIndításkor szokatlan hang hallható.",
     acceptTerms: true,
     termsVersion: ctx.config.termsVersion,
@@ -208,7 +214,13 @@ test("owner, reception and manager permissions protect snapshots, transitions, r
   const { user } = await customer(request);
   const carResponse = await request.post("/api/vehicles", {
     headers,
-    data: { plate: "BOOK123", make: "Škoda", model: "Octavia", year: 2018 },
+    data: {
+      plate: "BOOK123",
+      make: "Škoda",
+      model: "Octavia",
+      year: 2018,
+      vin: "WVWZZZ1JZXW000001",
+    },
   });
   expect(carResponse.status()).toBe(201);
   const vehicle = (await carResponse.json()).vehicle;
@@ -220,6 +232,7 @@ test("owner, reception and manager permissions protect snapshots, transitions, r
       make: vehicle.make,
       model: vehicle.model,
       year: vehicle.year,
+      vin: vehicle.vin,
     },
   };
   let a = await create(request, data);
@@ -474,7 +487,13 @@ test("saved customer details book a real appointment; staff confirm and complete
     (
       await page.request.post("/api/vehicles", {
         headers,
-        data: { plate: "APPT123", make: "Škoda", model: "Octavia", year: 2020 },
+        data: {
+          plate: "APPT123",
+          make: "Škoda",
+          model: "Octavia",
+          year: 2020,
+          vin: "WVWZZZ1JZXW000001",
+        },
       })
     ).status(),
   ).toBe(201);
@@ -485,6 +504,9 @@ test("saved customer details book a real appointment; staff confirm and complete
   await expect(page.getByLabel("Település")).toHaveValue("Veszprém");
   await expect(page.getByLabel("Rendszám")).toHaveValue("APPT123");
   await expect(page.getByLabel("Modell")).toHaveValue("Octavia");
+  await expect(page.getByLabel("Alvázszám (VIN)")).toHaveValue(
+    "WVWZZZ1JZXW000001",
+  );
   await page.getByRole("button", { name: "Foglalás áttekintése" }).click();
   await page.getByRole("checkbox").check();
   const created = page.waitForResponse(
@@ -558,6 +580,7 @@ test("the booking UI recovers when staff fill a slot while the customer reviews 
   await page.getByLabel("Település").fill("Veszprém");
   await page.getByLabel("Rendszám").fill("LATE123");
   await page.getByLabel("Gyártási év").fill("2020");
+  await page.getByLabel("Alvázszám (VIN)").fill("WVWZZZ1JZXW000001");
   await page.getByLabel("Márka").fill("Ford");
   await page.getByLabel("Modell").fill("Focus");
   await page.getByRole("button", { name: "Foglalás áttekintése" }).click();
@@ -581,4 +604,387 @@ test("the booking UI recovers when staff fill a slot while the customer reviews 
   for (const row of rows)
     expect((await status(staff, row, "cancelled")).status()).toBe(200);
   await staff.dispose();
+});
+
+test("prices require staff and phone confirmation; totals are computed on the server and stale edits are rejected", async ({
+  request,
+  playwright,
+}) => {
+  await customer(request);
+  const data = await payload(request),
+    a = await create(request, data);
+  const reception = await playwright.request.newContext({ baseURL: origin });
+  await login(reception, "reception");
+  const save = (api: APIRequestContext, revision: number, input: unknown) =>
+    api.put(`/api/appointments/${a.id}/price`, {
+      headers,
+      data: { revision, ...(input as object) },
+    });
+  const total = { mode: "total", totalHuf: 45000, note: "Tájékoztató ár" };
+  expect((await save(request, a.revision, total)).status()).toBe(403);
+  expect((await save(reception, a.revision, total)).status()).toBe(409);
+  const confirmed = (await (await status(reception, a, "confirmed")).json())
+    .appointment as LiveAppointment;
+  let response = await save(reception, confirmed.revision, total);
+  expect(response.status(), await response.text()).toBe(200);
+  let current = (await response.json()).appointment as LiveAppointment;
+  expect(current.price?.totalHuf).toBe(45000);
+  expect(
+    (await (await request.get(`/api/appointments/${a.id}`)).json()).appointment
+      .price.totalHuf,
+  ).toBe(45000);
+  expect((await save(reception, confirmed.revision, total)).status()).toBe(409);
+  const items = [
+    { kind: "part", description: "Olajszűrő", quantity: 2, unitPriceHuf: 7500 },
+    {
+      kind: "labour",
+      description: "Munkadíj",
+      quantity: 1,
+      unitPriceHuf: 20000,
+    },
+  ];
+  for (const bad of [
+    { mode: "total", totalHuf: -1 },
+    { mode: "total", totalHuf: 1.5 },
+    { mode: "itemized", totalHuf: 1, items },
+    { mode: "itemized", items: [{ ...items[0], quantity: 0 }] },
+    { mode: "itemized", items: [{ ...items[0], unitPriceHuf: 1000000000 }] },
+  ])
+    expect((await save(reception, current.revision, bad)).status()).toBe(400);
+  response = await save(reception, current.revision, {
+    mode: "itemized",
+    items,
+    note: "Alkatrészek és munkadíj\nBruttó összegek",
+  });
+  expect(response.status(), await response.text()).toBe(200);
+  current = (await response.json()).appointment;
+  expect(current.price).toMatchObject({
+    mode: "itemized",
+    totalHuf: 35000,
+    items,
+  });
+  // Same data with the current revision is a no-op, including its notification event.
+  response = await save(reception, current.revision, {
+    mode: "itemized",
+    items,
+    note: current.price!.note,
+  });
+  expect((await response.json()).appointment.revision).toBe(current.revision);
+  const other = await playwright.request.newContext({ baseURL: origin });
+  await context(other);
+  expect((await other.get(`/api/appointments/${a.id}`)).status()).toBe(404);
+  const auth = await root(request);
+  const native = await request.get(
+    `${backend}/api/collections/appointments/records/${a.id}`,
+    { headers: auth },
+  );
+  expect((await native.json()).price.totalHuf).toBe(35000);
+  expect(
+    (
+      await other.get(`${backend}/api/collections/appointment_mail/records`)
+    ).status(),
+  ).toBe(403);
+  // Rescheduling invalidates the old price as well as the phone confirmation.
+  response = await request.patch(`/api/appointments/${a.id}`, {
+    headers,
+    data: { ...data, requestId: undefined, revision: current.revision },
+  });
+  expect(response.status(), await response.text()).toBe(200);
+  expect((await response.json()).appointment.price).toBeNull();
+  await reception.dispose();
+  await other.dispose();
+});
+
+test("multiple saved cars require a choice, guests stay blank, and a new guest request clears the previous details", async ({
+  page,
+}) => {
+  await customer(page.request);
+  for (const [plate, model] of [
+    ["FIRST123", "Focus"],
+    ["SECOND123", "Fiesta"],
+  ]) {
+    expect(
+      (
+        await page.request.post("/api/vehicles", {
+          headers,
+          data: { plate, make: "Ford", model, year: 2020 },
+        })
+      ).status(),
+    ).toBe(201);
+  }
+  // Booking context uses fresh server data even if the portal has not refreshed its profile cache.
+  await page.request.patch("/api/account", {
+    headers,
+    data: { city: "Pákozd" },
+  });
+  await page.goto("/idopont?service=other");
+  await uiSlot(page);
+  await expect(page.getByLabel("Teljes név")).toHaveValue("Booking Customer");
+  await expect(page.getByLabel("Település")).toHaveValue("Pákozd");
+  await expect(page.getByLabel("Rendszám")).toHaveValue("");
+  await page
+    .getByLabel("Mentett jármű kiválasztása")
+    .selectOption({ label: "Ford Fiesta · SECOND123" });
+  await expect(page.getByLabel("Rendszám")).toHaveValue("SECOND123");
+  await expect(page.getByLabel("Modell")).toHaveValue("Fiesta");
+  await page.request.post("/api/auth/logout", { headers, data: {} });
+  await page.goto("/idopont?service=other");
+  await uiSlot(page);
+  for (const field of [
+    "Teljes név",
+    "Mobiltelefonszám",
+    "E-mail-cím",
+    "Település",
+    "Rendszám",
+    "Modell",
+  ])
+    await expect(page.getByLabel(field)).toHaveValue("");
+  await expect(page.getByLabel("E-mail-cím")).toHaveAttribute(
+    "autocomplete",
+    "off",
+  );
+  await page.getByLabel("Teljes név").fill("Guest Blank");
+  await page.getByLabel("Mobiltelefonszám").fill("+36301234567");
+  await page
+    .getByLabel("E-mail-cím")
+    .fill(`blank-${crypto.randomUUID()}@example.test`);
+  await page.getByLabel("Település").fill("Pákozd");
+  await page.getByLabel("Rendszám").fill("BLANK123");
+  await page.getByLabel("Gyártási év").fill("2020");
+  await page.getByLabel("Alvázszám (VIN)").fill("WVWZZZ1JZXW000001");
+  await page.getByLabel("Márka").fill("Ford");
+  await page.getByLabel("Modell").fill("Focus");
+  await page.getByRole("button", { name: "Foglalás áttekintése" }).click();
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Időpontkérés elküldése" }).click();
+  await page.getByRole("button", { name: "Másik időpontot kérek" }).click();
+  await page.getByRole("button", { name: /Egyéb szervizigény/ }).click();
+  await uiSlot(page);
+  await expect(page.getByLabel("Teljes név")).toHaveValue("");
+  await expect(page.getByLabel("Rendszám")).toHaveValue("");
+});
+
+test("staff edit detailed prices through the UI and customers see a read-only breakdown on mobile", async ({
+  page,
+}) => {
+  await customer(page.request);
+  const a = await create(page.request, await payload(page.request));
+  await login(page.request, "reception");
+  const confirmed = await status(page.request, a, "confirmed");
+  expect(confirmed.status()).toBe(200);
+  await page.goto(`/munkafelvetel?appointment=${a.id}`);
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Ár hozzáadása" }).click();
+  await dialog.getByLabel("Árazás módja").selectOption("itemized");
+  await dialog.getByLabel("1. tétel megnevezése").fill("Fékbetét");
+  await dialog.getByLabel("1. tétel mennyisége").fill("2");
+  await dialog.getByLabel("1. tétel bruttó egységára (Ft)").fill("15000");
+  await dialog.getByRole("button", { name: "Új tétel", exact: true }).click();
+  await dialog.getByLabel("2. tétel típusa").selectOption("labour");
+  await dialog.getByLabel("2. tétel megnevezése").fill("Beszerelés");
+  await dialog.getByLabel("2. tétel bruttó egységára (Ft)").fill("20000");
+  await dialog.getByRole("button", { name: "Ár mentése", exact: true }).click();
+  await expect(dialog.locator(".price-total")).toContainText(/50\s*000/);
+  await expect(dialog.locator(".price-lines")).toContainText("Fékbetét");
+  await expect(dialog.locator(".price-lines")).toContainText("Beszerelés");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await dialog.locator(".appointment-price").scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: test.info().outputPath("price-breakdown-mobile.png"),
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  // A separate guest owns the record below and receives the same read-only breakdown.
+  await page.request.post("/api/auth/logout", { headers, data: {} });
+  const guest = await create(page.request, await payload(page.request));
+  await login(page.request, "manager");
+  let current = (await (await status(page.request, guest, "confirmed")).json())
+    .appointment;
+  expect(
+    (
+      await page.request.put(`/api/appointments/${guest.id}/price`, {
+        headers,
+        data: { mode: "total", totalHuf: 80000, revision: current.revision },
+      })
+    ).status(),
+  ).toBe(200);
+  await page.request.post("/api/auth/logout", { headers, data: {} });
+  await page.goto(`/foglalasaim?appointment=${guest.id}`);
+  await expect(dialog.locator(".price-total")).toContainText(/80\s*000/);
+  await expect(
+    dialog.getByRole("button", { name: "Ár módosítása" }),
+  ).toHaveCount(0);
+});
+
+test("mail uses durable snapshots, separate recipients and retries; repeated events never create duplicate jobs", async ({
+  request,
+  playwright,
+}) => {
+  const auth = await root(request);
+  expect(
+    (
+      await request.post(`${backend}/api/fairauto-test/mail`, {
+        headers: auth,
+        data: { clear: true, fail: true },
+      })
+    ).status(),
+  ).toBe(200);
+  const data = await payload(request),
+    a = await create(request, { ...data, note: '<script>alert("x")</script>' });
+  const list = async () =>
+    (
+      await (
+        await request.get(
+          `${backend}/api/collections/appointment_mail/records?perPage=100`,
+          { headers: auth },
+        )
+      ).json()
+    ).items as Array<{
+      id: string;
+      event: string;
+      status: string;
+      attempts: number;
+      recipient: string;
+      snapshot: { reference: string };
+      nextAttempt: number;
+    }>;
+  let jobs = await list();
+  expect(
+    jobs.filter((job) => job.snapshot.reference === a.reference),
+  ).toHaveLength(3);
+  expect(new Set(jobs.map((job) => job.recipient)).size).toBe(3);
+  await create(request, { ...data, note: '<script>alert("x")</script>' });
+  expect((await list()).length).toBe(3);
+  expect(
+    (
+      await request.post(`${backend}/api/fairauto-test/mail`, {
+        headers: auth,
+        data: { fail: true },
+      })
+    ).status(),
+  ).toBe(200);
+  jobs = await list();
+  expect(
+    jobs.every((job) => job.status === "pending" && job.attempts >= 1),
+  ).toBe(true);
+  expect((await request.get(`/api/appointments/${a.id}`)).status()).toBe(200);
+  for (const job of jobs)
+    expect(
+      (
+        await request.patch(
+          `${backend}/api/collections/appointment_mail/records/${job.id}`,
+          { headers: auth, data: { nextAttempt: 1 } },
+        )
+      ).status(),
+    ).toBe(200);
+  expect(
+    (
+      await request.post(`${backend}/api/fairauto-test/mail`, {
+        headers: auth,
+        data: { fail: false },
+      })
+    ).status(),
+  ).toBe(200);
+  jobs = await list();
+  expect(jobs.every((job) => job.status === "sent")).toBe(true);
+  const captures = await (
+    await request.get(
+      `${backend}/api/collections/test_mail_capture/records?perPage=100`,
+      { headers: auth },
+    )
+  ).json();
+  expect(captures.items).toHaveLength(3);
+  for (const mail of captures.items) {
+    expect(mail.html).toContain("8000 Székesfehérvár");
+    expect(mail.html).not.toContain("<script>");
+    expect(mail.html).toContain("&lt;script&gt;");
+    expect(mail.html).not.toContain("manager@fairauto.test");
+    expect(mail.html).not.toContain("reception@fairauto.test");
+  }
+  const staff = await playwright.request.newContext({ baseURL: origin });
+  const staffUser = await login(staff, "reception");
+  await request.post(`${backend}/api/fairauto-test/mail`, {
+    headers: auth,
+    data: { fail: true },
+  });
+  const confirmed = (await (await status(staff, a, "confirmed")).json())
+    .appointment;
+  await status(staff, confirmed, "confirmed");
+  expect(
+    (await list()).filter((job) => job.event === "confirmed"),
+  ).toHaveLength(3);
+  try {
+    expect(
+      (
+        await request.patch(
+          `${backend}/api/collections/users/records/${staffUser.id}`,
+          { headers: auth, data: { active: false } },
+        )
+      ).status(),
+    ).toBe(200);
+    await request.post(`${backend}/api/fairauto-test/mail`, {
+      headers: auth,
+      data: { fail: false },
+    });
+    const latest = await (
+      await request.get(
+        `${backend}/api/collections/appointment_mail/records?perPage=100`,
+        { headers: auth },
+      )
+    ).json();
+    expect(
+      latest.items.find(
+        (job: { recipient: string; event: string }) =>
+          job.recipient === staffUser.email && job.event === "confirmed",
+      ),
+    ).toMatchObject({ status: "failed", errorCode: "recipient_changed" });
+    const delivered = await (
+      await request.get(
+        `${backend}/api/collections/test_mail_capture/records?perPage=100`,
+        { headers: auth },
+      )
+    ).json();
+    expect(
+      delivered.items.filter(
+        (mail: { recipient: string }) => mail.recipient === staffUser.email,
+      ),
+    ).toHaveLength(1);
+  } finally {
+    await request.patch(
+      `${backend}/api/collections/users/records/${staffUser.id}`,
+      { headers: auth, data: { active: true } },
+    );
+  }
+  await staff.dispose();
+});
+
+test("guest bookings require a valid VIN; historical appointments can still be read without one", async ({
+  request,
+}) => {
+  const data = await payload(request);
+  for (const vin of [undefined, "", "INVALID", "WVWZZZ1JZXW00000O"]) {
+    const r = await request.post("/api/appointments", {
+      headers,
+      data: { ...data, vehicle: { ...data.vehicle, vin } },
+    });
+    expect(r.status(), await r.text()).toBe(400);
+  }
+  const a = await create(request, data);
+  expect(a.vehicle.vin).toBe(data.vehicle.vin);
+  const auth = await root(request);
+  const { vin: _, ...historical } = data.vehicle;
+  expect(
+    (
+      await request.patch(
+        `${backend}/api/collections/appointments/records/${a.id}`,
+        { headers: auth, data: { vehicle: historical } },
+      )
+    ).status(),
+  ).toBe(200);
+  const r = await request.get(`/api/appointments/${a.id}`);
+  expect(r.status()).toBe(200);
+  expect((await r.json()).appointment.vehicle.vin).toBe("");
 });

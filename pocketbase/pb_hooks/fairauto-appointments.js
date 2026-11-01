@@ -58,6 +58,11 @@ function id(value) {
     fail(400, "invalid_details");
   return value;
 }
+function vin(value) {
+  const result = txt(value, 30, 1).toUpperCase().replace(/\s/g, "");
+  if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(result)) fail(400, "invalid_details");
+  return result;
+}
 function minute(value) {
   const a = value.split(":").map(Number);
   return a[0] * 60 + a[1];
@@ -177,17 +182,18 @@ function compact(rule) {
 }
 function setup(app) {
   configuration();
-  let a, h, c, limits;
+  let a, h, c, limits, mail;
   try {
     a = app.findCollectionByNameOrId("appointments");
     h = app.findCollectionByNameOrId("appointment_events");
     c = app.findCollectionByNameOrId("appointment_closures");
     limits = app.findCollectionByNameOrId("appointment_limits");
+    mail = app.findCollectionByNameOrId("appointment_mail");
   } catch {
     fail(503, "booking_setup_required");
   }
   if (
-    [a, h, c, limits].some(
+    [a, h, c, limits, mail].some(
       (collection) =>
         collection.createRule != null ||
         collection.updateRule != null ||
@@ -201,7 +207,10 @@ function setup(app) {
     compact(c.viewRule) !== compact(staffRule) ||
     limits.listRule != null ||
     limits.viewRule != null ||
-    !a.fields.getByName("guestHash")?.hidden
+    mail.listRule != null ||
+    mail.viewRule != null ||
+    !a.fields.getByName("guestHash")?.hidden ||
+    !a.fields.getByName("price")?.hidden
   )
     fail(503, "booking_setup_required");
 }
@@ -290,7 +299,9 @@ function count(app, where, params) {
   return result.total;
 }
 function dto(record, actor) {
-  const confirmed = json(record, "confirmation");
+  const confirmed = json(record, "confirmation"),
+    vehicle = json(record, "vehicle");
+  if (vehicle && typeof vehicle.vin !== "string") vehicle.vin = "";
   return {
     id: record.id,
     reference: record.getString("reference"),
@@ -300,11 +311,12 @@ function dto(record, actor) {
     service: record.getString("service"),
     serviceName: record.getString("serviceName"),
     priceLabel: record.getString("priceLabel"),
+    price: json(record, "price"),
     date: record.getString("date"),
     time: record.getString("time"),
     duration: record.getInt("duration"),
     contact: json(record, "contact"),
-    vehicle: json(record, "vehicle"),
+    vehicle,
     vehicleId: record.getString("vehicleId"),
     note: record.getString("note"),
     status: record.getString("status"),
@@ -359,6 +371,7 @@ function audit(app, record, actor, action, change) {
   event.set("actorRole", actor.role);
   event.set("change", change);
   app.save(event);
+  require(__hooks + "/fairauto-mail.js").enqueue(app, record, action);
 }
 function openDay(app, day) {
   const now = clock();
@@ -466,19 +479,33 @@ function details(app, actor, data) {
       make: saved.getString("make"),
       model: saved.getString("model"),
       year: String(saved.getInt("year")),
+      vin: vin(saved.getString("vin")),
     };
-    const preview = object(data.vehicle, ["plate", "make", "model", "year"]);
+    const preview = object(data.vehicle, [
+      "plate",
+      "make",
+      "model",
+      "year",
+      "vin",
+    ]);
     if (
       typeof preview.plate !== "string" ||
       preview.plate.trim().toUpperCase().replace(/[\s-]/g, "") !== car.plate ||
       preview.make !== car.make ||
       preview.model !== car.model ||
-      String(preview.year) !== car.year
+      String(preview.year) !== car.year ||
+      vin(preview.vin) !== car.vin
     )
       fail(409, "vehicle_changed");
     vehicleId = saved.id;
   } else {
-    const vehicle = object(data.vehicle, ["plate", "make", "model", "year"]);
+    const vehicle = object(data.vehicle, [
+      "plate",
+      "make",
+      "model",
+      "year",
+      "vin",
+    ]);
     const plate = txt(vehicle.plate, 30, 3).toUpperCase().replace(/[\s-]/g, "");
     if (!(
       typeof vehicle.year === "number" ||
@@ -498,6 +525,7 @@ function details(app, actor, data) {
       make: txt(vehicle.make, 60, 1),
       model: txt(vehicle.model, 60, 1),
       year: String(year),
+      vin: vin(vehicle.vin),
     };
   }
   if (!validDate(data.date)) fail(400, "invalid_details");
@@ -560,7 +588,7 @@ function intent(data) {
       "city",
       "reminders",
     ]),
-    v = object(data.vehicle, ["plate", "make", "model", "year"]);
+    v = object(data.vehicle, ["plate", "make", "model", "year", "vin"]);
   if (!(
     typeof v.year === "number" ||
     (typeof v.year === "string" && /^\d{4}$/.test(v.year))
@@ -582,6 +610,7 @@ function intent(data) {
       make: txt(v.make, 60, 1),
       model: txt(v.model, 60, 1),
       year: String(v.year),
+      vin: vin(v.vin),
     },
     vehicleId: txt(data.vehicleId || "", 15),
     note: txt(data.note || "", 1500, 0, true),
@@ -761,6 +790,7 @@ exports.rescheduleRoute = (e) => {
       );
     record.set("status", "requested");
     record.set("confirmation", null);
+    record.set("price", null);
     record.set("revision", record.getInt("revision") + 1);
     record.set(
       "contactKey",
@@ -1047,4 +1077,109 @@ exports.dashboardRoute = (e) => {
     capacity: cfg.schedule.capacity,
     workMinutes: minute(cfg.schedule.closesAt) - minute(cfg.schedule.opensAt),
   });
+};
+
+exports.priceRoute = (e) => {
+  setup($app);
+  guard($app, e, true);
+  const data = body(e, ["mode", "totalHuf", "items", "note", "revision"]);
+  let result;
+  $app.runInTransaction((tx) => {
+    const actor = identity(tx, e);
+    staff(actor);
+    const record = accessible(tx, actor, e.request.pathValue("id"));
+    revision(data, record);
+    if (
+      ["confirmed", "progress", "completed"].indexOf(
+        record.getString("status"),
+      ) < 0
+    )
+      fail(409, "transition_invalid");
+    const money = (amount) => {
+      if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1000000000)
+        fail(400, "invalid_details");
+      return amount;
+    };
+    let total,
+      items = [];
+    if (data.mode === "total") {
+      if (
+        data.items !== undefined &&
+        (!Array.isArray(data.items) || data.items.length)
+      )
+        fail(400, "invalid_details");
+      total = money(data.totalHuf);
+    } else if (data.mode === "itemized") {
+      if (
+        data.totalHuf !== undefined ||
+        !Array.isArray(data.items) ||
+        !data.items.length ||
+        data.items.length > 30
+      )
+        fail(400, "invalid_details");
+      items = data.items.map((input) => {
+        const line = object(input, [
+          "kind",
+          "description",
+          "quantity",
+          "unitPriceHuf",
+        ]);
+        if (
+          ["part", "labour", "other"].indexOf(line.kind) < 0 ||
+          !Number.isInteger(line.quantity) ||
+          line.quantity < 1 ||
+          line.quantity > 1000
+        )
+          fail(400, "invalid_details");
+        return {
+          kind: line.kind,
+          description: txt(line.description, 160, 1),
+          quantity: line.quantity,
+          unitPriceHuf: money(line.unitPriceHuf),
+        };
+      });
+      total = money(
+        items.reduce((sum, line) => sum + line.quantity * line.unitPriceHuf, 0),
+      );
+    } else fail(400, "invalid_details");
+    const clean = {
+      mode: data.mode,
+      totalHuf: total,
+      items,
+      note: txt(data.note || "", 1000, 0, true),
+    };
+    const previous = json(record, "price");
+    const fingerprint = (value) =>
+      JSON.stringify({
+        mode: value.mode,
+        totalHuf: value.totalHuf,
+        items: value.items.map((line) => ({
+          kind: line.kind,
+          description: line.description,
+          quantity: line.quantity,
+          unitPriceHuf: line.unitPriceHuf,
+        })),
+        note: value.note,
+      });
+    if (
+      previous &&
+      Array.isArray(previous.items) &&
+      fingerprint(previous) === fingerprint(clean)
+    ) {
+      result = dto(record, actor);
+      return;
+    }
+    record.set(
+      "price",
+      Object.assign({}, clean, { updatedAt: new Date().toISOString() }),
+    );
+    record.set("revision", record.getInt("revision") + 1);
+    tx.save(record);
+    audit(tx, record, actor, "price_updated", {
+      before: previous,
+      after: json(record, "price"),
+    });
+    result = dto(record, actor);
+  });
+  return e.json(200, { appointment: result });
 };

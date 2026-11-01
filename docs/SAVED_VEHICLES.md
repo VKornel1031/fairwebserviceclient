@@ -57,4 +57,4 @@ A listák 24 autót mutatnak oldalanként, a keresés szerveroldali. A webes gy�
 
 Frissítsd a weboldalt a Vercel telepítése és a migráció után. Jelentkezz be, nyisd meg a Járműveim oldalt, és ments el egy autót. Újratöltés után is látszania kell; másik fiókból a saját listában nem jelenhet meg. Az alapértelmezett autó a saját áttekintésben is megjelenik. A partner Járműpark lapja ugyanennek a fióknak az autóit és valódi darabszámát mutatja.
 
-A járműmentés adatbázisos funkció. Az alapértelmezett autó a foglalóban kitöltődik; az időpontkérések backendjének külön telepítése: [APPOINTMENTS.md](./APPOINTMENTS.md). A járműadatok megléte önmagában nem küld időpontkérést vagy e-mailt.
+A járműmentés adatbázisos funkció. Az egyetlen mentett autó a foglalóban kitöltődik; több autónál választani kell. A VIN-mezőhöz a [friss időpontmigráció](./APPOINTMENTS.md) szükséges; régi autókba utólag írható be. az időpontkérések backendjének külön telepítése: [APPOINTMENTS.md](./APPOINTMENTS.md). A járműadatok megléte önmagában nem küld időpontkérést vagy e-mailt.

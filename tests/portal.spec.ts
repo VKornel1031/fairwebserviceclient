@@ -16,6 +16,7 @@ async function fillDetails(page: Page) {
   await page.getByLabel("Település").fill("Székesfehérvár");
   await page.getByLabel("Rendszám").fill("TST-123");
   await page.getByLabel("Gyártási év").fill("2020");
+  await page.getByLabel("Alvázszám (VIN)").fill("WVWZZZ1JZXW000001");
   await page.getByLabel("Márka").fill("Toyota");
   await page.getByLabel("Modell").fill("Corolla");
 }

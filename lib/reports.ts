@@ -10,6 +10,7 @@ export function downloadAppointments(rows: Appointment[], filename: string) {
       "Dátum",
       "Időpont",
       "Rendszám",
+      "Alvázszám (VIN)",
       "Jármű",
       "Szolgáltatás",
       "Állapot",
@@ -21,6 +22,7 @@ export function downloadAppointments(rows: Appointment[], filename: string) {
       a.date,
       a.time,
       a.vehicle.plate,
+      a.vehicle.vin || "",
       `${a.vehicle.make} ${a.vehicle.model}`,
       a.serviceName ||
         services.find((s) => s.id === a.service)?.name ||

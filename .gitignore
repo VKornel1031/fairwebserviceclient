@@ -10,3 +10,5 @@ test-results/
 
 .next-test/
 pb_data/
+
+__pycache__/

@@ -1,28 +1,15 @@
-# Értesítések az éles változathoz – rögzített igények
+# Szolgáltatási értesítések – működés és további feladatok
 
-Ez a dokumentum a későbbi levelezés követelményeit rögzíti. A jelenlegi portál valódi PocketBase-fiókokat és időpontkéréseket kezel, de **nem küld e-mailt, nem készít e-mail-előnézeteket, és nem tartalmaz levelezési szolgáltatást**. Az alábbi értesítések még megvalósítandók.
+A portál opcionális, tartós PocketBase-feladatsort és e-mail-küldést tartalmaz. **Alapból ki van kapcsolva.** Unix `sendmail` vagy a PocketBase-ben beállított SMTP-kliens használható; nincs webes e-mail-előnézet vagy a frontendben tárolt levelezési kulcs.
 
-## Időpontkérés beérkezése
+Telepítés és bekapcsolás: [APPOINTMENT_PRICES_AND_MAIL.md](./APPOINTMENT_PRICES_AND_MAIL.md). CasaOS host Sendmail és a konténer közötti kapcsolat: [LOCAL_SENDMAIL.md](./LOCAL_SENDMAIL.md).
 
-- Az ügyfél vagy céges kapcsolattartó egy áttekintő levelet kap a kérés megadott e-mail-címére. Egyértelmű, hogy ez a kérés átvétele, és az időpont még telefonos egyeztetésre vár.
-- Az ügyvezető és a munkafelvevő is értesítést kap a kérés részleteivel.
-- Tartalom: foglalási azonosító, kért dátum és érkezési idő, szolgáltatás, becsült időtartam, név, telefonszám, e-mail, település, rendszám, márka/modell, gyártási év, megjegyzés; céges foglalásnál a cég és a kapcsolattartó adatai.
-- A belső címzettek és az ügyfél külön levelet kapnak. Az ügyfél levelében ne jelenjenek meg a munkatársak e-mail-címei.
+Bekapcsolás után az időpontkérésről külön áttekintő értesítést kap a megadott kapcsolattartó és az aktív vezető/munkafelvevő. Telefonos visszaigazoláskor új üzenet jelzi a biztosított időpontot. Átütemezés, lemondás, árváltozás és elkészült munka is külön esemény. A levél az azonosítót, dátumot, szolgáltatást, kapcsolattartási és járműadatokat – a megadott VIN-t is –, opcionális céget, megjegyzést, árakat és műhelyelérhetőségeket tartalmazza. A munka tartalmát és végleges díját továbbra külön kell egyeztetni.
 
-## Telefonos egyeztetés és visszaigazolás
+A címzettek külön üzenetet kapnak; az ügyfél nem látja a munkatársak címeit. A felhasználói szöveget HTML-ként nem hajtjuk végre. A hozzáférési titok nem kerül e-mailbe vagy URL-be. A kérés és a feladat együtt jön létre; a tényleges átadás a foglalási tranzakción kívül fut. Átadási hiba nem törli a mentett időpontot. Ismételt kattintás ugyanahhoz az eseményhez nem hoz létre új feladatot.
 
-- A munkafelvevő, a tulajdonos/vezető és az adminisztrátor visszaigazolhatja az időpontot a telefonos egyeztetés után.
-- A rendszer rögzíti a visszaigazolás időpontját és az eljáró felhasználót.
-- A sikeres visszaigazolás után az ügyfél vagy a cég megadott kapcsolattartója egy új levelet kap a végleges időponttal, a szolgáltatás és jármű adataival, a műhely címével és az érkezéshez szükséges tudnivalókkal.
-- A munkáról és a végleges árról továbbra is külön megállapodás szükséges; az időpont-visszaigazolás nem válhat automatikusan javítási megrendeléssé.
-- Az időpont módosítása új egyeztetést igényel; a módosított adatokkal friss értesítés és az új visszaigazolás után új visszaigazoló levél szükséges. A korábbi visszaigazolás ne maradjon érvényben az új időpontra.
+A PocketBase superuser az `appointment_mail` kollekcióban látja az állapotot és a próbálkozásszámot. A `sent` csak a levélkliens sikeres átadását jelzi, nem bizonyított postaládás kézbesítést. A feladat alapból legfeljebb ötször próbálkozik. Folyamatleállás utáni újrapróbálkozás miatt a külső kézbesítésre nem állítunk pontosan egyszeri garanciát.
 
-## A valódi bekötésnél szükséges
+A bevezetéshez az üzemeltetőnek ellenőriznie kell a feladó és a munkatársi címek valódiságát, a saját postafiókba történő tényleges kézbesítést, a küldési naplókat és az MTA működését. A levelek és feladatsorok személyesadat-megőrzését, a tényleges szolgáltatókat és továbbításokat az adatkezelési dokumentációhoz kell igazítani.
 
-- Szerveroldali hitelesítés és jogosultságvizsgálat: a böngésző által küldött szerepkör nem elegendő.
-- Valós feladói cím, ügyvezetői és munkafelvevői címzettek, szerveren kezelt SMTP-beállítások; titkok ne kerüljenek a frontendbe vagy a repóba.
-- Tartós értesítési feladatsor: a foglalási esemény és a kiküldendő üzenet rögzítése együtt történjen. Egy foglalás/verzió/esemény/címzett csak egyszer kapjon levelet; ismételt kattintás vagy újrapróbálkozás ne duplázzon.
-- A küldési hiba ne állítsa vissza vagy tüntesse el a sikeresen mentett foglalást. Legyen újrapróbálkozás és a munkatársak számára látható kézbesítési állapot. Az alkalmazás ne jelezzen sikeres kézbesítést pusztán a feladat létrehozásakor.
-- HTML és szöveges levélváltozat, magyar dátumformátum és Europe/Budapest időzóna, változatlanul megőrzött értesítési adatok. A felhasználói szöveg HTML-ként ne hajtódhasson végre.
-- Az értesítések szolgáltatási üzenetek; marketing-hozzájárulást ne kapcsoljunk hozzájuk. A valódi levelezési adatfeldolgozót és megőrzést az adatkezelési tájékoztatóban kell pontosítani.
-- Az adatbázis és a levelezés bevezetésekor a tesztpostafiókokon ellenőrizni kell a vendég, a magánügyfél és a cég teljes folyamatát, a módosítást, az ismételt eseményeket és a sikertelen küldést is.
+E-mailes címellenőrzés, fiókaktiválás, önkiszolgáló jelszó-visszaállítás, időzített emlékeztetők, marketing és webes kézbesítési kezelőfelület továbbra nincs bekötve. A regisztráció és bejelentkezés működését a levélbeállítás nem változtatja meg.

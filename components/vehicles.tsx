@@ -23,7 +23,7 @@ import { usePortal } from "./provider";
 import { Empty, Field } from "./fields";
 import { Modal, PageHeading } from "./ui";
 
-const blank = { plate: "", make: "", model: "", year: "" };
+const blank = { plate: "", make: "", model: "", year: "", vin: "" };
 export default function Vehicles({ embedded = false }: { embedded?: boolean }) {
   const { user, notify, refreshGarage } = usePortal();
   const [editing, setEditing] = useState<SavedVehicle | null>(null);
@@ -110,6 +110,7 @@ export default function Vehicles({ embedded = false }: { embedded?: boolean }) {
       make: car.make,
       model: car.model,
       year: car.year,
+      vin: car.vin,
     });
     setFormError("");
     setOpen(true);
@@ -269,7 +270,7 @@ export default function Vehicles({ embedded = false }: { embedded?: boolean }) {
             value={query}
             maxLength={100}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Rendszám, márka vagy modell"
+            placeholder="Rendszám, VIN, márka vagy modell"
           />
         </label>
         <button className="button button-outline" type="submit">
@@ -343,6 +344,9 @@ export default function Vehicles({ embedded = false }: { embedded?: boolean }) {
                     <span>H</span>
                     {displayPlate(car.plate)}
                   </span>
+                  {car.vin && (
+                    <p className="small muted vehicle-vin">VIN: {car.vin}</p>
+                  )}
                   <div className="vehicle-actions">
                     <div>
                       {car.owner === user.id && !car.isDefault && (
@@ -484,6 +488,22 @@ export default function Vehicles({ embedded = false }: { embedded?: boolean }) {
                   placeholder="Golf VII"
                   onChange={(event) =>
                     setForm({ ...form, model: event.target.value })
+                  }
+                />
+                <Field
+                  label="Alvázszám (VIN)"
+                  wide
+                  minLength={17}
+                  maxLength={17}
+                  pattern="[A-HJ-NPR-Z0-9]{17}"
+                  autoComplete="off"
+                  value={form.vin}
+                  hint="17 karakter, I, O és Q nélkül. Mentett autónál később is megadhatod; foglaláshoz szükséges."
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      vin: event.target.value.toUpperCase().replace(/\s/g, ""),
+                    })
                   }
                 />
               </div>

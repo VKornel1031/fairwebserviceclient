@@ -50,3 +50,12 @@ routerAdd(
   (e) => require(__hooks + "/fairauto-appointments.js").statusRoute(e),
   $apis.bodyLimit(2048),
 );
+routerAdd(
+  "PUT",
+  "/api/fairauto/appointments/{id}/price",
+  (e) => require(__hooks + "/fairauto-appointments.js").priceRoute(e),
+  $apis.bodyLimit(16384),
+);
+cronAdd("fairauto-appointment-mail", "* * * * *", () =>
+  require(__hooks + "/fairauto-mail.js").process($app),
+);

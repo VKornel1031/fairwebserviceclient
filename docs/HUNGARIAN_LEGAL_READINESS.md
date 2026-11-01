@@ -2,7 +2,7 @@
 
 Forrásellenőrzés dátuma: **2026. október 30.**
 
-Technikai frissítés (2026. november 1.): a fiókok, autók és időpontkérések PocketBase-t használnak. A tájékoztató a szerveroldali tárolást, az állapotelőzményeket, a telefonos megerősítést, a munkamenet- és vendég-hozzáférési sütit, valamint az e-mail nélküli működést is leírja. Az üzemeltetőnek a tényleges adattárolás előtt ki kell töltenie a megőrzést, szolgáltatókat és hivatalos cégadatokat; a mintajelölés továbbra is érvényes.
+Technikai frissítés (2026. november 1.): a fiókok, autók és időpontkérések PocketBase-t használnak. A tájékoztató a szerveroldali tárolást, az állapotelőzményeket, a telefonos megerősítést, a munkamenet- és vendég-hozzáférési sütit, valamint az alapból kikapcsolt, külön aktiválható szolgáltatási értesítéseket is leírja. A frissítés alvázszámot és bruttó árbecslés-részletezést is kezel. Az üzemeltetőnek a tényleges adattárolás előtt ki kell töltenie a megőrzést, szolgáltatókat és hivatalos cégadatokat; a mintajelölés továbbra is érvényes.
 
 A felhasználó által megerősített és jelenleg megvalósított modell: **a weboldal csak időpontot kér; a javítás tartalmát és végleges árát külön egyeztetik.** Ár megjelenítése önmagában nem dönti el, hogy létrejön-e javítási szerződés: a teljes folyamatot, a gombok és nyilatkozatok tartalmát kell vizsgálni. A rögzített árú online megrendelési modellre való átállást külön tisztázni és megvalósítani kell. A portál valós időpontkérést rögzít, de nem köt javítási szerződést és nem fizettet. Az itt leírt módosítások jogi és technikai előkészítést jelentenek; nem tanúsítják egy későbbi éles vállalkozás teljes jogszabályi megfelelőségét.
 
@@ -29,7 +29,7 @@ A 2001. évi CVIII. törvény 4–6. § alapján a tényleges szolgáltató adat
 
 Az elektronikus szerződéses folyamatnál szükséges a technikai lépések, az adatbeviteli hibák kijavítása, a nyelv, az írásbeliség/iktatás/hozzáférhetőség és az esetleges magatartási kódex ismertetése. A megrendelés beérkezésének visszaigazolásához a törvény főszabály szerint legfeljebb 48 órás jogkövetkezményt kapcsol; a kézhezvétel és a megrendelés elfogadása külön esemény lehet.
 
-A portál nem küld visszaigazoló e-mailt, és nincs éles szerződéses iktatása. A javítási szerződés létrejöttét a valós működés szerint kell eldönteni: önmagában a gomb felirata vagy egy ÁSZF-mondat nem változtatja meg egy ténylegesen szerződéskötésre működő folyamat jogi természetét.
+Az alapbeállításban a portál nem küld visszaigazoló e-mailt, és nincs éles szerződéses iktatása. A javítási szerződés létrejöttét a valós működés szerint kell eldönteni: önmagában a gomb felirata vagy egy ÁSZF-mondat nem változtatja meg egy ténylegesen szerződéskötésre működő folyamat jogi természetét.
 
 ## 3. Panaszkezelés és békéltetés
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "termsVersion": "2026-11-01.3-draft",
+  "termsVersion": "2026-11-01.4-draft",
   "guestCookieDays": 120,
   "schedule": {
     "opensAt": "06:00",

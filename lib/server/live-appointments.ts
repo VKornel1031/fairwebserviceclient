@@ -72,7 +72,10 @@ async function requestPB<T>(
     if (error instanceof PocketBaseError) {
       if (error.code && messages[error.code])
         throw new AccountError(error.status, messages[error.code], error.code);
-      if (error.status === 404 && !path.match(/^\/[a-z0-9]{15}(\/status)?$/))
+      if (
+        error.status === 404 &&
+        !path.match(/^\/[a-z0-9]{15}(\/(status|price))?$/)
+      )
         throw new AccountError(
           503,
           messages.booking_setup_required,
@@ -106,7 +109,24 @@ export async function bookingContext(request: NextRequest) {
     config.guestCookieDays > 365
   )
     throw new AccountError(503, messages.booking_setup_required);
-  const response = json({ config, viewer: auth.session?.user.id || "guest" });
+  const user = auth.session?.user;
+  const response = json({
+    config,
+    viewer: user?.id || "guest",
+    prefill:
+      user && ["customer", "partner"].includes(user.role)
+        ? {
+            contact: {
+              name: user.name,
+              email: user.email,
+              phone: user.phone,
+              city: user.city,
+              reminders: false,
+            },
+            companyName: user.companyName,
+          }
+        : null,
+  });
   if (!auth.session)
     response.cookies.set(
       guestCookie,
@@ -147,15 +167,21 @@ export async function appointmentProxy(
     | "create"
     | "reschedule"
     | "status"
+    | "price"
     | "closures"
     | "close"
     | "open",
   identifier?: string,
 ) {
   const auth = await actor();
-  const write = ["create", "reschedule", "status", "close", "open"].includes(
-    action,
-  );
+  const write = [
+    "create",
+    "reschedule",
+    "status",
+    "price",
+    "close",
+    "open",
+  ].includes(action);
   throttle(
     request,
     write ? "appointments-write" : "appointments-read",
@@ -203,6 +229,17 @@ export async function appointmentProxy(
       method = "POST";
       path = `/${identifier}/status`;
       payload = await body(request, ["status", "revision"]);
+      break;
+    case "price":
+      method = "PUT";
+      path = `/${identifier}/price`;
+      payload = await body(request, [
+        "mode",
+        "totalHuf",
+        "items",
+        "note",
+        "revision",
+      ]);
       break;
     case "close":
       method = "PUT";

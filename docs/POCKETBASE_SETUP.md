@@ -89,7 +89,7 @@ A változtatás után új Vercel deployment szükséges. A PocketBase-cím **ala
 6. Tiltott fiók nem léphet be; meglévő munkamenete sem ad további API-hozzáférést. Törlésnél a cél e-mail-címét is meg kell erősíteni. Saját admin és védett alapadmin nem törölhető az appban.
 7. E-mail-cím és jelszó módosítása saját jelenlegi jelszóval lehetséges. Elfelejtett jelszónál az admin ellenőrzött megkeresés után állíthat újat. A fióktulajdonos személyazonosságának ellenőrzése az üzemeltető feladata.
 
-A mentett járművek és a partner saját járműlistája külön migrációval PocketBase-ben működik: [SAVED_VEHICLES.md](./SAVED_VEHICLES.md). Ehhez nem kell hook vagy új Vercel-hitelesítő adat. Az időpontkérések, telefonos visszaigazolás, műhelyállapotok és riportok telepítése: [APPOINTMENTS.md](./APPOINTMENTS.md). A meglévő konténert és aktív adatkönyvtárát használja; külön migráció és foglalási hookok szükségesek. Több külön fiók közös flottája még nincs bekötve. Nincs SMTP, levélküldés vagy előnézeti postafiók.
+A mentett járművek és a partner saját járműlistája külön migrációval PocketBase-ben működik: [SAVED_VEHICLES.md](./SAVED_VEHICLES.md). Ehhez nem kell hook vagy új Vercel-hitelesítő adat. Az időpontkérések, telefonos visszaigazolás, műhelyállapotok és riportok telepítése: [APPOINTMENTS.md](./APPOINTMENTS.md). A meglévő konténert és aktív adatkönyvtárát használja; külön migráció és foglalási hookok szükségesek. Több külön fiók közös flottája még nincs bekötve. Az opcionális időpontértesítések alapból ki vannak kapcsolva; a bekapcsolás és árkezelés leírása: [APPOINTMENT_PRICES_AND_MAIL.md](./APPOINTMENT_PRICES_AND_MAIL.md). Aktiváló levél és előnézeti postafiók nincs.
 
 ## 6. Biztonsági határok és üzemeltetés
 
@@ -111,7 +111,7 @@ A beállításhoz szervercím, port/TLS mód, SMTP-felhasználó és jelszó, va
 
 Alapértelmezésben PocketBase a Unix `sendmail` parancsot is használhatja. Ez nem jelent automatikusan működő vagy megbízható kézbesítést egy CasaOS/Docker homelabon. A hivatalos [üzemeltetési útmutató](https://pocketbase.io/docs/going-to-production/#use-smtp-mail-server) SMTP-szolgáltatást javasol éles levelezéshez.
 
-Az SMTP beállítása önmagában nem kapcsolja be a weboldal ellenőrző vagy jelszó-visszaállító folyamatait: ezek a felhasználó kérésére jelenleg ki vannak kapcsolva. A mostani regisztráció és belépés levelezés nélkül működik. A későbbi emailes folyamatokat külön kell bekötni és tesztelni.
+Az SMTP beállítása önmagában nem kapcsolja be a weboldal ellenőrző vagy jelszó-visszaállító folyamatait: ezek a felhasználó kérésére jelenleg ki vannak kapcsolva. A mostani regisztráció és belépés levelezés nélkül működik. Az időpontértesítések külön, opcionális funkciók; a Unix sendmail CasaOS-beállítása: [LOCAL_SENDMAIL.md](./LOCAL_SENDMAIL.md). A későbbi emailes folyamatokat külön kell bekötni és tesztelni.
 
 ## 8. „A fiókszolgáltatás kapcsolata most nem használható”
 
