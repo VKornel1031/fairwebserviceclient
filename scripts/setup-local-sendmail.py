@@ -13,8 +13,10 @@ import os
 from pathlib import Path
 import re
 import shutil
+import selectors
 import subprocess
 import tempfile
+import time
 
 BEGIN = "dnl BEGIN FAIRAUTO POCKETBASE MAIL"
 END = "dnl END FAIRAUTO POCKETBASE MAIL"
@@ -67,6 +69,42 @@ def relay_configuration(source, client):
     return clean.rstrip() + "\n" + ACCESS_BEGIN + "\nConnect:" + client + "\tRELAY\n" + ACCESS_END + "\n"
 
 
+def smtp_probe(command, timeout=30):
+    """Wait for a complete SMTP greeting before QUIT; never pipeline before 220."""
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        buffer = b""
+        deadline = time.monotonic() + timeout
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout, selectors.EVENT_READ)
+            ready = False
+            while not ready:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or not selector.select(remaining):
+                    raise RuntimeError("Timed out waiting for the private SMTP greeting; no message was sent.")
+                chunk = os.read(process.stdout.fileno(), 4096)
+                if not chunk:
+                    raise RuntimeError("The private SMTP connection closed before its greeting; no message was sent.")
+                buffer += chunk
+                if len(buffer) > 16384:
+                    raise RuntimeError("Unexpectedly large SMTP greeting; no message was sent.")
+                while b"\n" in buffer:
+                    line, buffer = buffer.split(b"\n", 1)
+                    if line.startswith(b"220 ") or line.rstrip() == b"220":
+                        ready = True
+                        break
+                    if not line.startswith(b"220-"):
+                        code = line[:3].decode("ascii", errors="replace")
+                        raise RuntimeError("Private SMTP greeting was rejected (code " + code + "); no message was sent.")
+        process.communicate(input=b"QUIT\r\n", timeout=5)
+        if process.returncode:
+            raise RuntimeError("The SMTP probe exited with a transport error; no message was sent.")
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.communicate()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Read-only preflight; do not change files or restart services")
@@ -110,9 +148,7 @@ def main():
         run(["systemctl", "restart", "sendmail"])
         run(["systemctl", "is-active", "--quiet", "sendmail"])
         # Check only a banner/QUIT exchange; no message or recipient is submitted.
-        check = run(["docker", "exec", "-i", "pocketbase", "/bin/busybox", "nc", "-w", "3", gateway, "2525"], input=b"QUIT\r\n", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if not check.stdout.startswith(b"220"):
-            raise RuntimeError("The private Sendmail listener did not return an SMTP greeting.")
+        smtp_probe(["docker", "exec", "-i", "pocketbase", "/bin/busybox", "nc", "-w", "30", gateway, "2525"])
         with tempfile.TemporaryDirectory(prefix="fairauto-sendmail-") as directory:
             generated = Path(directory) / "sendmail"
             generated.write_text(wrapper)

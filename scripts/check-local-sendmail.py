@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import patch
 import contextlib
 import io
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("setup_mail", ROOT / "scripts/setup-local-sendmail.py")
@@ -15,6 +16,24 @@ spec.loader.exec_module(setup)
 
 
 class ConfigurationChecks(unittest.TestCase):
+    def test_smtp_probe_waits_for_multiline_greeting_before_quit(self):
+        program = '''
+import select, sys, time
+time.sleep(0.1)
+if select.select([sys.stdin], [], [], 0)[0]: sys.exit(1)
+print("220-delayed greeting", flush=True)
+time.sleep(0.1)
+if select.select([sys.stdin], [], [], 0)[0]: sys.exit(2)
+print("220 ready", flush=True)
+if sys.stdin.buffer.readline() != b"QUIT\\r\\n": sys.exit(3)
+print("221 goodbye", flush=True)
+'''
+        setup.smtp_probe([sys.executable, "-u", "-c", program], timeout=2)
+
+    def test_smtp_probe_rejects_non_success_greeting(self):
+        with self.assertRaises(RuntimeError):
+            setup.smtp_probe([sys.executable, "-u", "-c", 'print("554 rejected", flush=True)'], timeout=2)
+
     def test_failed_configuration_build_restores_previous_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
