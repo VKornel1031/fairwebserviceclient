@@ -9,6 +9,7 @@ test-results/
 !.env.example
 
 .next-test/
+.next-docs/
 pb_data/
 
 __pycache__/

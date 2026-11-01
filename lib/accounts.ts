@@ -10,6 +10,7 @@ export type Account = {
   reminders: boolean;
   role: Role;
   verified: boolean;
+  emailVerificationRequired: boolean;
   active: boolean;
   protectedRoot: boolean;
   companyName: string;

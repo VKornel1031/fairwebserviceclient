@@ -1,3 +1,4 @@
+import { verifyAccount } from "./account-mail-helper";
 import { test, expect, type APIRequestContext } from "@playwright/test";
 const origin = "http://127.0.0.1:3100",
   backend = "http://127.0.0.1:3101";
@@ -36,6 +37,7 @@ async function customer(api: APIRequestContext) {
       })
     ).status(),
   ).toBe(202);
+  await verifyAccount(api, email);
   return { email, user: await login(api, email) };
 }
 async function create(api: APIRequestContext, data = car) {
@@ -215,6 +217,7 @@ test("customers are isolated; admin can edit all cars; forged owners and prefere
       {
         data: {
           name: "Forged default",
+          emailVerificationRequired: true,
           companyName: "Forged Default Kft.",
           companyTax: "12345678-2-19",
           email: `forged-${crypto.randomUUID()}@example.test`,

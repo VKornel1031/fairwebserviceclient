@@ -8,6 +8,7 @@ import { PageHeading } from "./ui";
 import { accountRequest, type Account as AccountRecord } from "@/lib/accounts";
 import { roleLabels } from "@/lib/permissions";
 import { AccountAvatar } from "./account-avatar";
+import AccountMailHelp from "./account-mail-help";
 import { companyTaxHint, companyTaxPattern } from "@/lib/company";
 
 export function Account() {
@@ -234,6 +235,7 @@ export function Account() {
               <ArrowRight size={17} />
             </button>
           </form>
+          <AccountMailHelp />
           <p className="form-legal-note">
             <Link
               href="/adatkezelesi-tajekoztato"
@@ -248,8 +250,8 @@ export function Account() {
             </Link>
           </p>
           <p className="demo-footnote">
-            E-mailes ellenőrzés és jelszó-visszaállítás egyelőre nem érhető el.
-            Elfelejtett jelszó esetén keresd az üzemeltetőt.
+            Új fióknál bejelentkezés előtt erősítsd meg az e-mail-címedet a
+            levélben kapott hivatkozással.
           </p>
           <p className="small muted">
             Magánszemélyként{" "}
@@ -288,7 +290,10 @@ function Profile() {
     setError("");
     setSuccess("");
     try {
-      const result = await accountRequest<{ user: AccountRecord }>(
+      const result = await accountRequest<{
+        user: AccountRecord;
+        message?: string;
+      }>(
         action === "profile" ? "/api/account" : `/api/auth/change-${action}`,
         action === "profile" ? "PATCH" : "POST",
         data,
@@ -296,9 +301,10 @@ function Profile() {
       if (action !== "profile") form.reset();
       acceptAccount(result.user);
       setSuccess(
-        action === "password"
-          ? "A jelszavad megváltozott. Más eszközökön újra be kell jelentkezned."
-          : "A változtatásokat elmentettük.",
+        result.message ||
+          (action === "password"
+            ? "A jelszavad megváltozott. Más eszközökön újra be kell jelentkezned."
+            : "A változtatásokat elmentettük."),
       );
     } catch (error) {
       setError(
@@ -462,7 +468,7 @@ function Profile() {
                 required
               />
               <button className="button button-outline" disabled={busy}>
-                E-mail-cím mentése
+                Megerősítő levél az új címre
               </button>
             </form>
             <form
@@ -505,6 +511,12 @@ function Profile() {
           <AccountAvatar user={user} className="large-avatar" />
           <h3>{user!.name}</h3>
           <p className="muted">{roleLabels[user!.role]}</p>
+          <p className="small muted">
+            {user!.verified
+              ? "E-mail-cím megerősítve."
+              : "E-mail-cím még nincs megerősítve."}
+          </p>
+          {!user!.verified && <AccountMailHelp email={user!.email} />}
           <p className="small muted">
             A hozzáférésedet az adminisztrátor kezeli.
           </p>

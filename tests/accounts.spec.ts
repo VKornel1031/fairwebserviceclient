@@ -1,3 +1,4 @@
+import { verifyAccount, accountMailLink } from "./account-mail-helper";
 import {
   test,
   expect,
@@ -40,6 +41,7 @@ async function register(api: APIRequestContext, prefix: string) {
     },
   });
   expect(result.status()).toBe(202);
+  await verifyAccount(api, email);
   const user = await login(api, email);
   return { email, user };
 }
@@ -84,7 +86,8 @@ test("successful registration stays successful when its response omits internal 
     },
   });
   expect(response.status()).toBe(202);
-  expect((await response.json()).message).toContain("most bejelentkezhetsz");
+  expect((await response.json()).message).toContain("megerősítő levelet");
+  await verifyAccount(request, email);
   const user = await login(request, email);
   expect(user).toMatchObject({
     email,
@@ -110,7 +113,7 @@ test("successful registration stays successful when its response omits internal 
   });
 });
 
-test("registration, profile persistence and logout use PocketBase without verification or browser tokens", async ({
+test("registration, profile persistence and logout use PocketBase with email verification and no browser-readable tokens", async ({
   page,
 }) => {
   const email = uniqueEmail("browser");
@@ -136,7 +139,8 @@ test("registration, profile persistence and logout use PocketBase without verifi
   ).not.toBeChecked();
   await page.getByRole("checkbox", { name: /Elfogadom/ }).check();
   await page.getByRole("button", { name: "Regisztráció", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("most bejelentkezhetsz");
+  await expect(page.getByRole("status")).toContainText("megerősítő levelet");
+  await verifyAccount(page.request, email);
   await page.getByLabel(/^E\-mail\-cím(?:\s*\*)?$/).fill(email);
   await page.getByLabel(/^Jelszó(?:\s*\*)?$/).fill(testPassword);
   await page
@@ -156,7 +160,7 @@ test("registration, profile persistence and logout use PocketBase without verifi
   );
   const session = await (await page.request.get("/api/auth/session")).json();
   expect(session.user.role).toBe("partner");
-  expect(session.user.verified).toBe(false);
+  expect(session.user.verified).toBe(true);
   expect(session).not.toHaveProperty("token");
   const cookies = await page.context().cookies();
   expect(
@@ -259,6 +263,7 @@ test("admin creates, assigns roles, suspends and deletes accounts; role changes 
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("row", { name: new RegExp(name) })).toBeVisible();
   const customer = await playwright.request.newContext({ baseURL: origin });
+  await verifyAccount(customer, email);
   const user = await login(customer, email);
   await page.getByRole("button", { name: `${name} szerkesztése` }).click();
   await dialog.getByLabel("Szerepkör").selectOption("reception");
@@ -333,8 +338,23 @@ test("self email and password changes require the old password and revoke old pa
         "POST",
       )
     ).status(),
+  ).toBe(202);
+  expect(
+    (await (await request.get("/api/auth/session")).json()).user.email,
+  ).toBe(email);
+  const mail = await accountMailLink(request, updatedEmail, "email");
+  expect(
+    (
+      await write(
+        request,
+        "/api/auth/confirm-email-change",
+        { token: mail.token, password: testPassword },
+        "POST",
+      )
+    ).status(),
   ).toBe(200);
   const newPassword = "Replacement-passphrase-93847!";
+  await login(request, updatedEmail, testPassword);
   expect(
     (
       await write(
@@ -446,7 +466,7 @@ test("account APIs reject CSRF, mass assignment, oversized input and non-admin a
   ).toBe(403);
   expect(
     (
-      await request.post("/api/auth/request-verification", {
+      await request.post("/api/auth/unknown-action", {
         headers: { Origin: origin },
         data: {},
       })
@@ -489,7 +509,7 @@ test("native PocketBase rules prevent privilege escalation, cross-account reads 
     role: "partner",
     active: true,
     protectedRoot: false,
-    verified: false,
+    verified: true,
     termsVersion: site.legal.version,
   });
   const listing = await raw.get("/api/collections/users/records", { headers });
@@ -514,6 +534,7 @@ test("native PocketBase rules prevent privilege escalation, cross-account reads 
   );
   expect(created.status()).toBe(201);
   const other = (await created.json()).user;
+  await verifyAccount(request, other.email);
   await login(request, other.email);
   expect(
     (

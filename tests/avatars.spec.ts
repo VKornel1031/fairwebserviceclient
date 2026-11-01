@@ -1,3 +1,4 @@
+import { verifyAccount } from "./account-mail-helper";
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import sharp from "sharp";
 import { AVATAR_UPLOAD_LIMIT } from "../lib/avatar";
@@ -24,6 +25,7 @@ async function customer(api: APIRequestContext) {
       })
     ).status(),
   ).toBe(202);
+  await verifyAccount(api, email);
   const result = await api.post("/api/auth/login", {
     headers,
     data: { email, password },

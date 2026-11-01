@@ -2,6 +2,8 @@
  * Levelezés vagy analitika bekötésekor a tényleges adatfolyamokkal együtt frissítsd. */
 import { address, site, legalNavigation, contactPhoneLabel } from "./site";
 import { consumerDocument } from "./consumer";
+import { privacyDocument } from "./privacy";
+import { dataSecurityDocument } from "./data-security";
 export type LegalSection = {
   id: string;
   title: string;
@@ -16,136 +18,18 @@ export type LegalDocument = {
   title: string;
   description: string;
   sections: LegalSection[];
+  download?: { filename: string; label: string };
 };
 const missing = (value: string) =>
   value || "Kitöltés szükséges az éles használat előtt";
 export const legalDocuments: LegalDocument[] = [
-  {
-    ...legalNavigation[0],
-    title: "Az adataidról, érthetően.",
-    description:
-      "Milyen adatokat kér a portál, mire használja őket, és hogyan kezelheted a mentéseidet.",
-    sections: [
-      {
-        id: "adatkezelo",
-        title: "Az üzemeltető és az elérhetőségek",
-        facts: [
-          { label: "Cégnév", value: site.legal.companyName },
-          { label: "Székhely", value: missing(site.legal.registeredOffice) },
-          { label: "Műhely", value: address },
-          {
-            label: "Adatkezelési kapcsolattartás",
-            value: site.legal.privacyEmail,
-          },
-        ],
-      },
-      {
-        id: "jelenlegi-mukodes",
-        title: "A portál jelenlegi működése",
-        paragraphs: [
-          "A regisztráció, bejelentkezés, profilmódosítás, mentett járművek és adminisztrátori fiókkezelés a szerviz PocketBase-adatbázisával működik, a szükséges migrációk telepítése után. Az adatokat a webhely szervere továbbítja a homelabon működő PocketBase felé, HTTPS-kapcsolaton keresztül.",
-          "A vendégként vagy céges partnerként leadott időpontkérés a szerviz adatbázisába kerül. A kérés a munkafelvevő, vezető vagy adminisztrátor telefonos visszaigazolásával foglal műhelykapacitást. Az üzemeltető által külön bekapcsolható időpontértesítések alapértelmezetten ki vannak kapcsolva. Címellenőrzés és e-mailes jelszó-visszaállítás továbbra nincs.",
-        ],
-      },
-      {
-        id: "adatok",
-        title: "Milyen adatokat kezel a portál?",
-        items: [
-          "Fiók: kapcsolattartó neve, e-mail-cím, céges regisztrációnál kötelező cégnév és adószám, opcionális mobiltelefonszám és település, szerepkör, aktív/letiltott állapot és fiókazonosító. Az ÁSZF elfogadott verzióját és időpontját a szerver rögzíti.",
-          "Mentett jármű: rendszám, márka, modell, gyártási év, opcionális alvázszám (VIN), tulajdonos fiókazonosítója, létrehozási és módosítási időpont, valamint az alapértelmezett jármű kiválasztása. A listát a saját fiókod és az adminisztrátor kezelheti; más ügyfél, partner, munkafelvevő vagy vezető a saját fiókjához tartozó járműveket kezeli.",
-          "Időpontkérés: szolgáltatás és annak mentett neve, becsült időtartam és esetleges árjelzés, nap, időpont, megjegyzés és állapot; kapcsolattartási és járműadatok másolata, új kérésnél kötelező alvázszám (VIN); partnernél cégnév. A szerver rögzíti az elfogadott feltételverziót, időpontot, módosítási sorszámot és állapotelőzményeket. A telefonos visszaigazoláshoz a művelet ideje és a jogosult munkatárs azonosítása tartozik; ezt az ügyfélnek adott nézet nem mutatja.",
-          "Opcionális értesítések: külön címzettenként tárolt e-mail-cím, az időpont eseménykori adatmásolata, küldési próbálkozások, ütemezés és technikai állapot. Az ügyfél és az aktív munkafelvevői/vezetői fiókok külön levelet kaphatnak. Nem osztjuk meg a többi címzett címét az ügyféllel. Az értesítések nem marketingüzenetek; megőrzésüket és kézbesítési naplóikat az üzemeltetőnek kell meghatároznia.",
-          "Korábban feltöltött opcionális profilkép: a users.avatar fájlmezőben tárolt, védett kép. A képfeltöltő backend 512 × 512 pixeles keretbe igazítja, WebP formátumra alakítja és eltávolítja a fotó metaadatait, például az EXIF-helyadatokat. A jelenlegi webes felület kezdőbetűket jelenít meg, profilképet nem kér és nem tölt be.",
-          "Céges profiladatok: regisztrációnál kötelező cégnév és magyar adószám, opcionális céges település. Az adószám formátumát ellenőrizzük; ez nem jelent NAV-ellenőrzést vagy a cég képviseleti jogának igazolását. A partnerfiókhoz saját mentett járműlista tartozik; több külön fiók közös flottakezelése még nem érhető el.",
-          "Hitelesítés: a jelszó lenyomatát PocketBase tárolja, a jelszó TLS-kapcsolaton jut el a kiszolgálókhoz. A böngésző HttpOnly munkamenetsütit kap; az alkalmazás nem tárol valódi jelszót vagy hitelesítési tokent a localStorage-ban.",
-        ],
-      },
-      {
-        id: "celok",
-        title: "Mire használjuk ezeket?",
-        paragraphs: [
-          "A vendég hozzáférési azonosító a saját kéréseid megnyitását védi. Visszaélésvédelemhez a PocketBase rövid ideig, jellemzően két percig őriz lenyomatból képzett kéréskorlátozási számlálókat; a technikai szolgáltatók naplóinak megőrzése ettől külön üzemeltetési beállítás.",
-          "A fiókadatok a belépést, profilkezelést és jogosultságkezelést szolgálják. A fiók, céges profil, járművek és időpontkérések PocketBase-ben tárolódnak. A valódi személyes és foglalási adatok nem kerülnek a böngésző localStorage-jába. A témabeállítás ettől elkülönülten használ helyi tárhelyet.",
-          "Nyilvánosan cégnévvel és adószámmal lehet regisztrálni, céges partnerként. Magánszemélyek regisztráció nélkül, vendégként kérhetnek időpontot. Munkafelvevői, vezetői és adminisztrátori hozzáférést adminisztrátor adhat. A korábbi magánügyfél-fiókok és adataik megmaradnak, partner szerepkörbe kerülnek; céges adataik következő módosításakor ezeket ki kell egészíteni.",
-        ],
-      },
-      {
-        id: "tarolas",
-        title: "Tárolás és megőrzés",
-        paragraphs: [
-          "A mentett jármű adatait a Járműveim vagy Járműpark oldalon módosíthatod és törölheted. A fiók törlése a hozzá tartozó mentett járműveket is törli. Korábbi biztonsági mentésekben az adatok a meghatározott megőrzési ideig még szerepelhetnek. A mentett jármű törlése nem töröl már külön rögzített időpontkérési másolatot.",
-          "A korábban feltöltött profilkép eltávolítását az üzemeltetőtől kérheted; a jelenlegi webes felületen nincs képfeltöltő. A PocketBase a korábbi aktuális képfájlt csere vagy törlés után eltávolítja; korábbi biztonsági mentésekben a beállított megőrzési ideig még szerepelhet. A mentések megőrzését az üzemeltetőnek kell meghatároznia.",
-          "A fiókok az üzemeltető PocketBase-adatbázisában tárolódnak, másik eszközről is elérhetők. A fiók-, technikai napló- és biztonságimentés-megőrzési időket az alábbi megőrzési adatmezőben az üzemeltetőnek kell meghatároznia. A munkamenetsüti legfeljebb 8 órás; kijelentkezéskor a jelen böngésző sütijét töröljük.",
-          "Az időpontkérések és állapotelőzményeik a szerviz adatbázisában maradnak. Fióktörléskor a fiókhoz mutató kapcsolat megszűnik, az időpontkérésben mentett kapcsolattartási és járműmásolatot nem töröljük automatikusan; annak célját, jogalapját és megőrzését az üzemeltetőnek kell meghatároznia. A vendégoldali hozzáférés a kérés vagy új időpontkérés után legfeljebb 120 napig tart. Korábbi demóverzióból maradt helyi adatok nem kerülnek az adatbázisba, és a webhelyadatok törlésével távolíthatók el.",
-        ],
-      },
-      {
-        id: "kulso-szolgaltatasok",
-        title: "Külső kapcsolatok",
-        paragraphs: [
-          "Az Inter és Outfit betűkészleteket ez a webhely helyben szolgálja ki. A megjelenítéshez nem küldünk betűkészlet-lekérést a Google Fonts vagy más külső betűkészlet-szolgáltató felé.",
-          "A fő weboldalra, térképre, telefonra vagy e-mailre mutató külső linkek a megfelelő szolgáltatáshoz vezetnek. A tárhely és a homelab tényleges szolgáltatóit az élesítéskor az impresszumban és az adatkezelési dokumentációban is meg kell nevezni.",
-        ],
-      },
-      {
-        id: "keresek",
-        title: "Kérdések és érintetti kérelmek",
-        paragraphs: [
-          `Adatkezelési kérdéssel a ${site.legal.privacyEmail} címen kereshetsz minket. A hozzáférés, helyesbítés, törlés, korlátozás, adathordozhatóság és tiltakozás lehetőségeit az alkalmazandó feltételek szerint kell biztosítani.`,
-          `A helyi demóadatokat az üzemeltető távolról nem tudja törölni a saját böngésződből. Ezek eltávolítását a böngésződ webhelyadat-kezelőjében végezheted el. Panasz esetén a Nemzeti Adatvédelmi és Információszabadság Hatóság elérhetőségei a naih.hu oldalon találhatók.`,
-        ],
-      },
-      {
-        id: "jogalapok",
-        title: "Az éles adatkezelés céljai és jogalapjai",
-        paragraphs: [
-          "Az adatkezelési tájékoztató megismerése nem általános hozzájárulás minden adatkezeléshez. Az ÁSZF elfogadása, az érintett tájékoztatása és az esetleges marketing-hozzájárulás külön kérdés.",
-          "Éles, természetes személy ügyfelek időpontkérésénél a szolgáltatáshoz szükséges adatok kezelésének alapja tipikusan a GDPR 6. cikk (1) b) pontja, a szerződés vagy az érintett kérésére tett szerződéskötést megelőző lépések. Céges kapcsolattartóknál és biztonsági naplózásnál az adott célhoz megfelelő jogalapot külön kell meghatározni, jogos érdek esetén érdekmérlegeléssel. A panaszkezelés és a kötelező megőrzés jogi kötelezettségen is alapulhat. A marketing nem része az időpontfoglaláshoz szükséges adatkezelésnek.",
-          "Bekapcsolt Gmail SMTP esetén az értesítési levelek a Google levelezési szolgáltatásán is áthaladnak. A használt céges vagy tesztpostafiókot, a szolgáltató jogi adatait, szerződéses feltételeit és az esetleges EU-n kívüli adattovábbítás garanciáit az üzemeltetőnek kell a tényleges beállításhoz igazítania.",
-          "Az éles célokat, adatfeldolgozókat, naplózást, megőrzési időket és az esetleges EU-n kívüli adattovábbítás garanciáit a tényleges telepítés szerint kell kitölteni. Ennek hiányában a dokumentum minta állapotú marad.",
-        ],
-        facts: [
-          {
-            label: "Éles célok, jogalapok, szolgáltatók és továbbítások",
-            value: missing(site.legal.productionDataProcessing),
-          },
-          {
-            label: "Éles fiók-, foglalási és naplómegőrzés",
-            value: missing(site.legal.productionRetention),
-          },
-        ],
-      },
-      {
-        id: "jogok-reszletesen",
-        title: "Az érintetti jogok gyakorlása",
-        paragraphs: [
-          "A GDPR feltételei szerint tájékoztatást és hozzáférést, helyesbítést, törlést vagy korlátozást kérhetsz; megfelelő esetben adathordozhatósági vagy tiltakozási jogod is van. Hozzájáruláson alapuló kezelésnél a hozzájárulást a jövőre nézve visszavonhatod. A törlés nem feltétlenül terjed ki a jogszabály alapján kötelezően megőrzött adatokra.",
-          "A kérelmeket indokolatlan késedelem nélkül, főszabály szerint egy hónapon belül kell megválaszolni. Összetett vagy nagyszámú kérelmeknél a GDPR feltételeivel legfeljebb további két hónap hosszabbítás lehetséges; erről és az okokról az első hónapon belül tájékoztatást kell adni. Személyazonosításhoz csak az indokolt, szükséges adat kérhető.",
-          "A saját profiladatok a Saját fiók oldalon helyesbíthetők. Fióktörléshez és egyéb érintetti kérelmekhez keresd az adatkezelőt a fent megadott címen. A kérelmek azonosítását, teljesítését és dokumentálását az üzemeltető végzi. A böngészőben maradó demóadatokat a webhelyadatok törlésével távolíthatod el. Panasz a NAIH-nál tehető, és a GDPR szerint bírósági jogorvoslat is rendelkezésre áll.",
-          "A NAIH székhelye: 1055 Budapest, Falk Miksa utca 9–11.; levelezési címe: 1363 Budapest, Pf. 9.; telefon: +36 (1) 391-1400. Hatósági eljárás indításához a Hatóság hivatalos ügyintézési csatornáit kell követni.",
-        ],
-        links: [
-          {
-            label: "NAIH – hivatalos ügyfélszolgálat és kapcsolattartás",
-            href: "https://naih.hu/ugyfelszolgalat-kapcsolat",
-          },
-          {
-            label: "GDPR – az (EU) 2016/679 rendelet",
-            href: "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
-          },
-        ],
-      },
-      {
-        id: "elesites",
-        title: "Az éles változat előtt pontosítandó",
-        paragraphs: [
-          "Az éles rendszerhez rögzíteni kell a célonkénti jogalapokat, megőrzési időket, címzetteket és adatfeldolgozókat, az esetleges harmadik országbeli továbbításokat, az érintetti kérelmek folyamatát és a tényleges technikai védelmet. A hozzájárulás nem helyettesíti minden adatkezelés megfelelő jogalapjának meghatározását.",
-        ],
-      },
-    ],
-  },
+  privacyDocument,
   {
     ...legalNavigation[1],
+    download: {
+      filename: "aszf.txt",
+      label: "ÁSZF letöltése szöveges fájlként",
+    },
     title: "Tiszta feltételek, az első lépéstől.",
     description:
       "A portál használatának és az online időpontkérésnek az alapvető feltételei.",
@@ -155,6 +39,10 @@ export const legalDocuments: LegalDocument[] = [
         title: "A szolgáltató",
         facts: [
           { label: "Cégnév", value: site.legal.companyName },
+          { label: "Székhely", value: site.legal.registeredOffice },
+          { label: "Cégjegyzékszám", value: site.legal.registrationNumber },
+          { label: "Adószám", value: site.legal.taxNumber },
+          { label: "Képviselő", value: site.legal.representative },
           { label: "Műhely", value: address },
           { label: "Telefon", value: contactPhoneLabel },
           { label: "E-mail", value: site.contact.email },
@@ -171,6 +59,7 @@ export const legalDocuments: LegalDocument[] = [
         id: "idopontkeres",
         title: "Az időpontkérés menete",
         items: [
+          `Műszaki vizsgára kizárólag telefonon, a ${contactPhoneLabel} telefonszámokon egyeztethető időpont. A többi, onlineként megjelenő szolgáltatás a foglalóban választható.`,
           "Válaszd ki a szolgáltatást és egy elérhető napot, illetve érkezési időpontot.",
           "Add meg a kapcsolattartási és járműadatokat, majd ellenőrizd az összesítést.",
           "Az elküldött kérés a szerviz rendszerében telefonos egyeztetésre vár. A kért időpontot a telefonos visszaigazolás biztosítja; az elküldés önmagában nem foglal műhelykapacitást és nem hoz létre javítási megrendelést.",
@@ -220,8 +109,27 @@ export const legalDocuments: LegalDocument[] = [
         id: "fiok",
         title: "Fiók és céges használat",
         paragraphs: [
-          "Regisztráció után e-mail-címmel és jelszóval azonnal bejelentkezhetsz, e-mail-ellenőrzés nélkül. A saját kapcsolattartási és céges profiladatok, valamint a mentett járművek PocketBase-ben tárolhatók. Az e-mail-cím és jelszó módosításához a jelenlegi jelszó szükséges. Elfelejtett jelszóval az üzemeltetőhöz kell fordulni. Az időpontkérések és visszaigazolások a Foglalásaim oldalon követhetők.",
+          "Nyilvános regisztrációhoz cégnév, magyar adószám és kapcsolattartó szükséges. Az új fiók automatikusan csak céges partner szerepet kap. Vezetői, munkafelvevői és adminisztrátori hozzáférést kizárólag adminisztrátor oszthat ki; az e-mail-cím igazolása nem módosít szerepkört. A Partnerközpontban saját mentett járműpark és a saját időpontok kezelhetők.",
+          "Új céges fiók regisztrációja után a levélben kapott hivatkozással meg kell erősíteni az e-mail-címet; ezután e-mail-címmel és jelszóval lehet belépni. A korábbi fiókok hozzáférése megmarad; az átállás nem minősíti automatikusan igazoltnak címüket. A saját kapcsolattartási és céges profiladatok, valamint a mentett járművek PocketBase-ben tárolhatók. Az e-mail-cím módosításához a jelenlegi jelszó és az új címre küldött hivatkozás megerősítése szükséges. Jelszó módosítása jelenlegi jelszóval, elfelejtett jelszó helyett új jelszó beállítása pedig az e-mailben kapott, időben korlátozott hivatkozással lehetséges. Az időpontkérések és visszaigazolások a Foglalásaim oldalon követhetők.",
           "A céges és munkatársi nézetek elérését a PocketBase-ben tárolt szerepkör szabályozza. Új fiókhoz az adminisztrátor adhat bővebb hozzáférést. Az admin kezelheti mások fiókjait és hozzáférését; a saját és a védett alapadmin-fiók törlése vagy lefokozása az alkalmazásban nem engedélyezett.",
+        ],
+      },
+      {
+        id: "adatkezeles-es-biztonsag",
+        title: "Adatkezelés és adatbiztonság",
+        paragraphs: [
+          `A vendég által indított kérés aktív webes adatait és kapcsolódó előzményeit, értesítési másolatait a befejezés vagy lemondás rögzítése után ${site.guestRetentionDays} nap elteltével időzített feladat törli. A még nyitott ügyeket és a fiókos foglalásokat ez a törlés nem érinti. A további megőrzési köröket, jogosultságokat és érintetti jogokat az adatkezelési tájékoztató részletezi.`,
+          "Az adatvédelmi és adatbiztonsági szabályzat a társaság belső hozzáférési, üzemeltetési és incidenskezelési rendjének nyilvános leírása. Megismerése nem általános adatkezelési hozzájárulás, és nem helyettesíti az adatkezelési tájékoztatót.",
+        ],
+        links: [
+          {
+            label: "Adatkezelési Tájékoztató",
+            href: "/adatkezelesi-tajekoztato",
+          },
+          {
+            label: "Adatvédelmi és adatbiztonsági szabályzat",
+            href: "/adatvedelmi-es-adatbiztonsagi-szabalyzat",
+          },
         ],
       },
       {
@@ -353,4 +261,5 @@ export const legalDocuments: LegalDocument[] = [
     ],
   },
   consumerDocument,
+  dataSecurityDocument,
 ];

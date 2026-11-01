@@ -17,6 +17,7 @@ export const site = {
   // A nyitvatartási feliratokat is igazítsd a foglalási értékekhez.
   hours: { short: "H–P 06:00–17:00", long: "Hétfő–péntek · 06:00–17:00" },
   booking: bookingConfiguration.schedule,
+  guestRetentionDays: bookingConfiguration.guestRetentionDays,
   legal: {
     updatedAt: "2026-11-01",
     version: bookingConfiguration.termsVersion,
@@ -24,22 +25,24 @@ export const site = {
     bookingModel: "appointment-request",
     // Maradjon true a tényleges működéshez igazítás és ellenőrzés befejezéséig.
     isDraft: true,
-    companyName: "FAIR AUTÓSZERVÍZ FEHÉRVÁR Kft.",
+    companyName: "Fair Autószerviz Fehérvár Kft.",
     // Ezeket a saját hiteles cégadataid alapján töltsd ki; a műhely címe nem feltétlenül székhely.
-    registeredOffice: "",
-    registrationNumber: "",
-    taxNumber: "",
+    registeredOffice: "8105 Pétfürdő, Fazekas M. utca 8/b.",
+    registrationNumber: "19-09-520902",
+    taxNumber: "27277777-2-19",
     registryAuthority: "",
-    representative: "",
-    hostingProvider: "",
-    hostingAddress: "",
-    hostingEmail: "",
-    complaintsAddress: "",
+    representative: "Vida Zoltán",
+    itContact: "Vida Kornél",
+    hostingProvider: "Vercel Inc.",
+    hostingAddress: "440 N Barranca Avenue #4133, Covina, CA 91723, USA",
+    hostingEmail: "privacy@vercel.com",
+    complaintsAddress: "8000 Székesfehérvár, Balatoni út 8.",
     complaintsEmail: "kborsos@fairauto.eu",
     conciliationSubmission: "not-confirmed",
     regulatedServiceDisclosure: "",
     codeOfConduct: "",
-    pricingDisclosure: "",
+    pricingDisclosure:
+      "Az időpontkérés nem hoz létre javítási megrendelést. Telefonos visszaigazolás után a szerviz egy összegben vagy tételesen bruttó, forintban megadott árbecslést rögzíthet; ez nem számla vagy automatikusan elfogadott ajánlat. A munka tartalmát és a végleges díjat külön kell egyeztetni. Online fizetés nincs.",
     // Szolgáltatónkénti adatkezelési célok, jogalapok, megőrzés és továbbítás élesítéskor.
     productionDataProcessing: "",
     productionRetention: "",
@@ -77,4 +80,8 @@ export const legalNavigation = [
   { slug: "suti-tajekoztato", label: "Süti- és tárhelytájékoztató" },
   { slug: "impresszum", label: "Impresszum" },
   { slug: "fogyasztoi-tajekoztato", label: "Fogyasztói tájékoztató" },
+  {
+    slug: "adatvedelmi-es-adatbiztonsagi-szabalyzat",
+    label: "Adatvédelmi és adatbiztonsági szabályzat",
+  },
 ];

@@ -115,6 +115,46 @@ async function recordWrite<T>(
     throw error;
   }
 }
+async function requestAccountMail(
+  action: "request-verification" | "request-password-reset",
+  identity: string,
+) {
+  await requireEmailSetup();
+  try {
+    await pb(`/api/collections/users/${action}`, "POST", { email: identity });
+  } catch (error) {
+    // Public results never reveal whether an address exists or is already verified.
+    if (!(
+      error instanceof PocketBaseError && [400, 404].includes(error.status)
+    ))
+      throw error;
+  }
+}
+async function requireEmailSetup() {
+  try {
+    const policy = await pb<{ emailVerification: boolean }>(
+      "/api/fairauto/account/registration-policy",
+      "GET",
+    );
+    if (!policy.emailVerification) throw new PocketBaseError(404);
+  } catch (error) {
+    if (error instanceof PocketBaseError)
+      throw new AccountError(
+        503,
+        "A fióklevelezéshez telepíteni kell az e-mailes fiókkezelési migrációt és a friss hookokat.",
+      );
+    throw error;
+  }
+}
+function confirmationToken(data: Record<string, unknown>) {
+  const value = text(data, "token", 4096, 20);
+  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value))
+    throw new AccountError(
+      400,
+      "A megerősítő hivatkozás hibás vagy lejárt. Kérj új levelet.",
+    );
+  return value;
+}
 export async function authGet(action: string) {
   if (action !== "session") return json({ error: "Nem található." }, 404);
   const session = await currentSession();
@@ -125,6 +165,71 @@ export async function authGet(action: string) {
 }
 export async function authPost(request: NextRequest, action: string) {
   if (action === "logout") return clearSession(json({ ok: true }));
+  if (
+    [
+      "resend-verification",
+      "request-password-reset",
+      "request-verification",
+    ].includes(action)
+  ) {
+    const data = await body(request, ["email"]);
+    const identity = email(data);
+    throttle(request, "account-mail", identity, 4, 30);
+    await requestAccountMail(
+      action === "request-password-reset"
+        ? "request-password-reset"
+        : "request-verification",
+      identity,
+    );
+    return json(
+      {
+        message:
+          "Ha a megadott címmel használható fiók van és levél küldhető, elküldtük a szükséges hivatkozást. Ellenőrizd a beérkezett és a levélszemét mappát is.",
+      },
+      202,
+    );
+  }
+  if (
+    [
+      "confirm-verification",
+      "confirm-password-reset",
+      "confirm-email-change",
+    ].includes(action)
+  ) {
+    const data = await body(
+      request,
+      action === "confirm-verification"
+        ? ["token"]
+        : action === "confirm-email-change"
+          ? ["token", "password"]
+          : ["token", "password", "passwordConfirm"],
+    );
+    const token = confirmationToken(data);
+    throttle(request, "account-confirmation", token, 5, 100);
+    const payload: Record<string, unknown> = { token };
+    if (action === "confirm-password-reset") {
+      payload.password = newPassword(data);
+      payload.passwordConfirm = payload.password;
+    }
+    if (action === "confirm-email-change") payload.password = password(data);
+    try {
+      await pb(`/api/collections/users/${action}`, "POST", payload);
+    } catch (error) {
+      if (error instanceof PocketBaseError)
+        throw new AccountError(
+          400,
+          "A hivatkozás hibás, lejárt vagy már nem használható, illetve a jelszó hibás. Kérj új levelet, vagy ellenőrizd a jelszavad.",
+        );
+      throw error;
+    }
+    return json({
+      ok: true,
+      message:
+        action === "confirm-password-reset"
+          ? "Az új jelszót elmentettük. Most bejelentkezhetsz."
+          : "Az e-mail-címet megerősítettük. Most bejelentkezhetsz.",
+    });
+  }
   if (action === "login") {
     const data = await body(request, ["email", "password"]);
     const identity = email(data);
@@ -159,11 +264,12 @@ export async function authPost(request: NextRequest, action: string) {
     const details = profile(data, true);
     requireCompany(details);
     try {
-      const policy = await pb<{ companyOnly: boolean }>(
-        "/api/fairauto/account/registration-policy",
-        "GET",
-      );
-      if (!policy.companyOnly) throw new PocketBaseError(404);
+      const policy = await pb<{
+        companyOnly: boolean;
+        emailVerification: boolean;
+      }>("/api/fairauto/account/registration-policy", "GET");
+      if (!policy.companyOnly || !policy.emailVerification)
+        throw new PocketBaseError(404);
     } catch (error) {
       if (error instanceof PocketBaseError)
         throw new AccountError(
@@ -183,9 +289,15 @@ export async function authPost(request: NextRequest, action: string) {
         emailVisibility: false,
         role: "partner",
         active: true,
+        emailVerificationRequired: true,
         termsVersion: site.legal.version,
         termsAcceptedAt: new Date().toISOString(),
       });
+      try {
+        await requestAccountMail("request-verification", identity);
+      } catch {
+        console.error("[fairauto] registration_verification_request_failed");
+      }
     } catch (error) {
       // The same outward result for existing addresses; never reveal account existence.
       if (!(error instanceof PocketBaseError && error.status === 400))
@@ -193,9 +305,9 @@ export async function authPost(request: NextRequest, action: string) {
     }
     return json(
       {
-        pending: false,
+        pending: true,
         message:
-          "Ha a megadott adatokkal új fiók hozható létre, most bejelentkezhetsz. Ha már van fiókod, a meglévő jelszavaddal lépj be.",
+          "Ha a megadott adatokkal új fiók hozható létre, megerősítő levelet küldtünk. Bejelentkezés előtt igazold az e-mail-címedet. Ha nem érkezik meg, kérj új megerősítő levelet.",
       },
       202,
     );
@@ -227,14 +339,21 @@ export async function authPost(request: NextRequest, action: string) {
     const secret = password(data),
       identity = email(data);
     await reauthenticate(session, secret);
+    await requireEmailSetup();
     await recordWrite(
-      "/api/fairauto/account/email",
+      "/api/collections/users/request-email-change",
       "POST",
-      { email: identity, password: secret },
+      { newEmail: identity },
       session.token,
     );
-    const updated = await authenticate(identity, secret);
-    return setSession(json({ user: updated.user }), updated.token);
+    return json(
+      {
+        user: session.user,
+        message:
+          "A megerősítő levelet az új címre kértük. Az e-mail-cím a levélben kapott hivatkozás megerősítése után változik meg.",
+      },
+      202,
+    );
   }
   return json({ error: "Nem található." }, 404);
 }
@@ -327,12 +446,18 @@ export async function createAccount(request: NextRequest) {
       email: email(data),
       role,
       active: flag(data, "active", true),
+      emailVerificationRequired: true,
       emailVisibility: false,
       password: secret,
       passwordConfirm: secret,
     },
     session.token,
   );
+  try {
+    await requestAccountMail("request-verification", email(data));
+  } catch {
+    console.error("[fairauto] admin_verification_request_failed");
+  }
   return json({ user: account(result) }, 201);
 }
 export async function modifyAccount(
@@ -404,5 +529,12 @@ export async function modifyAccount(
     details,
     session.token,
   );
+  if (details.email && details.email !== target.email) {
+    try {
+      await requestAccountMail("request-verification", details.email as string);
+    } catch {
+      console.error("[fairauto] admin_verification_request_failed");
+    }
+  }
   return json({ user: account(result) });
 }

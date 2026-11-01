@@ -4,17 +4,19 @@ Hungarian service portal built with Next.js, React and TypeScript, matching [Fai
 
 ## Account management
 
-Accounts use **PocketBase**, without requiring email verification:
+Accounts use **PocketBase** with email verification for new accounts:
 
-- Register a **company partner** with a company name and Hungarian tax number, then sign in immediately using email and password. Individuals book as guests.
+- Register a **company partner** with a company name and Hungarian tax number, confirm the email address, then sign in using email and password. Individuals book as guests.
 - Save contact details and required company details across devices.
-- Save, edit, search and delete cars in PocketBase, and choose a default vehicle. Customers and partners have private garages; admins can manage all vehicles. Fleet lists are paginated.
+- Save, edit, search and delete cars in PocketBase, and choose a default vehicle. Each company account has a private fleet; admins can manage all vehicles. Fleet lists are paginated.
 - Accounts display initials; profile picture controls and their setup message have been removed.
-- Change email address or password with your current password.
+- Change an email address with your current password and a confirmation link sent to the new address. Change a password while signed in, or request a password-reset email.
 - Admins create, search, edit, suspend and delete accounts, and assign `partner`, `reception`, `manager` or `admin` roles.
 - Navigation follows the current PocketBase role. The demo role switcher and password-free profile switching have been removed.
 - Admin changes require the admin's password. Self-demotion/deletion and changes to a protected root admin are blocked.
 - Sessions use HttpOnly cookies; real tokens, passwords and profiles are not stored in browser localStorage. Each authenticated API call checks PocketBase again.
+
+**Final testing update:** apply [docs/FINAL_UPDATE.md](./docs/FINAL_UPDATE.md) to the existing CasaOS container. It adds the two new migrations, account email templates, hooks and the matching legal configuration without changing the working SMTP credentials.
 
 **Setup is required on your PocketBase and Vercel deployment.** Follow [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md), including the versioned migration, first normal `users` admin, and environment settings. No superuser credentials or API keys belong in this app. No avatar setup is needed for the current UI. Public registration defaults to disabled until explicitly enabled after migration.
 
@@ -57,9 +59,9 @@ Production authentication requires HTTPS and `AUTH_APP_ORIGIN` matching the depl
 
 **Real:** account/profile management, role assignment, private garages, guest/partner appointment requests, phone confirmation, workshop status tracking, cancellation/rescheduling, history, closures and aggregate reports. Guest access uses an HttpOnly capability cookie; account access follows the stored PocketBase role. Requests and personal data are not kept in localStorage.
 
-**Remaining:** shared company membership across multiple accounts, verified/reliable production mail setup and account email recovery, repair contracts, work orders and invoicing. A partner's fleet currently belongs to that individual account. There is no hard-delete control for appointment history.
+**Remaining:** shared company membership across multiple accounts, scheduled reminders, repair contracts, work orders and invoicing. A partner's fleet currently belongs to that individual account. Guest-created completed/cancelled requests and related history/mail copies are automatically removed 30 days after closure; open or account-owned records are retained.
 
-Optional appointment notifications use a durable PocketBase outbox and its native mail client; delivery defaults to **off**. Admins can view sanitized queue/transport status and retry failed handoffs without resending accepted messages. Gmail SMTP settings, tested with delivery to the operator’s own inbox, are in [docs/GMAIL_SMTP.md](./docs/GMAIL_SMTP.md). The selected company mailbox still needs its own supported sending credentials. Unix Sendmail setup and the CasaOS localhost fix are in [docs/LOCAL_SENDMAIL.md](./docs/LOCAL_SENDMAIL.md); activation and price details are in [docs/APPOINTMENT_PRICES_AND_MAIL.md](./docs/APPOINTMENT_PRICES_AND_MAIL.md). There is no email preview, verification mail or email password recovery. For now, an admin can reset another user's password after independently checking their identity. Mail workflow and remaining operator requirements are in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
+Optional appointment notifications use a durable PocketBase outbox and its native mail client; delivery defaults to **off**. Admins can view sanitized queue/transport status and retry failed handoffs without resending accepted messages. Gmail SMTP settings, tested with delivery to the operator’s own inbox, are in [docs/GMAIL_SMTP.md](./docs/GMAIL_SMTP.md). The operator has confirmed delivery from the intended company sender. Unix Sendmail setup and the CasaOS localhost fix are in [docs/LOCAL_SENDMAIL.md](./docs/LOCAL_SENDMAIL.md); activation and price details are in [docs/APPOINTMENT_PRICES_AND_MAIL.md](./docs/APPOINTMENT_PRICES_AND_MAIL.md). Account verification, resend, confirmed email changes and password recovery use PocketBase's native signed-token flows. Emails use branded HTML layouts; appointment emails retain a text alternative and can include itemized price tables. There is no demo email-preview inbox. Mail workflow and remaining operator requirements are in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
 
 ## Checks
 
@@ -86,6 +88,8 @@ The documents describe real PocketBase accounts, vehicles, appointment storage, 
 
 ## Next integration steps
 
-PocketBase manages SQLite internally. Company membership across multiple accounts, scheduled reminders and account email recovery remain future work. Browser storage and client-side permissions never authorize appointment operations.
+PocketBase manages SQLite internally. Company membership across multiple accounts and scheduled reminders remain future work. Browser storage and client-side permissions never authorize appointment operations.
 
 Before company production use, upgrade the old homelab PocketBase, enable backend/edge rate limits, protect superuser routes, test backup restoration and complete the legal/operator settings. See the security boundaries in the setup guide.
+
+The supplied legal documents are readable from the footer and downloadable as TXT/Word. Editable sources: `content/privacy.ts`, `content/data-security.ts`, `content/legal.ts` and `content/site.ts`. Original uploads and correction notes are in [docs/legal-sources](./docs/legal-sources/README.md). Final test findings are recorded in [docs/FINAL_TESTING.md](./docs/FINAL_TESTING.md).

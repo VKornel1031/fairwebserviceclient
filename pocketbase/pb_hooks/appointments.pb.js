@@ -59,6 +59,9 @@ routerAdd(
 cronAdd("fairauto-appointment-mail", "* * * * *", () =>
   require(__hooks + "/fairauto-mail.js").process($app),
 );
+cronAdd("fairauto-guest-retention", "* * * * *", () =>
+  require(__hooks + "/fairauto-retention.js").process($app),
+);
 routerAdd("GET", "/api/fairauto/appointments/mail-status", (e) =>
   require(__hooks + "/fairauto-appointments.js").mailStatusRoute(e),
 );

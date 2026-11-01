@@ -1,5 +1,7 @@
 # Céges regisztráció, négy szerepkör
 
+**E-mailes fiókkezelés és megőrzés:** az újabb [FINAL_UPDATE.md](./FINAL_UPDATE.md) frissítést is alkalmazd. Új fióknál a belépéshez címigazolás kell; a szerep automatikusan továbbra csak `partner`.
+
 Nyilvánosan csak **cégnévvel és magyar adószámmal** lehet fiókot létrehozni. Az új fiók `partner`; nincs nyilvános szerepkörválasztás. Az adószám formátuma `12345678-2-19`; ez formátumellenőrzés, nem NAV-lekérdezés vagy képviseleti jogosultság igazolása. Magánszemélyek továbbra vendégként kérhetnek időpontot.
 
 A megmaradó szerepek: `partner`, `reception`, `manager`, `admin`. A munkatársi fiókokat az admin hozza létre, nekik nem kell cégnév vagy adószám. A partner céges adatait nem lehet üresre menteni. A szabály a Next szerver és a PocketBase natív rekord API felől is érvényesül.

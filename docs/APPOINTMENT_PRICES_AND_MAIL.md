@@ -4,7 +4,7 @@
 
 A már működő időpontkezeléshez az új **`1793512800_prices_vin_and_mail.js`** migráció és a friss foglalási hookok szükségesek. Az [APPOINTMENTS.md](./APPOINTMENTS.md) két másolható blokkját futtasd: a korábban alkalmazott migráció kimarad, az új az aktív `/pocketbase/pb_data` adatbázisba kerül. A meglévő konténer és járműadatok megmaradnak. API-kulcs vagy új Vercel-változó nem kell.
 
-A friss `content/booking.json` is szükséges: a tájékoztatók közös verziója `2026-11-01.5-draft`. Levelezés alapból ki van kapcsolva; az árkezelés ettől függetlenül működik.
+A friss `content/booking.json` is szükséges: a tájékoztatók közös verziója `2026-11-01.6-draft`. Levelezés alapból ki van kapcsolva; az árkezelés ettől függetlenül működik.
 
 ## Admin automatikus kitöltés és levelezési állapot javítása
 
@@ -86,7 +86,7 @@ sudo docker restart pocketbase
 
 A bekapcsolástól kezdve a kérés, telefonos visszaigazolás, átütemezés, lemondás, árváltozás és elkészült munka külön szolgáltatási értesítést hoz létre a kapcsolattartónak és az aktív kijelölt munkatársaknak. A korábbi eseményeket nem küldi újra visszamenőleg. A munkatársi címet és aktív jogosultságot küldés előtt újraellenőrzi; megszűnt jogosultságnál nem küldi el a várakozó levelet. A címzettek külön levelet kapnak; a munkatársak címei nem kerülnek az ügyfél levelébe. A partner kapcsolattartója az időpontban tárolt címen kap levelet.
 
-A szolgáltatási levél tartalmazza az azonosítót, időpontot, szolgáltatást, kontakt- és autóadatokat, opcionális céget, megjegyzést, árbontást és műhelyelérhetőséget. A kérés átvételét és a telefonos megerősítést elkülöníti. Hozzáférési titkot nem küld e-mailben; a vendég saját böngészőjében kezeli a kérését. Nincs webes e-mail-előnézeti postafiók, marketinglevél, aktiváló levél vagy új jelszó-visszaállítási folyamat.
+A szolgáltatási levél tartalmazza az azonosítót, időpontot, szolgáltatást, kontakt- és autóadatokat, opcionális céget, megjegyzést, árbontást és műhelyelérhetőséget. A kérés átvételét és a telefonos megerősítést elkülöníti. Hozzáférési titkot nem küld e-mailben; a vendég saját böngészőjében kezeli a kérését. Demó e-mail-előnézeti postafiók és marketinglevél nincs. A fiókmegerősítés, jelszó-visszaállítás és címváltoztatás beállítása a [FINAL_UPDATE.md](./FINAL_UPDATE.md) része.
 
 ### Küldési állapotok
 

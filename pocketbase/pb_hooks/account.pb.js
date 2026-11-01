@@ -23,11 +23,9 @@ routerAdd(
       const record = tx.findRecordById("users", event.auth.id);
       if (!record.getBool("active") || !record.validatePassword(body.password))
         throw new UnauthorizedError("Invalid account credentials.");
-      record.set("email", identity);
-      record.set("verified", false);
-      tx.save(record);
+      // The old direct-change route is retired now that SMTP is configured.
     });
-    return event.json(200, { ok: true });
+    throw new ApiError(410, "Use the email confirmation flow.");
   },
   $apis.requireAuth("users"),
 );
@@ -53,7 +51,10 @@ routerAdd(
     const privateView =
       '@request.auth.id != "" && @request.auth.active = true && (id = @request.auth.id || @request.auth.role = "admin")';
     const ready =
-      compact(collection.authRule) === compact("active = true") &&
+      compact(collection.authRule) ===
+        compact(
+          "active = true && (verified = true || emailVerificationRequired = false)",
+        ) &&
       compact(collection.viewRule) === compact(privateView) &&
       !!avatar &&
       avatar.type() === "file" &&

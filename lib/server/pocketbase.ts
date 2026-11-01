@@ -230,6 +230,7 @@ export function account(record: Record<string, unknown>): Account {
     reminders: record.reminders === true,
     role: record.role as Role,
     verified: record.verified === true,
+    emailVerificationRequired: record.emailVerificationRequired === true,
     active: record.active !== false,
     protectedRoot: record.protectedRoot === true,
     companyName: field("companyName"),
@@ -241,6 +242,7 @@ export function account(record: Record<string, unknown>): Account {
       Object.hasOwn(record, "active") &&
       Object.hasOwn(record, "protectedRoot") &&
       Object.hasOwn(record, "termsVersion") &&
+      Object.hasOwn(record, "emailVerificationRequired") &&
       Object.hasOwn(record, "companyName"),
   };
 }
@@ -280,7 +282,7 @@ export async function authenticate(
     )
       throw new AccountError(
         401,
-        "Hibás e-mail-cím vagy jelszó, illetve letiltott fiók.",
+        "Hibás e-mail-cím vagy jelszó, letiltott fiók, vagy még meg nem erősített e-mail-cím. Új fióknál előbb nyisd meg a megerősítő levelet.",
       );
     throw error;
   }

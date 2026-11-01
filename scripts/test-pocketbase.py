@@ -53,6 +53,7 @@ migrate((app) => {
   c.fields.add(new TextField({ name: "recipient", max: 254 }));
   c.fields.add(new TextField({ name: "subject", max: 500 }));
   c.fields.add(new TextField({ name: "html", max: 50000 }));
+  c.fields.add(new AutodateField({ name: "created", onCreate: true }));
   app.save(c);
   const legacy = new Record(app.findCollectionByNameOrId("users"));
   legacy.set("name", "Legacy Personal Account");
@@ -65,7 +66,7 @@ migrate((app) => {
 ''')
     (hooks / "mail-interceptor.pb.js").write_text('''
 onMailerSend((e) => {
-  if ($app.store().get("fairauto_test_mail_failure")) throw new Error("Simulated transport failure");
+  if ($app.store().get("fairauto_test_mail_failure") && e.message.subject.indexOf("Fair Autószerviz · FA-") === 0) throw new Error("Simulated transport failure");
   const r = new Record($app.findCollectionByNameOrId("test_mail_capture"));
   r.set("recipient", e.message.to[0].address); r.set("subject", e.message.subject); r.set("html", e.message.html);
   $app.save(r);
@@ -81,6 +82,9 @@ routerAdd("POST", "/api/fairauto-test/mail", (e) => {
   }
   return e.json(200, require(__hooks + "/fairauto-mail.js").process($app));
 }, $apis.requireSuperuserAuth());
+routerAdd("POST", "/api/fairauto-test/retention", (e) => {
+  return e.json(200, require(__hooks + "/fairauto-retention.js").process($app, Number(e.requestInfo().body.now)));
+}, $apis.requireSuperuserAuth());
 ''')
     # Test-only: emulate a successful public creation response with internal fields redacted.
     # This temporary hook is never installed on the homelab or included in production pb_hooks.
@@ -93,6 +97,14 @@ onRecordEnrich((event) => {
   }
   event.next();
 }, "users");
+''')
+    # Synthetic retention deadlines are exercised through the protected test endpoint,
+    # so a wall-clock cron tick must not race those deliberately aged fixtures.
+    (hooks / "retention-scheduler-test.pb.js").write_text('''
+onServe((event) => {
+  cronAdd("fairauto-guest-retention", "* * * * *", () => {});
+  return event.next();
+});
 ''')
     options = ["--dir", str(root / "pb_data"), "--migrationsDir", str(migrations), "--hooksDir", str(hooks), "--dev=false"]
     subprocess.run([binary, "superuser", "upsert", "root@fairauto.test", secret, *options], check=True)

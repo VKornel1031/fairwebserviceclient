@@ -1,5 +1,6 @@
 """Verify upgrading existing accounts and rerunning the migration in a disposable local DB."""
 import json
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 import secrets
@@ -155,6 +156,52 @@ with tempfile.TemporaryDirectory(prefix="fair-migration-check-") as directory:
         for collection, before_record in [("vehicles", car), ("appointments", appointment)]:
             status, after_record = api("GET", f'/api/collections/{collection}/records/{before_record["id"]}', token=token)
             assert status == 200 and after_record == before_record, collection
-        print("PASS: account data, field IDs, car/default ownership and appointment snapshots preserved; legacy customers converted without deletion or reactivation; admin protection and password login preserved.")
+        guest_records = []
+        for index, state in enumerate(["cancelled", "completed"]):
+            data = {
+                "reference": "FA-OLD-GUEST-" + str(index), "service": "other", "serviceName": "Old guest request",
+                "date": "2026-10-01", "time": "09:00", "duration": 60, "startMinute": 540,
+                "endMinute": 600, "status": state, "contact": {"name": "Legacy Guest"},
+                "vehicle": {"plate": "OLD123"}, "termsVersion": "old", "termsAcceptedAt": "2026-10-01 09:00:00.000Z",
+                "requestHash": str(index + 1) * 64, "payloadHash": "f" * 64, "revision": 2,
+                "guestHash": ("c" if index == 0 else "d") * 64,
+            }
+            status, guest = api("POST", "/api/collections/appointments/records", data, token)
+            assert status == 200
+            guest_records.append(guest)
+        old_date = datetime.fromtimestamp(time.time() - 40 * 86400, timezone.utc).isoformat()
+        status, event = api("POST", "/api/collections/appointment_events/records", {
+            "appointment": guest_records[0]["id"], "action": "cancelled", "revision": 2,
+            "change": {"before": "requested", "after": "cancelled"},
+        }, token)
+        assert status == 200
+        assert api("PATCH", f'/api/collections/appointment_events/records/{event["id"]}', {"created": old_date}, token)[0] == 200
+        status, old_event = api("GET", f'/api/collections/appointment_events/records/{event["id"]}', token=token)
+        assert status == 200
+        status, before_auth = api("POST", "/api/collections/users/auth-with-password", {"identity": customers[0]["email"], "password": password})
+        assert status == 200
+        started = time.time()
+        stop()
+        for name in ["1793541600_guest_retention.js", "1793545200_email_verification.js"]:
+            shutil.copyfile(source / name, migrations / name)
+        subprocess.run([binary, "migrate", "up", *options], check=True, stdout=subprocess.DEVNULL)
+        token = start()
+        # The schema migration only records deadlines. It must never perform deletion.
+        for index, guest in enumerate(guest_records):
+            status, migrated = api("GET", f'/api/collections/appointments/records/{guest["id"]}', token=token)
+            assert status == 200 and migrated["contact"] == guest["contact"]
+            if index == 0:
+                assert migrated["closedAt"] == old_event["created"]
+            else:
+                at = datetime.fromisoformat(migrated["closedAt"].replace("Z", "+00:00")).timestamp()
+                assert started - 1 <= at <= time.time() + 1, "Unknown closure did not receive a fresh grace period"
+        # PocketBase may revoke existing tokens when the auth rule changes; credentials remain usable.
+        assert api("POST", "/api/collections/users/auth-with-password", {"identity": customers[0]["email"], "password": password})[0] == 200
+        status, preserved = api("GET", f'/api/collections/users/records/{customers[0]["id"]}', token=token)
+        assert status == 200 and not preserved["verified"] and not preserved["emailVerificationRequired"]
+        assert preserved["role"] == "partner" and preserved["defaultVehicle"] == car["id"]
+        status, still_disabled = api("GET", f'/api/collections/users/records/{legacy["id"]}', token=token)
+        assert status == 200 and not still_disabled["active"] and still_disabled["protectedRoot"]
+        print("PASS: account/car/appointment data and field IDs preserved; legacy access retained without falsifying verification; disabled admins stay disabled; guest deadlines backfilled from closure history or a fresh grace period, with no migration-time deletion.")
     finally:
         stop()

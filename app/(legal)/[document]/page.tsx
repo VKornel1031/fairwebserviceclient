@@ -7,6 +7,7 @@ import { site } from "@/content/site";
 import LegalLinks from "@/components/legal-links";
 import ThemeToggle from "@/components/theme-toggle";
 import { legalSetupIssues } from "@/lib/legal";
+import { currentWordCopy } from "@/lib/legal-downloads";
 
 export function generateStaticParams() {
   return legalDocuments.map((doc) => ({ document: doc.slug }));
@@ -33,6 +34,7 @@ export default async function LegalPage({
   const doc = legalDocuments.find((d) => d.slug === document);
   if (!doc) notFound();
   const draft = legalSetupIssues().length > 0;
+  const wordCopy = currentWordCopy(doc);
   const updated = new Date(
     `${site.legal.updatedAt}T12:00:00`,
   ).toLocaleDateString("hu-HU", {
@@ -79,9 +81,9 @@ export default async function LegalPage({
         </div>
         {draft && (
           <p className="legal-draft-note">
-            Ez a szöveg a jelenlegi demó működését írja le. Az éles használathoz
-            a hiányzó cégadatokat és a tényleges szolgáltatás feltételeit ki
-            kell egészíteni és ellenőrizni kell.
+            A dokumentum üzemeltetői felülvizsgálata folyamatban van. Az éles
+            használat előtt a jelzett adatokat és működési feltételeket
+            véglegesíteni és ellenőrizni kell.
           </p>
         )}
         <div className="legal-layout">
@@ -105,14 +107,25 @@ export default async function LegalPage({
               <FileText size={22} strokeWidth={1.3} />
               <h2>{doc.title}</h2>
             </div>
-            {doc.slug === "aszf" && (
-              <a
-                className="legal-download"
-                href="/dokumentumok/aszf.txt"
-                download
-              >
-                ÁSZF letöltése szöveges fájlként <ArrowUpRight size={14} />
-              </a>
+            {doc.download && (
+              <div className="legal-downloads">
+                <a
+                  className="legal-download"
+                  href={`/dokumentumok/${doc.download.filename}`}
+                  download
+                >
+                  {doc.download.label} <ArrowUpRight size={14} />
+                </a>
+                {wordCopy && (
+                  <a
+                    className="legal-download"
+                    href={`/dokumentumok/jogi/${wordCopy.filename}`}
+                    download
+                  >
+                    Word változat letöltése (.docx) <ArrowUpRight size={14} />
+                  </a>
+                )}
+              </div>
             )}
             {doc.sections.map((section, i) => (
               <section

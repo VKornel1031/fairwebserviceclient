@@ -1,7 +1,8 @@
 {
   "version": 1,
-  "termsVersion": "2026-11-01.5-draft",
+  "termsVersion": "2026-11-01.6-draft",
   "guestCookieDays": 120,
+  "guestRetentionDays": 30,
   "phoneContacts": [
     { "label": "06 20 347 3705", "href": "tel:+36203473705" },
     { "label": "06 20 405 6299", "href": "tel:+36204056299" }

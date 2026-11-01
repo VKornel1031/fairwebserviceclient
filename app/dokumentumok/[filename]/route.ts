@@ -1,6 +1,6 @@
 import { consumerForms } from "@/content/consumer-forms";
 import { legalDocuments } from "@/content/legal";
-import { site } from "@/content/site";
+import { legalDocumentText } from "@/lib/legal-downloads";
 
 export async function GET(
   _request: Request,
@@ -11,22 +11,9 @@ export async function GET(
     const form = consumerForms[filename as keyof typeof consumerForms];
     return download(filename, form.text);
   }
-  if (filename === "aszf.txt") {
-    const doc = legalDocuments.find((d) => d.slug === "aszf")!;
-    const text = [
-      `${doc.label} – ${site.name}`,
-      `Változat: ${site.legal.version}`,
-      `Frissítve: ${site.legal.updatedAt}`,
-      "Szerkeszthető dokumentum a helyi demó működéséhez.",
-      ...doc.sections.flatMap((section) => [
-        "",
-        section.title,
-        ...(section.facts || []).map((f) => `${f.label}: ${f.value}`),
-        ...(section.paragraphs || []),
-        ...(section.items || []).map((item) => `- ${item}`),
-      ]),
-    ].join("\r\n");
-    return download(filename, text);
+  const doc = legalDocuments.find((d) => d.download?.filename === filename);
+  if (doc) {
+    return download(filename, legalDocumentText(doc));
   }
   return new Response("A dokumentum nem található.", { status: 404 });
 }

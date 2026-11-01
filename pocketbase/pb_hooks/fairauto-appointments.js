@@ -142,6 +142,12 @@ function configuration() {
     fail(503, "booking_setup_required");
   txt(cfg.termsVersion, 100, 1);
   if (
+    !Number.isInteger(cfg.guestRetentionDays) ||
+    cfg.guestRetentionDays < 1 ||
+    cfg.guestRetentionDays > 365
+  )
+    fail(503, "booking_setup_required");
+  if (
     !Array.isArray(cfg.services) ||
     cfg.services.length < 1 ||
     cfg.services.length > 30
@@ -212,6 +218,7 @@ function setup(app) {
     mail.listRule != null ||
     mail.viewRule != null ||
     !a.fields.getByName("guestHash")?.hidden ||
+    !a.fields.getByName("closedAt")?.hidden ||
     !a.fields.getByName("price")?.hidden
   )
     fail(503, "booking_setup_required");
@@ -657,6 +664,14 @@ function scope(actor, all) {
 }
 exports.configRoute = (e) => {
   setup($app);
+  if (
+    !$app
+      .cron()
+      .jobs()
+      .some((job) => job.id() === "fairauto-guest-retention") ||
+    typeof require(__hooks + "/fairauto-retention.js").process !== "function"
+  )
+    fail(503, "booking_setup_required");
   guard($app, e, false);
   return e.json(200, configuration());
 };
@@ -825,6 +840,7 @@ exports.rescheduleRoute = (e) => {
       );
     record.set("status", "requested");
     record.set("confirmation", null);
+    record.set("closedAt", "");
     record.set("price", null);
     record.set("revision", record.getInt("revision") + 1);
     record.set(
@@ -890,6 +906,8 @@ exports.statusRoute = (e) => {
       });
     }
     record.set("status", next);
+    if (next === "completed" || next === "cancelled")
+      record.set("closedAt", new Date().toISOString());
     record.set("revision", record.getInt("revision") + 1);
     tx.save(record);
     audit(tx, record, actor, next, { before: current, after: next });

@@ -4,7 +4,7 @@ import { site } from "../content/site";
 import { legalSetupIssues } from "../lib/legal";
 
 test("hiding the draft flag cannot hide missing company and operational requirements", () => {
-  const altered = { ...site.legal, isDraft: false };
+  const altered = { ...site.legal, registeredOffice: "", isDraft: false };
   const issues = legalSetupIssues(altered);
   expect(issues.some((issue) => issue.includes("Székhely"))).toBe(true);
   expect(issues.some((issue) => issue.includes("adatfeldolgozók"))).toBe(true);

@@ -1,3 +1,4 @@
+import { verifyAccount } from "./account-mail-helper";
 import {
   test,
   expect,
@@ -44,6 +45,7 @@ async function customer(api: APIRequestContext) {
       })
     ).status(),
   ).toBe(202);
+  await verifyAccount(api, email);
   const user = await login(api, email);
   await api.patch("/api/account", {
     headers,
@@ -898,6 +900,7 @@ test("staff edit detailed prices through the UI and customers see a read-only br
 test("mail uses durable snapshots, separate recipients and retries; repeated events never create duplicate jobs", async ({
   request,
   playwright,
+  page,
 }) => {
   const auth = await root(request);
   expect(
@@ -1036,6 +1039,64 @@ test("mail uses durable snapshots, separate recipients and retries; repeated eve
       { headers: auth, data: { active: true } },
     );
   }
+  const estimate = await staff.put(`/api/appointments/${a.id}/price`, {
+    headers,
+    data: {
+      revision: confirmed.revision,
+      mode: "itemized",
+      items: [
+        {
+          kind: "part",
+          description: "Fékbetét <script>",
+          quantity: 2,
+          unitPriceHuf: 15000,
+        },
+        {
+          kind: "labour",
+          description: "Munkadíj",
+          quantity: 1,
+          unitPriceHuf: 20000,
+        },
+      ],
+    },
+  });
+  expect(estimate.status(), await estimate.text()).toBe(200);
+  await request.post(`${backend}/api/fairauto-test/mail`, {
+    headers: auth,
+    data: { fail: false },
+  });
+  const priced = await (
+    await request.get(`${backend}/api/collections/test_mail_capture/records`, {
+      headers: auth,
+      params: { filter: 'subject ~ "ár frissült"', perPage: "100" },
+    })
+  ).json();
+  expect(priced.items.length).toBeGreaterThan(0);
+  const html = priced.items[0].html;
+  expect(html).toContain("Tájékoztató bruttó árbecslés");
+  expect(html).toContain("50 000 Ft");
+  expect(html).toContain("Fékbetét &lt;script&gt;");
+  expect(html).not.toContain("<script>");
+  await page.setContent(html);
+  for (const width of [390, 640]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await expect(
+    page.getByRole("link", { name: "Időpont részleteinek megnyitása" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Bruttó összeg" }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: test.info().outputPath("appointment-email-mobile.png"),
+    fullPage: true,
+  });
   await staff.dispose();
 });
 

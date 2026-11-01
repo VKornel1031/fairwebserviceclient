@@ -1,6 +1,6 @@
 # Gmail SMTP a PocketBase-ben
 
-A CasaOS gépen a külső 25-ös port elutasítja a kapcsolatot, a Gmail 587-es portja elérhető. A saját Gmail-fiókkal küldött PocketBase-teszt megérkezett. A PocketBase közvetlen SMTP-küldése megkerüli a helyi Sendmail továbbítását; alkalmazáskód vagy Vercel-kulcs nem kell hozzá.
+A CasaOS gépen a külső 25-ös port elutasítja a kapcsolatot, a Gmail 587-es portja elérhető. Az üzemeltető 2026-11-01-én megerősítette, hogy a kívánt céges feladóról küldött levél is megérkezik. A működő hitelesítést a végső frissítés megőrzi. A PocketBase közvetlen SMTP-küldése megkerüli a helyi Sendmail továbbítását; alkalmazáskód vagy Vercel-kulcs nem kell hozzá.
 
 1. A küldő Google-fiókban engedélyezd a kétlépcsős azonosítást, majd az [Alkalmazásjelszavak](https://myaccount.google.com/apppasswords) oldalon hozz létre egy PocketBase-jelszót.
 2. A PocketBase **Settings → Mail settings** oldalán kapcsold be az SMTP-t.
@@ -32,3 +32,5 @@ A működő Gmail-fiók saját feladócímével tesztelhető a levelezés. Cége
 Az időpontértesítések a PocketBase aktuális `newMailClient()` beállítását használják. A már engedélyezett `fairauto-mail.json` konfigurációt nem kell lecserélni. Bekapcsolás és az admin újrapróbálás gombja: [APPOINTMENT_PRICES_AND_MAIL.md](./APPOINTMENT_PRICES_AND_MAIL.md).
 
 Az SMTP-re váltás az új küldésekre és az alkalmazás még várakozó feladataira vonatkozik. A helyi Sendmailnek korábban sikeresen átadott tesztlevelek a host saját sorában maradnak; ez a beállítás nem küldi újra és nem törli azokat. Az alkalmazás `sent` állapota továbbra a levélkiszolgáló átvételét jelenti, nem postaládai kézbesítési igazolást.
+
+Az e-mailes fiókellenőrzés és jelszó-visszaállítás migrációja, magyar sablonjai és a meglévő CasaOS telepítés frissítése: [FINAL_UPDATE.md](./FINAL_UPDATE.md).

@@ -23,7 +23,12 @@ Módosítás után telepítsd újra a weboldalt, és **ugyanezt a fájlt** máso
 
 A nyitvatartási feliratokat a `site.ts` fájlban is igazítsd a foglalási órákhoz. A `closedWeekdays` számozása 0 = vasárnap, 6 = szombat; legalább egy nyitott nap maradjon. A kapacitás és az idősávköz pozitív szám legyen, és a zárás essen a nyitás után. Minden nyitott nap azonos nyitvatartást használ; külön zárt napokat a vezető/admin a felületen állíthat be. A `reservationPolicy` maradjon `phone-confirmation`, az időzóna `Europe/Budapest`. Függő kérés nem foglal kapacitást; a telefonos megerősítés biztosítja azt.
 
-## `content/legal.ts` – a jogi oldalak szövege
+## Szerkeszthető jogi dokumentumok
+
+- `content/privacy.ts`: a megadott Adatkezelési Tájékoztató webes változata.
+- `content/data-security.ts`: a megadott Adatvédelmi és adatbiztonsági szabályzat webes változata.
+- `content/legal.ts`: ÁSZF, süti- és tárhelytájékoztató, impresszum; a két külön dokumentumot is itt kapcsoljuk a közös megjelenítéshez.
+- A Word-export és az eredeti fájlok összehasonlítása: [legal-sources/README.md](./legal-sources/README.md).
 
 Az alapdokumentumok minden bekezdése, felsorolása és adatblokkja itt található. A fogyasztói tájékoztató külön a `content/consumer.ts`, a letölthető nyilatkozatok szövege a `content/consumer-forms.ts` fájlban szerkeszthető. A szöveg a PocketBase-fiókkezelést, mentett autókat, időpontkéréseket, telefonos megerősítést és vendég-hozzáférési sütit írja le. Az opcionális időpontértesítés alapból ki van kapcsolva; a helyi `fairauto-mail.json` kapcsolóval indítható, működő levélkiszolgáló ellenőrzése után. Az árkezelés és levélbeállítás részletei: [APPOINTMENT_PRICES_AND_MAIL.md](./APPOINTMENT_PRICES_AND_MAIL.md).
 

@@ -5,6 +5,9 @@ routerAdd("GET", "/api/fairauto/account/registration-policy", (event) => {
   const users = $app.findCollectionByNameOrId("users");
   const roles = users.fields.getByName("role");
   return event.json(200, {
+    emailVerification:
+      !!users.fields.getByName("emailVerificationRequired") &&
+      String(users.authRule).indexOf("emailVerificationRequired") !== -1,
     companyOnly:
       roles.values.length === 4 &&
       roles.values.indexOf("customer") === -1 &&

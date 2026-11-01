@@ -1,3 +1,4 @@
+import { verifyAccount } from "./account-mail-helper";
 import { test, expect } from "@playwright/test";
 
 const origin = "http://127.0.0.1:3100";
@@ -76,6 +77,7 @@ test("public registration requires company details and creates only a partner", 
   expect(
     (await request.post("/api/auth/register", { headers, data })).status(),
   ).toBe(202);
+  await verifyAccount(request, data.email);
   const login = await request.post("/api/auth/login", {
     headers,
     data: { email: data.email, password },
@@ -84,7 +86,7 @@ test("public registration requires company details and creates only a partner", 
   expect((await login.json()).user).toMatchObject({
     ...company,
     role: "partner",
-    verified: false,
+    verified: true,
   });
   expect(
     (
@@ -110,6 +112,7 @@ test("native PocketBase APIs reject personal signups and clearing a partner's co
     ...company,
     active: true,
     role: "partner",
+    emailVerificationRequired: true,
     termsVersion: "test",
     termsAcceptedAt: new Date().toISOString(),
   };
@@ -135,6 +138,10 @@ test("native PocketBase APIs reject personal signups and clearing a partner's co
   expect(result.status(), await result.text()).toBe(200);
   const user = await result.json();
   expect(user).toMatchObject({ ...company, role: "partner" });
+  await api.post("/api/collections/users/request-verification", {
+    data: { email: data.email },
+  });
+  await verifyAccount(api, data.email);
   const auth = await api.post("/api/collections/users/auth-with-password", {
     data: { identity: data.email, password },
   });

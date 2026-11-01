@@ -1,3 +1,4 @@
+import { verifyAccount } from "./account-mail-helper";
 import { test, expect, request as apiRequest } from "@playwright/test";
 const origin = "http://127.0.0.1:3100";
 const backend = "http://127.0.0.1:3101";
@@ -61,6 +62,7 @@ test("native public registration cannot create privileged, preverified or protec
     password,
     passwordConfirm: password,
     active: true,
+    emailVerificationRequired: true,
     termsVersion: "test",
     termsAcceptedAt: new Date().toISOString(),
     companyName: "Native Test Kft.",
@@ -115,6 +117,7 @@ test("deleting an active account and resetting a password invalidate existing se
       companyTax: "12345678-2-19",
     },
   });
+  await verifyAccount(request, email);
   const loggedIn = await request.post("/api/auth/login", {
     headers: { Origin: origin },
     data: { email, password },

@@ -1,4 +1,6 @@
-# PocketBase fiókkezelés – e-mail és ellenőrzés nélkül
+# PocketBase fiókkezelés
+
+**Jelenlegi végső frissítés:** [FINAL_UPDATE.md](./FINAL_UPDATE.md) – új fiókok címigazolása, jelszó-visszaállítás, megerősített címváltoztatás és vendégadat-törlés. A korábbi fiókok hozzáférése megmarad.
 
 **Céges regisztráció frissítése:** az alapmigráció után a [COMPANY_ACCOUNTS.md](./COMPANY_ACCOUNTS.md) másolható blokkját is alkalmazd. A jelenlegi szerepek: `partner`, `reception`, `manager`, `admin`. A régi `customer` szerepkört a továbbvivő migráció adatvesztés nélkül kivezeti.
 
@@ -12,7 +14,7 @@ Készíts és tölts le PocketBase-mentést, és őrizd meg a jelenlegi collecti
 
 [`pocketbase/pb_migrations/1793404800_account_management.js`](../pocketbase/pb_migrations/1793404800_account_management.js)
 
-A saját e-mail-cím SMTP nélküli módosításához a [`pocketbase/pb_hooks/account.pb.js`](../pocketbase/pb_hooks/account.pb.js) fájlt is másold a PocketBase tényleges `pb_hooks` könyvtárába, majd indítsd újra az alkalmazást. A hook kizárólag a saját aktív fiók jelszóval megerősített címváltoztatását engedi; nem bővíti a `manageRule` sajátfiók-jogosultságát.
+A korábbi, SMTP nélküli címváltoztatást felváltotta az új címre küldött megerősítés. A végső frissítés részeként a [`pocketbase/pb_hooks/account.pb.js`](../pocketbase/pb_hooks/account.pb.js) fájlt is másold a PocketBase tényleges `pb_hooks` könyvtárába, majd indítsd újra az alkalmazást. A régi közvetlen címváltoztatási végpont már nem ír adatot; a jelenlegi felület a PocketBase e-mail-megerősítését használja.
 
 A migráció a meglévő `users` auth collectiont bővíti; nem törli és nem cseréli le a rekordokat vagy a meglévő mezőazonosítókat. A hiányzó mezőket hozzáadja, öt szerepkört állít be, és az API/auth szabályokat lecseréli. Az új `active` mező bevezetésekor a meglévő fiókokat egyszer aktiválja. Későbbi futtatás nem aktiválja újra a letiltott fiókokat. A legkorábban létrehozott aktív app-admint védetté teszi, ha már van ilyen. Automatikus visszagörgetés helyett ellenőrzött mentésből állíts vissza.
 
@@ -39,7 +41,7 @@ A rendszermezőket (`id`, `email`, `password`, `verified`, stb.) PocketBase keze
 | `name`             | Text, legalább 2, legfeljebb 100 karakter                                                        |
 | `phone`            | Text, max. 25                                                                                    |
 | `city`             | Text, max. 100                                                                                   |
-| `reminders`        | Bool; jelenleg nincs levelezés és nincs ilyen beállítás a felületen                              |
+| `reminders`        | Bool; fenntartott mező; az időpontértesítéseket nem ez kapcsolja                                 |
 | `role`             | Select, kötelező, egy érték: `partner`, `reception`, `manager`, `admin` (a céges frissítés után) |
 | `companyName`      | Text, max. 120                                                                                   |
 | `companyTax`       | Text, max. 30                                                                                    |
@@ -63,7 +65,7 @@ A PocketBase `/_/` kezelőjében, superuserként hozz létre egy normál **users
 - `active`: `true`;
 - `protectedRoot`: `true`;
 - `emailVisibility`: `false`;
-- `verified`: maradhat `false`, mert most nincs címellenőrzés.
+- Új fióknál `emailVerificationRequired = true`, a `verified` értékét a címigazolás állítja. A régi fiókot a frissítés nem jelöli automatikusan igazoltnak; az admin hozzáférését megőrzi.
 
 Ez az alkalmazás-admin különbözik a PocketBase-superusertől. A weboldalon a normál users rekord e-mail-címével és jelszavával lépsz be. Más app-admin nem törölheti, nem tilthatja le és nem veheti át a védett alapadmin fiókját az alkalmazás API-ján keresztül. A superuser továbbra is minden rekordot kezelhet a PocketBase adminfelületén.
 
@@ -84,14 +86,14 @@ A változtatás után új Vercel deployment szükséges. A PocketBase-cím **ala
 ## 5. Kipróbálás
 
 1. Nyisd meg a `/fiok` oldalt; nincs Demó mód vagy szerepkörválasztó.
-2. Regisztrálj új céges partnert, majd lépj be: nincs aktiváló levél és nincs e-mail-ellenőrzés. A céges frissítés után az új fiók `partner`, cégnév és adószám szükséges.
+2. Regisztrálj új céges partnert, erősítsd meg a levélben az e-mail-címet, majd lépj be. A céges frissítés után az új fiók `partner`, cégnév és adószám szükséges.
 3. Ments telefonszámot, települést vagy céges adatokat; másik böngészőben is ellenőrizd a mentést.
 4. Lépj be az adminnal, nyisd meg az `/admin` oldalt. Hozz létre fiókot, vagy módosítsd egy másik felhasználó szerepét. Minden adminmódosításhoz a saját adminjelszó kell.
 5. A felhasználó oldalfrissítéskor, fókuszváltáskor vagy legfeljebb percenkénti ellenőrzéskor megkapja az új nézetet. Minden hitelesített API-hívás azonnal újraellenőrzi a PocketBase-fiókot és szerepkört.
 6. Tiltott fiók nem léphet be; meglévő munkamenete sem ad további API-hozzáférést. Törlésnél a cél e-mail-címét is meg kell erősíteni. Saját admin és védett alapadmin nem törölhető az appban.
-7. E-mail-cím és jelszó módosítása saját jelenlegi jelszóval lehetséges. Elfelejtett jelszónál az admin ellenőrzött megkeresés után állíthat újat. A fióktulajdonos személyazonosságának ellenőrzése az üzemeltető feladata.
+7. E-mail-cím változtatásához saját jelszó és az új címre küldött megerősítés kell. Jelszócsere saját jelszóval, elfelejtett jelszó helyett új jelszó pedig e-mailes hivatkozással állítható be. A fióktulajdonos személyazonosságának ellenőrzése az üzemeltető feladata.
 
-A mentett járművek és a partner saját járműlistája külön migrációval PocketBase-ben működik: [SAVED_VEHICLES.md](./SAVED_VEHICLES.md). Ehhez nem kell hook vagy új Vercel-hitelesítő adat. Az időpontkérések, telefonos visszaigazolás, műhelyállapotok és riportok telepítése: [APPOINTMENTS.md](./APPOINTMENTS.md). A meglévő konténert és aktív adatkönyvtárát használja; külön migráció és foglalási hookok szükségesek. Több külön fiók közös flottája még nincs bekötve. Az opcionális időpontértesítések alapból ki vannak kapcsolva; a bekapcsolás és árkezelés leírása: [APPOINTMENT_PRICES_AND_MAIL.md](./APPOINTMENT_PRICES_AND_MAIL.md). Aktiváló levél és előnézeti postafiók nincs.
+A mentett járművek és a partner saját járműlistája külön migrációval PocketBase-ben működik: [SAVED_VEHICLES.md](./SAVED_VEHICLES.md). Ehhez nem kell hook vagy új Vercel-hitelesítő adat. Az időpontkérések, telefonos visszaigazolás, műhelyállapotok és riportok telepítése: [APPOINTMENTS.md](./APPOINTMENTS.md). A meglévő konténert és aktív adatkönyvtárát használja; külön migráció és foglalási hookok szükségesek. Több külön fiók közös flottája még nincs bekötve. Az opcionális időpontértesítések alapból ki vannak kapcsolva; a bekapcsolás és árkezelés leírása: [APPOINTMENT_PRICES_AND_MAIL.md](./APPOINTMENT_PRICES_AND_MAIL.md). Új fióknál címigazoló levél van; demó előnézeti postafiók nincs.
 
 ## 6. Biztonsági határok és üzemeltetés
 

@@ -561,6 +561,11 @@
   margin-bottom: 24px;
   color: var(--ink);
 }
+.legal-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+}
 .legal-section > .legal-section-links {
   list-style: none;
   padding: 0;
