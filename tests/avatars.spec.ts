@@ -159,63 +159,24 @@ test("avatar uploads reject invalid files, oversize bodies, CSRF and extra accou
   ).toMatchObject({ avatar: filename, role: "customer" });
 });
 
-test("the profile UI previews, saves and removes the avatar across reloads and phone layouts", async ({
+test("the profile uses initials without picture controls or avatar requests", async ({
   page,
 }) => {
   await customer(page.request);
+  const avatarRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/avatar")) avatarRequests.push(request.url());
+  });
   await page.goto("/fiok");
+  await expect(page.locator(".user-menu .avatar")).toHaveText("AT");
+  await expect(page.locator(".profile-aside .large-avatar")).toHaveText("AT");
   await expect(
-    page.getByRole("button", { name: "Kép feltöltése" }),
-  ).toBeEnabled();
-  await page.getByLabel("Profilkép kiválasztása").setInputFiles({
-    name: "photo.png",
-    mimeType: "image/png",
-    buffer: await picture(),
-  });
-  await expect(
-    page.getByAltText("Kiválasztott profilkép előnézete"),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Kép mentése", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "A profilképedet elmentettük.",
-  );
-  await expect
-    .poll(() =>
-      page
-        .locator(".user-menu .avatar img")
-        .evaluate((image) => (image as HTMLImageElement).naturalWidth),
-    )
-    .toBeGreaterThan(0);
+    page.getByRole("button", { name: /Kép feltöltése/ }),
+  ).toHaveCount(0);
+  await expect(page.getByText(/profilképkezelés beállítása/)).toHaveCount(0);
   await page.reload();
-  await expect(page.locator(".user-menu .avatar img")).toBeVisible();
-  await expect
-    .poll(() =>
-      page
-        .locator(".user-menu .avatar img")
-        .evaluate((image) => (image as HTMLImageElement).naturalWidth),
-    )
-    .toBeGreaterThan(0);
-  await page.screenshot({
-    path: test.info().outputPath("profile-avatar-desktop.png"),
-    fullPage: true,
-  });
-  for (const width of [320, 390]) {
-    await page.setViewportSize({ width, height: 844 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-  }
-  await page.screenshot({
-    path: test.info().outputPath("profile-avatar-mobile.png"),
-    fullPage: true,
-  });
-  await page.getByRole("button", { name: "Eltávolítás", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "A profilképedet eltávolítottuk.",
-  );
-  await expect(page.locator(".user-menu .avatar img")).toHaveCount(0);
+  await expect(page.locator(".user-menu .avatar")).toHaveText("AT");
+  expect(avatarRequests).toEqual([]);
 });
 
 test("uploads are refused before saving when the file or view rule is public", async ({

@@ -31,7 +31,7 @@ import {
   Mail,
   ClipboardList,
 } from "lucide-react";
-import { Provider, usePortal } from "./provider";
+import { usePortal } from "./provider";
 import Booking from "./booking";
 import {
   Account,
@@ -202,6 +202,13 @@ function Shell({ view }: { view: View }) {
       a.owner === (user?.id || null) &&
       !["completed", "cancelled"].includes(a.status),
   ).length;
+  // No guest/customer navigation until the server has resolved the account.
+  if (!ready)
+    return (
+      <div className="loading" role="status">
+        A műhely ajtaja nyílik…
+      </div>
+    );
   return (
     <>
       <a href="#main" className="skip-link">
@@ -329,9 +336,7 @@ function Shell({ view }: { view: View }) {
                 </Link>
               </div>
             )}
-          {!ready ? (
-            <div className="loading">A műhely ajtaja nyílik…</div>
-          ) : activeView === "admin" ? (
+          {activeView === "admin" ? (
             <Administration />
           ) : activeView === "management" ? (
             <Management />
@@ -412,9 +417,5 @@ function Shell({ view }: { view: View }) {
   );
 }
 export default function Portal({ view }: { view: View }) {
-  return (
-    <Provider>
-      <Shell view={view} />
-    </Provider>
-  );
+  return <Shell view={view} />;
 }

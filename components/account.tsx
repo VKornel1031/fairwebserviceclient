@@ -7,7 +7,7 @@ import { Field } from "./fields";
 import { PageHeading } from "./ui";
 import { accountRequest, type Account as AccountRecord } from "@/lib/accounts";
 import { roleLabels } from "@/lib/permissions";
-import { AccountAvatar, AvatarEditor } from "./account-avatar";
+import { AccountAvatar } from "./account-avatar";
 
 export function Account() {
   const { user, capabilities, acceptAccount, sessionError, refreshSession } =
@@ -249,7 +249,6 @@ export function Account() {
 function Profile() {
   const { user, acceptAccount, logout, notify } = usePortal();
   const [busy, setBusy] = useState(false);
-  const [avatarBusy, setAvatarBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   async function save(
@@ -292,7 +291,7 @@ function Profile() {
         action={
           <button
             className="button button-outline"
-            disabled={busy || avatarBusy}
+            disabled={busy}
             onClick={async () => {
               setBusy(true);
               try {
@@ -336,11 +335,7 @@ function Profile() {
               <h2>Személyes adatok</h2>
               <p>{user!.email}</p>
             </div>
-            <AvatarEditor disabled={busy} onBusyChange={setAvatarBusy} />
-            <fieldset
-              disabled={busy || avatarBusy}
-              className="account-fieldset"
-            >
+            <fieldset disabled={busy} className="account-fieldset">
               <div className="form-grid">
                 <Field
                   label="Teljes név"
@@ -429,10 +424,7 @@ function Profile() {
                 autoComplete="current-password"
                 required
               />
-              <button
-                className="button button-outline"
-                disabled={busy || avatarBusy}
-              >
+              <button className="button button-outline" disabled={busy}>
                 E-mail-cím mentése
               </button>
             </form>
@@ -466,10 +458,7 @@ function Profile() {
                 minLength={12}
                 maxLength={64}
               />
-              <button
-                className="button button-outline"
-                disabled={busy || avatarBusy}
-              >
+              <button className="button button-outline" disabled={busy}>
                 Jelszó mentése
               </button>
             </form>

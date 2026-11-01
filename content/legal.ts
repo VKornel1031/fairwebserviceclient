@@ -54,7 +54,7 @@ export const legalDocuments: LegalDocument[] = [
           "Fiók: név, e-mail-cím, opcionális mobiltelefonszám és település, szerepkör, aktív/letiltott állapot és fiókazonosító. Az ÁSZF elfogadott verzióját és időpontját a szerver rögzíti.",
           "Jármű: rendszám, márka, modell és gyártási év.",
           "Időpontkérés: szolgáltatás, nap, időpont, megjegyzés és állapot, valamint a megadott kapcsolattartási és járműadatok másolata.",
-          "Opcionális profilkép: a users.avatar fájlmezőben tárolt, védett kép. Feltöltéskor a szerver 512 × 512 pixeles keretbe igazítja, WebP formátumra alakítja és eltávolítja a fotó metaadatait, például az EXIF-helyadatokat. A kép a saját fiókodban és az arra jogosult adminisztrátorok számára jelenik meg.",
+          "Korábban feltöltött opcionális profilkép: a users.avatar fájlmezőben tárolt, védett kép. A képfeltöltő backend 512 × 512 pixeles keretbe igazítja, WebP formátumra alakítja és eltávolítja a fotó metaadatait, például az EXIF-helyadatokat. A jelenlegi webes felület kezdőbetűket jelenít meg, profilképet nem kér és nem tölt be.",
           "Céges profiladatok: opcionális cégnév, adószám és céges település. A flotta adatbázisos kezelése még nem érhető el.",
           "Hitelesítés: a jelszó lenyomatát PocketBase tárolja, a jelszó TLS-kapcsolaton jut el a kiszolgálókhoz. A böngésző HttpOnly munkamenetsütit kap; az alkalmazás nem tárol valódi jelszót vagy hitelesítési tokent a localStorage-ban.",
         ],
@@ -71,7 +71,7 @@ export const legalDocuments: LegalDocument[] = [
         id: "tarolas",
         title: "Tárolás és megőrzés",
         paragraphs: [
-          "A profilképet a Saját fiók oldalon cserélheted vagy eltávolíthatod. A PocketBase a korábbi aktuális képfájlt csere vagy törlés után eltávolítja; korábbi biztonsági mentésekben a beállított megőrzési ideig még szerepelhet. A mentések megőrzését az üzemeltetőnek kell meghatároznia.",
+          "A korábban feltöltött profilkép eltávolítását az üzemeltetőtől kérheted; a jelenlegi webes felületen nincs képfeltöltő. A PocketBase a korábbi aktuális képfájlt csere vagy törlés után eltávolítja; korábbi biztonsági mentésekben a beállított megőrzési ideig még szerepelhet. A mentések megőrzését az üzemeltetőnek kell meghatároznia.",
           "A fiókok az üzemeltető PocketBase-adatbázisában tárolódnak, másik eszközről is elérhetők. A fiók-, technikai napló- és biztonságimentés-megőrzési időket az alábbi megőrzési adatmezőben az üzemeltetőnek kell meghatároznia. A munkamenetsüti legfeljebb 8 órás; kijelentkezéskor a jelen böngésző sütijét töröljük.",
           "A helyi foglalási bemutató adatai a böngésző webhelyadatainak törléséig maradnak meg, automatikus lejárat nélkül. Törlésük nem törli a PocketBase-fiókot. Korábbi demóverzióból mentett helyi fiókadatok is maradhatnak a tárhelyen, amíg nem törlöd a webhelyadatokat; ezekkel már nem lehet bejelentkezni.",
         ],

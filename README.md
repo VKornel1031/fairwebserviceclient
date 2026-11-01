@@ -8,14 +8,14 @@ Accounts now use **PocketBase**, without SMTP or email verification:
 
 - Register as a **customer**, then sign in immediately using email and password.
 - Save personal and optional company details across devices.
-- Upload, preview, replace and remove a private profile picture using the existing `users.avatar` field. JPEG/PNG/WebP inputs up to 2 MB are processed into small WebP images with metadata removed.
+- Accounts display initials; profile picture controls and their setup message have been removed.
 - Change email address or password with your current password.
 - Admins create, search, edit, suspend and delete accounts, and assign `customer`, `partner`, `reception`, `manager` or `admin` roles.
 - Navigation follows the current PocketBase role. The demo role switcher and password-free profile switching have been removed.
 - Admin changes require the admin's password. Self-demotion/deletion and changes to a protected root admin are blocked.
 - Sessions use HttpOnly cookies; real tokens, passwords and profiles are not stored in browser localStorage. Each authenticated API call checks PocketBase again.
 
-**Setup is required on your PocketBase and Vercel deployment.** Follow [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md), including the versioned migration, first normal `users` admin, and environment settings. No superuser credentials or API keys belong in this app. Profile pictures additionally require the protected-avatar migration and updated hook described in [`docs/PROFILE_PICTURES.md`](./docs/PROFILE_PICTURES.md). Public registration defaults to disabled until explicitly enabled after migration.
+**Setup is required on your PocketBase and Vercel deployment.** Follow [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md), including the versioned migration, first normal `users` admin, and environment settings. No superuser credentials or API keys belong in this app. No avatar setup is needed for the current UI. Public registration defaults to disabled until explicitly enabled after migration.
 
 ## Run locally
 

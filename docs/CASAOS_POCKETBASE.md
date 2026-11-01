@@ -2,7 +2,7 @@
 
 Konténernév: **`pocketbase`**. Telepített image: **`argonptg/pocketbase:0.26.6`**. Meglévő host adatmappa: **`/DATA/AppData/pocketbase/pb_data`**.
 
-Az image közzétett konfigurációjában a munkakönyvtár `/pocketbase`, a bináris `/pocketbase/pocketbase`. Ebből következnek az alábbi alapértelmezett célmappák; a meglévő CasaOS-beállításban ellenőrizd, hogy nem írtad-e felül őket egyedi indítási paraméterrel. A `pb_data` meglévő kötetét ne töröld és ne cseréld le.
+A konténer tényleges `docker inspect` kimenete alapján az adatkötet célja **`/pb_data`**. A PocketBase alapértelmezetten az adatmappa mellett keresi a hookokat és migrációkat, ezért ebben a telepítésben **`/pb_hooks`** és **`/pb_migrations`** a helyes cél. A korábban megadott `/pocketbase/pb_*` kötet-célútvonalak nem illettek ehhez a konténerhez. A bináris útvonala továbbra is `/pocketbase/pocketbase`. A meglévő `/pb_data` kötetet ne töröld és ne cseréld le.
 
 ## 1. Mentés, majd leállítás
 
@@ -55,11 +55,11 @@ Ha valamelyik lépés hibát jelez, állj meg az újraindítás előtt. Siker es
 
 A PocketBase app **Settings → Volumes / Folder mappings** részében:
 
-| A CasaOS gépen                           | A konténerben                               |
-| ---------------------------------------- | ------------------------------------------- |
-| `/DATA/AppData/pocketbase/pb_data`       | `/pocketbase/pb_data` – a meglévő adatkötet |
-| `/DATA/AppData/pocketbase/pb_migrations` | `/pocketbase/pb_migrations` – új kötet      |
-| `/DATA/AppData/pocketbase/pb_hooks`      | `/pocketbase/pb_hooks` – új kötet           |
+| A CasaOS gépen                           | A konténerben                    |
+| ---------------------------------------- | -------------------------------- |
+| `/DATA/AppData/pocketbase/pb_data`       | `/pb_data` – a meglévő adatkötet |
+| `/DATA/AppData/pocketbase/pb_migrations` | `/pb_migrations` – új kötet      |
+| `/DATA/AppData/pocketbase/pb_hooks`      | `/pb_hooks` – új kötet           |
 
 Az új kötetek legyenek olvashatók a konténernek. Őrizd meg a meglévő portokat, hálózati és Tunnel-beállításokat. **Ne frissíts most véletlenül másik image-verzióra**, és ne töröld az appot vagy a `pb_data` mappát. Mentsd a beállításokat, majd indítsd el az appot.
 
@@ -72,11 +72,11 @@ Ha kézzel szeretnéd futtatni a migrációt, a te telepítésedhez ez a bemáso
 ```sh
 sudo docker stop pocketbase &&
 sudo docker run --rm --pull=never --network none \
-  --mount type=bind,src=/DATA/AppData/pocketbase/pb_data,dst=/pocketbase/pb_data \
-  --mount type=bind,src=/DATA/AppData/pocketbase/pb_migrations,dst=/pocketbase/pb_migrations,readonly \
+  --mount type=bind,src=/DATA/AppData/pocketbase/pb_data,dst=/pb_data \
+  --mount type=bind,src=/DATA/AppData/pocketbase/pb_migrations,dst=/pb_migrations,readonly \
   --entrypoint /pocketbase/pocketbase \
   argonptg/pocketbase:0.26.6 \
-  migrate up --dir /pocketbase/pb_data --migrationsDir /pocketbase/pb_migrations &&
+  migrate up --dir /pb_data --migrationsDir /pb_migrations &&
 sudo docker start pocketbase
 ```
 
