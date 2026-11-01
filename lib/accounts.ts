@@ -17,6 +17,7 @@ export type Account = {
   companyCity: string;
   partnerRequested: boolean;
   setupReady: boolean;
+  avatar: string;
 };
 export type AccountCapabilities = { registration: boolean };
 
@@ -32,8 +33,15 @@ export async function accountRequest<T>(
     cache: "no-store",
     signal,
     headers:
-      method === "GET" ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+      method === "GET" || body instanceof FormData
+        ? undefined
+        : { "Content-Type": "application/json" },
+    body:
+      body instanceof FormData
+        ? body
+        : body === undefined
+          ? undefined
+          : JSON.stringify(body),
   });
   const data = await response.json().catch(() => null);
   if (!response.ok) {

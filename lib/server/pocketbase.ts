@@ -48,18 +48,20 @@ function baseUrl() {
     throw new AccountError(503, "A fiókszolgáltatás beállítása hibás.");
   return url.origin;
 }
-export async function pb<T = Record<string, unknown>>(
+async function pocketbaseResponse(
   path: string,
   method = "POST",
   data?: unknown,
   token?: string,
-): Promise<T> {
+  accept = "application/json",
+): Promise<Response> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
+    Accept: accept,
     // Identify the actual server client; generic runtime user agents can trigger Cloudflare 1010.
     "User-Agent": "FairautoszervizAccountServer/0.1",
   };
+  if (data !== undefined && !(data instanceof FormData))
+    headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = token;
   const clientId = process.env.CF_ACCESS_CLIENT_ID,
     clientSecret = process.env.CF_ACCESS_CLIENT_SECRET;
@@ -77,7 +79,12 @@ export async function pb<T = Record<string, unknown>>(
     response = await fetch(baseUrl() + path, {
       method,
       headers,
-      body: data === undefined ? undefined : JSON.stringify(data),
+      body:
+        data instanceof FormData
+          ? data
+          : data === undefined
+            ? undefined
+            : JSON.stringify(data),
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.timeout(10_000),
@@ -90,6 +97,15 @@ export async function pb<T = Record<string, unknown>>(
   }
   if (response.status === 429)
     throw new AccountError(429, "Túl sok próbálkozás. Próbáld újra később.");
+  return response;
+}
+export async function pb<T = Record<string, unknown>>(
+  path: string,
+  method = "POST",
+  data?: unknown,
+  token?: string,
+): Promise<T> {
+  const response = await pocketbaseResponse(path, method, data, token);
   if (response.status === 204) return {} as T;
   if (!response.headers.get("content-type")?.includes("application/json")) {
     const media = response.headers
@@ -139,6 +155,36 @@ export async function pb<T = Record<string, unknown>>(
     throw new AccountError(503, "A fiókszolgáltatás hibás választ adott.");
   }
 }
+export async function pbImage(path: string): Promise<Response> {
+  const response = await pocketbaseResponse(
+    path,
+    "GET",
+    undefined,
+    undefined,
+    "image/webp,image/png,image/jpeg",
+  );
+  if (response.headers.get("cf-mitigated") === "challenge")
+    throw new AccountError(
+      503,
+      "A profilkép szolgáltatásának elérése blokkolva van.",
+    );
+  if (!response.ok) {
+    if (response.status >= 500)
+      throw new AccountError(503, "A profilkép most nem tölthető be.");
+    throw new PocketBaseError(response.status);
+  }
+  const media = response.headers
+    .get("content-type")
+    ?.split(";")[0]
+    .trim()
+    .toLowerCase();
+  if (!media || !["image/webp", "image/png", "image/jpeg"].includes(media))
+    throw new AccountError(
+      503,
+      "A profilkép szolgáltatása hibás választ adott.",
+    );
+  return response;
+}
 export function account(record: Record<string, unknown>): Account {
   if (
     !record ||
@@ -163,6 +209,7 @@ export function account(record: Record<string, unknown>): Account {
     active: record.active !== false,
     protectedRoot: record.protectedRoot === true,
     companyName: field("companyName"),
+    avatar: field("avatar"),
     companyTax: field("companyTax"),
     companyCity: field("companyCity"),
     partnerRequested: record.partnerRequested === true,

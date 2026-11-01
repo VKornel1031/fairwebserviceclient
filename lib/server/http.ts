@@ -65,25 +65,10 @@ export async function body(
     "application/json"
   )
     throw new AccountError(415, "JSON formátumú kérés szükséges.");
-  const reader = request.body?.getReader();
-  if (!reader) throw new AccountError(400, "Hiányzó adatok.");
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    length += value.length;
-    if (length > 8192) {
-      await reader.cancel();
-      throw new AccountError(413, "A kérés túl nagy.");
-    }
-    chunks.push(value);
-  }
+  const bytes = await readLimitedBody(request.body, 8192);
   let value: unknown;
   try {
-    value = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)),
-    );
+    value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } catch {
     throw new AccountError(400, "Hibás kérésformátum.");
   }
@@ -95,6 +80,26 @@ export async function body(
   )
     throw new AccountError(400, "Nem engedélyezett vagy hiányzó adatok.");
   return value as Record<string, unknown>;
+}
+export async function readLimitedBody(
+  stream: ReadableStream<Uint8Array> | null,
+  maximum: number,
+): Promise<Buffer> {
+  const reader = stream?.getReader();
+  if (!reader) throw new AccountError(400, "Hiányzó adatok.");
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.length;
+    if (length > maximum) {
+      await reader.cancel();
+      throw new AccountError(413, "A kérés túl nagy.");
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
 }
 export function text(
   data: Record<string, unknown>,
@@ -146,6 +151,7 @@ export function throttle(
   category: string,
   identity = "",
   limit = 12,
+  ipLimit = 80,
 ) {
   const now = Date.now();
   if (buckets.size > 4000)
@@ -157,7 +163,7 @@ export function throttle(
         "unknown"
       : "local";
   for (const [suffix, maximum] of [
-    ["ip", 80],
+    ["ip", ipLimit],
     [identity.trim().toLowerCase(), limit],
   ] as const) {
     const key = createHash("sha256")

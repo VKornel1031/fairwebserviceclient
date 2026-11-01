@@ -27,8 +27,8 @@ export const site = {
       "Az időpontkérés nem jelent javítási megrendelést. A munka tartalmát és a végleges árat a műhellyel külön egyeztetitek.",
   },
   legal: {
-    updatedAt: "2026-10-31",
-    version: "2026-10-31.1-draft",
+    updatedAt: "2026-11-01",
+    version: "2026-11-01.1-draft",
     // A jelenlegi folyamat időpontkérés; online javítási szerződést/fizetést nem valósít meg.
     bookingModel: "appointment-request",
     // Maradjon true a tényleges működéshez igazítás és ellenőrzés befejezéséig.

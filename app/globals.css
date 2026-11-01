@@ -3810,3 +3810,59 @@ select {
     min-width: 560px;
   }
 }
+
+.avatar,
+.large-avatar {
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.avatar img,
+.large-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.avatar-editor {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 22px;
+  margin-bottom: 24px;
+}
+.avatar-editor-image {
+  width: 64px;
+  height: 64px;
+  font-size: 20px;
+}
+.avatar-editor-controls {
+  flex: 1;
+  min-width: 0;
+}
+.avatar-editor-controls h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.avatar-editor-controls > p {
+  margin: 6px 0;
+}
+.avatar-editor .button-row {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.avatar-editor .button {
+  padding: 9px 12px;
+  min-height: 36px;
+  font-size: 11px;
+}
+.account-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.account-person > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

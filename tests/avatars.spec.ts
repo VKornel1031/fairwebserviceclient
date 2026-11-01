@@ -1,0 +1,291 @@
+import { test, expect, type APIRequestContext } from "@playwright/test";
+import sharp from "sharp";
+import { AVATAR_UPLOAD_LIMIT } from "../lib/avatar";
+
+const origin = "http://127.0.0.1:3100";
+const backend = "http://127.0.0.1:3101";
+const password = "Local-integration-only-928374!"; // Disposable loopback database only.
+const headers = { Origin: origin };
+async function customer(api: APIRequestContext) {
+  const email = `avatar-${crypto.randomUUID()}@example.test`;
+  expect(
+    (
+      await api.post("/api/auth/register", {
+        headers,
+        data: {
+          name: "Avatar Tester",
+          email,
+          password,
+          passwordConfirm: password,
+          acceptTerms: true,
+        },
+      })
+    ).status(),
+  ).toBe(202);
+  const result = await api.post("/api/auth/login", {
+    headers,
+    data: { email, password },
+  });
+  expect(result.status()).toBe(200);
+  return (await result.json()).user;
+}
+async function picture(background = "#6b8592") {
+  return sharp({ create: { width: 640, height: 480, channels: 3, background } })
+    .withMetadata({ orientation: 6 })
+    .png()
+    .toBuffer();
+}
+async function upload(
+  api: APIRequestContext,
+  buffer: Buffer,
+  mimeType = "image/png",
+  extra: Record<string, string> = {},
+) {
+  return api.put("/api/account/avatar", {
+    headers,
+    multipart: { avatar: { name: "photo.png", mimeType, buffer }, ...extra },
+  });
+}
+
+test("avatars persist in users.avatar, are processed safely and are private to the owner and admins", async ({
+  request,
+  playwright,
+}) => {
+  const user = await customer(request);
+  expect(
+    (await (await request.get("/api/account/avatar/policy")).json()).ready,
+  ).toBe(true);
+  expect((await request.get("/api/account/avatar")).status()).toBe(404);
+  const result = await upload(request, await picture());
+  expect(result.status()).toBe(200);
+  const saved = (await result.json()).user;
+  expect(saved.role).toBe("customer");
+  expect(saved.avatar).toMatch(/\.webp$/);
+  const image = await request.get("/api/account/avatar");
+  expect(image.status()).toBe(200);
+  expect(image.headers()["content-type"]).toBe("image/webp");
+  expect(image.headers()["cache-control"]).toContain("no-store");
+  expect(image.headers()["cross-origin-resource-policy"]).toBe("same-origin");
+  const metadata = await sharp(await image.body()).metadata();
+  expect(metadata.format).toBe("webp");
+  expect(metadata.width).toBeLessThanOrEqual(512);
+  expect(metadata.height).toBeLessThanOrEqual(512);
+  expect(metadata.exif).toBeUndefined();
+  const anonymous = await playwright.request.newContext({ baseURL: origin });
+  expect((await anonymous.get("/api/account/avatar")).status()).toBe(401);
+  expect(
+    (
+      await anonymous.get(
+        `${backend}/api/files/users/${user.id}/${saved.avatar}`,
+      )
+    ).status(),
+  ).toBe(404);
+  const other = await playwright.request.newContext({ baseURL: origin });
+  await customer(other);
+  expect(
+    (await other.get(`/api/admin/accounts/${user.id}/avatar`)).status(),
+  ).toBe(403);
+  expect((await other.get(`/api/account/avatar?id=${user.id}`)).status()).toBe(
+    404,
+  );
+  const admin = await playwright.request.newContext({ baseURL: origin });
+  expect(
+    (
+      await admin.post("/api/auth/login", {
+        headers,
+        data: { email: "admin@fairauto.test", password },
+      })
+    ).status(),
+  ).toBe(200);
+  expect(
+    (await admin.get(`/api/admin/accounts/${user.id}/avatar`)).status(),
+  ).toBe(200);
+  const replacement = await upload(request, await picture("#c3ac91"));
+  expect(replacement.status()).toBe(200);
+  expect((await replacement.json()).user.avatar).not.toBe(saved.avatar);
+  expect(
+    (await request.delete("/api/account/avatar", { headers })).status(),
+  ).toBe(200);
+  expect(
+    (await (await request.get("/api/auth/session")).json()).user.avatar,
+  ).toBe("");
+  expect((await request.get("/api/account/avatar")).status()).toBe(404);
+  await anonymous.dispose();
+  await other.dispose();
+  await admin.dispose();
+});
+
+test("avatar uploads reject invalid files, oversize bodies, CSRF and extra account fields", async ({
+  request,
+}) => {
+  await customer(request);
+  const valid = await picture();
+  const first = await upload(request, valid);
+  expect(first.status()).toBe(200);
+  const filename = (await first.json()).user.avatar;
+  const svg = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>',
+  );
+  expect((await upload(request, svg, "image/svg+xml")).status()).toBe(415);
+  expect((await upload(request, svg)).status()).toBe(400);
+  expect((await upload(request, Buffer.from("not an image"))).status()).toBe(
+    400,
+  );
+  expect(
+    (await upload(request, Buffer.alloc(AVATAR_UPLOAD_LIMIT + 1))).status(),
+  ).toBe(413);
+  expect(
+    (await upload(request, valid, "image/png", { role: "admin" })).status(),
+  ).toBe(400);
+  expect(
+    (
+      await request.put("/api/account/avatar", {
+        headers: { Origin: "https://attacker.example" },
+        multipart: {
+          avatar: { name: "photo.png", mimeType: "image/png", buffer: valid },
+        },
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await request.delete("/api/account/avatar", {
+        headers: { Origin: "https://attacker.example" },
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (await (await request.get("/api/auth/session")).json()).user,
+  ).toMatchObject({ avatar: filename, role: "customer" });
+});
+
+test("the profile UI previews, saves and removes the avatar across reloads and phone layouts", async ({
+  page,
+}) => {
+  await customer(page.request);
+  await page.goto("/fiok");
+  await expect(
+    page.getByRole("button", { name: "Kép feltöltése" }),
+  ).toBeEnabled();
+  await page.getByLabel("Profilkép kiválasztása").setInputFiles({
+    name: "photo.png",
+    mimeType: "image/png",
+    buffer: await picture(),
+  });
+  await expect(
+    page.getByAltText("Kiválasztott profilkép előnézete"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Kép mentése", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "A profilképedet elmentettük.",
+  );
+  await expect
+    .poll(() =>
+      page
+        .locator(".user-menu .avatar img")
+        .evaluate((image) => (image as HTMLImageElement).naturalWidth),
+    )
+    .toBeGreaterThan(0);
+  await page.reload();
+  await expect(page.locator(".user-menu .avatar img")).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator(".user-menu .avatar img")
+        .evaluate((image) => (image as HTMLImageElement).naturalWidth),
+    )
+    .toBeGreaterThan(0);
+  await page.screenshot({
+    path: test.info().outputPath("profile-avatar-desktop.png"),
+    fullPage: true,
+  });
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.screenshot({
+    path: test.info().outputPath("profile-avatar-mobile.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Eltávolítás", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "A profilképedet eltávolítottuk.",
+  );
+  await expect(page.locator(".user-menu .avatar img")).toHaveCount(0);
+});
+
+test("uploads are refused before saving when the file or view rule is public", async ({
+  request,
+}) => {
+  await customer(request);
+  const root = await request.post(
+    `${backend}/api/collections/_superusers/auth-with-password`,
+    { data: { identity: "root@fairauto.test", password } },
+  );
+  expect(root.status()).toBe(200);
+  const auth = { Authorization: (await root.json()).token };
+  const collection = await (
+    await request.get(`${backend}/api/collections/users`, { headers: auth })
+  ).json();
+  const fields = collection.fields.map(
+    (field: { name: string; protected?: boolean }) =>
+      field.name === "avatar" ? { ...field, protected: false } : field,
+  );
+  try {
+    const formatted = collection.viewRule.replaceAll(" && ", " &&\n  ");
+    expect(
+      (
+        await request.patch(`${backend}/api/collections/users`, {
+          headers: auth,
+          data: { viewRule: formatted },
+        })
+      ).status(),
+    ).toBe(200);
+    expect(
+      (await (await request.get("/api/account/avatar/policy")).json()).ready,
+    ).toBe(true);
+  } finally {
+    expect(
+      (
+        await request.patch(`${backend}/api/collections/users`, {
+          headers: auth,
+          data: { viewRule: collection.viewRule },
+        })
+      ).status(),
+    ).toBe(200);
+  }
+  for (const change of [{ fields }, { viewRule: "" }]) {
+    try {
+      expect(
+        (
+          await request.patch(`${backend}/api/collections/users`, {
+            headers: auth,
+            data: change,
+          })
+        ).status(),
+      ).toBe(200);
+      expect(
+        (await (await request.get("/api/account/avatar/policy")).json()).ready,
+      ).toBe(false);
+      const rejected = await upload(request, await picture());
+      expect(rejected.status()).toBe(503);
+      expect((await rejected.json()).code).toBe("avatar_setup_required");
+      expect(
+        (await (await request.get("/api/auth/session")).json()).user.avatar,
+      ).toBe("");
+    } finally {
+      expect(
+        (
+          await request.patch(`${backend}/api/collections/users`, {
+            headers: auth,
+            data: { fields: collection.fields, viewRule: collection.viewRule },
+          })
+        ).status(),
+      ).toBe(200);
+    }
+  }
+});

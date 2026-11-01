@@ -4,6 +4,7 @@ import { Modal } from "./ui";
 import CustomerOverview from "./customer-overview";
 import Management from "./management";
 import Administration from "./administration";
+import { AccountAvatar } from "./account-avatar";
 import { canAdminister, canViewReports, roleLabels } from "@/lib/permissions";
 import Link from "next/link";
 import LegalLinks from "./legal-links";
@@ -303,17 +304,7 @@ function Shell({ view }: { view: View }) {
               <CircleHelp size={19} />
             </button>
             <Link className="user-menu" href="/fiok">
-              <span className="avatar">
-                {user ? (
-                  user.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join("")
-                ) : (
-                  <UserRound size={17} />
-                )}
-              </span>
+              <AccountAvatar user={user} />
               <span className="user-menu-text">
                 {user ? user.name : "Vendég"}
                 <small>{user ? roleLabels[user.role] : "Bejelentkezés"}</small>

@@ -16,6 +16,7 @@ import { Empty, Field } from "./fields";
 import { accountRequest, type Account } from "@/lib/accounts";
 import { roleLabels } from "@/lib/permissions";
 import type { Role } from "@/lib/demo";
+import { AccountAvatar } from "./account-avatar";
 
 type Listing = {
   items: Account[];
@@ -200,15 +201,20 @@ export default function Administration() {
                     {listing.items.map((account) => (
                       <tr key={account.id}>
                         <td>
-                          <strong>{account.name}</strong>
-                          <small className="block muted">
-                            {account.email || "Rejtett e-mail-cím"}
-                          </small>
-                          {account.companyName && (
-                            <small className="block muted">
-                              {account.companyName}
-                            </small>
-                          )}
+                          <div className="account-person">
+                            <AccountAvatar user={account} />
+                            <div>
+                              <strong>{account.name}</strong>
+                              <small className="block muted">
+                                {account.email || "Rejtett e-mail-cím"}
+                              </small>
+                              {account.companyName && (
+                                <small className="block muted">
+                                  {account.companyName}
+                                </small>
+                              )}
+                            </div>
+                          </div>
                         </td>
                         <td>{roleLabels[account.role]}</td>
                         <td>
