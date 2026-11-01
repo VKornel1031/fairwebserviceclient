@@ -148,7 +148,7 @@ function Welcome() {
           <div className="home-footer-links">
             <nav aria-label="További lehetőségek">
               <Link href={user ? "/attekintes" : "/fiok?mode=register"}>
-                {user ? "Ügyfélportál megnyitása" : "Saját fiók létrehozása"}
+                {user ? "Ügyfélportál megnyitása" : "Céges fiók létrehozása"}
               </Link>
               <Link href="/partnerek">Céges partnerek</Link>
             </nav>

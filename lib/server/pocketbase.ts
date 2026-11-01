@@ -237,7 +237,6 @@ export function account(record: Record<string, unknown>): Account {
     defaultVehicle: field("defaultVehicle"),
     companyTax: field("companyTax"),
     companyCity: field("companyCity"),
-    partnerRequested: record.partnerRequested === true,
     setupReady:
       Object.hasOwn(record, "active") &&
       Object.hasOwn(record, "protectedRoot") &&

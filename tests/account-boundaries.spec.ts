@@ -8,7 +8,7 @@ test("the SMTP-free email hook rejects missing auth, forged targets and wrong pa
 }) => {
   const raw = await apiRequest.newContext({ baseURL: backend });
   const customer = await raw.post("/api/collections/users/auth-with-password", {
-    data: { identity: "customer@fairauto.test", password },
+    data: { identity: "partner@fairauto.test", password },
   });
   expect(customer.status()).toBe(200);
   const { token, record } = await customer.json();
@@ -63,15 +63,17 @@ test("native public registration cannot create privileged, preverified or protec
     active: true,
     termsVersion: "test",
     termsAcceptedAt: new Date().toISOString(),
+    companyName: "Native Test Kft.",
+    companyTax: "12345678-2-19",
   };
   for (const forged of [
     { role: "admin" },
     { role: "manager" },
-    { role: "partner" },
+    { role: "customer" },
     { role: "reception" },
-    { role: "customer", verified: true },
-    { role: "customer", protectedRoot: true },
-    { role: "customer", active: false },
+    { role: "partner", verified: true },
+    { role: "partner", protectedRoot: true },
+    { role: "partner", active: false },
   ]) {
     const result = await raw.post("/api/collections/users/records", {
       data: {
@@ -86,12 +88,12 @@ test("native public registration cannot create privileged, preverified or protec
     data: {
       ...details,
       email: `${crypto.randomUUID()}@example.test`,
-      role: "customer",
+      role: "partner",
       "role+": "admin",
     },
   });
   if (result.status() === 200)
-    expect((await result.json()).role).toBe("customer");
+    expect((await result.json()).role).toBe("partner");
   else expect([400, 403]).toContain(result.status());
   await raw.dispose();
 });
@@ -109,6 +111,8 @@ test("deleting an active account and resetting a password invalidate existing se
       password,
       passwordConfirm: password,
       acceptTerms: true,
+      companyName: "Integration Test Kft.",
+      companyTax: "12345678-2-19",
     },
   });
   const loggedIn = await request.post("/api/auth/login", {

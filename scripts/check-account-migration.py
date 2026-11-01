@@ -100,6 +100,61 @@ with tempfile.TemporaryDirectory(prefix="fair-migration-check-") as directory:
         status, record = api("GET", f'/api/collections/users/records/{legacy["id"]}', token=token)
         assert status == 200 and not record["active"], "Migration reactivated a suspended account"
         assert api("POST", "/api/collections/users/auth-with-password", {"identity": record["email"], "password": password})[0] != 200
-        print("PASS: existing account data and field IDs preserved, first admin protected, unverified login enabled, 8h tokens set, suspended account stays disabled on rerun.")
+        customers = []
+        for active in [True, False]:
+            status, customer = api("POST", "/api/collections/users/records", {
+                "name": "Existing personal account", "email": f"person-{active}@example.test",
+                "password": password, "passwordConfirm": password,
+                "role": "customer", "active": active, "phone": "+36301234567",
+                "companyName": "", "companyTax": "",
+            }, token)
+            assert status == 200
+            customers.append(customer)
+        stop()
+        source = Path(__file__).resolve().parents[1] / "pocketbase/pb_migrations"
+        for name in ["1793494800_saved_vehicles.js", "1793502000_appointments.js", "1793512800_prices_vin_and_mail.js"]:
+            shutil.copyfile(source / name, migrations / name)
+        subprocess.run([binary, "migrate", "up", *options], check=True, stdout=subprocess.DEVNULL)
+        token = start()
+        status, car = api("POST", "/api/collections/vehicles/records", {
+            "owner": customers[0]["id"], "plate": "OLD123", "make": "Ford", "model": "Focus",
+            "year": 2020, "vin": "WVWZZZ1JZXW000001",
+        }, token)
+        assert status == 200
+        assert api("PATCH", f'/api/collections/users/records/{customers[0]["id"]}', {"defaultVehicle": car["id"]}, token)[0] == 200
+        status, appointment = api("POST", "/api/collections/appointments/records", {
+            "owner": customers[0]["id"], "vehicleId": car["id"], "reference": "FA-LEGACY-1",
+            "service": "other", "serviceName": "Existing request", "date": "2026-11-02", "time": "09:00",
+            "duration": 60, "startMinute": 540, "endMinute": 600, "status": "requested",
+            "contact": {"name": "Existing contact", "email": customers[0]["email"]},
+            "vehicle": {"plate": "OLD123", "vin": "WVWZZZ1JZXW000001"},
+            "termsVersion": "legacy", "termsAcceptedAt": "2026-11-01 12:00:00.000Z",
+            "requestHash": "a" * 64, "payloadHash": "b" * 64, "revision": 1,
+        }, token)
+        assert status == 200
+        stop()
+        migration = Path(__file__).resolve().parents[1] / "pocketbase/pb_migrations/1793534400_company_accounts.js"
+        shutil.copyfile(migration, migrations / migration.name)
+        subprocess.run([binary, "migrate", "up", *options], check=True, stdout=subprocess.DEVNULL)
+        token = start()
+        status, company_schema = api("GET", "/api/collections/users", token=token)
+        assert status == 200
+        assert next(f["values"] for f in company_schema["fields"] if f["name"] == "role") == ["partner", "reception", "manager", "admin"]
+        assert all(next(f["id"] for f in company_schema["fields"] if f["name"] == name) == value for name, value in ids.items())
+        for before_customer in customers:
+            status, after_customer = api("GET", f'/api/collections/users/records/{before_customer["id"]}', token=token)
+            assert status == 200 and after_customer["role"] == "partner"
+            for field in ["id", "email", "phone", "active", "companyName", "companyTax"]:
+                assert after_customer[field] == before_customer[field], field
+            if before_customer["active"]:
+                assert after_customer["defaultVehicle"] == car["id"]
+            status, _ = api("POST", "/api/collections/users/auth-with-password", {"identity": after_customer["email"], "password": password})
+            assert (status == 200) == before_customer["active"]
+        status, admin = api("GET", f'/api/collections/users/records/{legacy["id"]}', token=token)
+        assert status == 200 and admin["role"] == "admin" and not admin["active"] and admin["protectedRoot"]
+        for collection, before_record in [("vehicles", car), ("appointments", appointment)]:
+            status, after_record = api("GET", f'/api/collections/{collection}/records/{before_record["id"]}', token=token)
+            assert status == 200 and after_record == before_record, collection
+        print("PASS: account data, field IDs, car/default ownership and appointment snapshots preserved; legacy customers converted without deletion or reactivation; admin protection and password login preserved.")
     finally:
         stop()

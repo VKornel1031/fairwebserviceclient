@@ -44,19 +44,19 @@ export const legalDocuments: LegalDocument[] = [
         title: "A portál jelenlegi működése",
         paragraphs: [
           "A regisztráció, bejelentkezés, profilmódosítás, mentett járművek és adminisztrátori fiókkezelés a szerviz PocketBase-adatbázisával működik, a szükséges migrációk telepítése után. Az adatokat a webhely szervere továbbítja a homelabon működő PocketBase felé, HTTPS-kapcsolaton keresztül.",
-          "A vendégként, ügyfélként vagy partnerként leadott időpontkérés a szerviz adatbázisába kerül. A kérés a munkafelvevő, vezető vagy adminisztrátor telefonos visszaigazolásával foglal műhelykapacitást. Az üzemeltető által külön bekapcsolható időpontértesítések alapértelmezetten ki vannak kapcsolva. Címellenőrzés és e-mailes jelszó-visszaállítás továbbra nincs.",
+          "A vendégként vagy céges partnerként leadott időpontkérés a szerviz adatbázisába kerül. A kérés a munkafelvevő, vezető vagy adminisztrátor telefonos visszaigazolásával foglal műhelykapacitást. Az üzemeltető által külön bekapcsolható időpontértesítések alapértelmezetten ki vannak kapcsolva. Címellenőrzés és e-mailes jelszó-visszaállítás továbbra nincs.",
         ],
       },
       {
         id: "adatok",
         title: "Milyen adatokat kezel a portál?",
         items: [
-          "Fiók: név, e-mail-cím, opcionális mobiltelefonszám és település, szerepkör, aktív/letiltott állapot és fiókazonosító. Az ÁSZF elfogadott verzióját és időpontját a szerver rögzíti.",
+          "Fiók: kapcsolattartó neve, e-mail-cím, céges regisztrációnál kötelező cégnév és adószám, opcionális mobiltelefonszám és település, szerepkör, aktív/letiltott állapot és fiókazonosító. Az ÁSZF elfogadott verzióját és időpontját a szerver rögzíti.",
           "Mentett jármű: rendszám, márka, modell, gyártási év, opcionális alvázszám (VIN), tulajdonos fiókazonosítója, létrehozási és módosítási időpont, valamint az alapértelmezett jármű kiválasztása. A listát a saját fiókod és az adminisztrátor kezelheti; más ügyfél, partner, munkafelvevő vagy vezető a saját fiókjához tartozó járműveket kezeli.",
           "Időpontkérés: szolgáltatás és annak mentett neve, becsült időtartam és esetleges árjelzés, nap, időpont, megjegyzés és állapot; kapcsolattartási és járműadatok másolata, új kérésnél kötelező alvázszám (VIN); partnernél cégnév. A szerver rögzíti az elfogadott feltételverziót, időpontot, módosítási sorszámot és állapotelőzményeket. A telefonos visszaigazoláshoz a művelet ideje és a jogosult munkatárs azonosítása tartozik; ezt az ügyfélnek adott nézet nem mutatja.",
           "Opcionális értesítések: külön címzettenként tárolt e-mail-cím, az időpont eseménykori adatmásolata, küldési próbálkozások, ütemezés és technikai állapot. Az ügyfél és az aktív munkafelvevői/vezetői fiókok külön levelet kaphatnak. Nem osztjuk meg a többi címzett címét az ügyféllel. Az értesítések nem marketingüzenetek; megőrzésüket és kézbesítési naplóikat az üzemeltetőnek kell meghatároznia.",
           "Korábban feltöltött opcionális profilkép: a users.avatar fájlmezőben tárolt, védett kép. A képfeltöltő backend 512 × 512 pixeles keretbe igazítja, WebP formátumra alakítja és eltávolítja a fotó metaadatait, például az EXIF-helyadatokat. A jelenlegi webes felület kezdőbetűket jelenít meg, profilképet nem kér és nem tölt be.",
-          "Céges profiladatok: opcionális cégnév, adószám és céges település. A partnerfiókhoz saját mentett járműlista tartozik; több külön fiók közös flottakezelése még nem érhető el.",
+          "Céges profiladatok: regisztrációnál kötelező cégnév és magyar adószám, opcionális céges település. Az adószám formátumát ellenőrizzük; ez nem jelent NAV-ellenőrzést vagy a cég képviseleti jogának igazolását. A partnerfiókhoz saját mentett járműlista tartozik; több külön fiók közös flottakezelése még nem érhető el.",
           "Hitelesítés: a jelszó lenyomatát PocketBase tárolja, a jelszó TLS-kapcsolaton jut el a kiszolgálókhoz. A böngésző HttpOnly munkamenetsütit kap; az alkalmazás nem tárol valódi jelszót vagy hitelesítési tokent a localStorage-ban.",
         ],
       },
@@ -66,7 +66,7 @@ export const legalDocuments: LegalDocument[] = [
         paragraphs: [
           "A vendég hozzáférési azonosító a saját kéréseid megnyitását védi. Visszaélésvédelemhez a PocketBase rövid ideig, jellemzően két percig őriz lenyomatból képzett kéréskorlátozási számlálókat; a technikai szolgáltatók naplóinak megőrzése ettől külön üzemeltetési beállítás.",
           "A fiókadatok a belépést, profilkezelést és jogosultságkezelést szolgálják. A fiók, céges profil, járművek és időpontkérések PocketBase-ben tárolódnak. A valódi személyes és foglalási adatok nem kerülnek a böngésző localStorage-jába. A témabeállítás ettől elkülönülten használ helyi tárhelyet.",
-          "Minden új fiók magánügyfélként indul. Partner-, munkafelvevői, vezetői vagy adminisztrátori hozzáférést adminisztrátor adhat. A nyilvános demószerepkör-váltó megszűnt.",
+          "Nyilvánosan cégnévvel és adószámmal lehet regisztrálni, céges partnerként. Magánszemélyek regisztráció nélkül, vendégként kérhetnek időpontot. Munkafelvevői, vezetői és adminisztrátori hozzáférést adminisztrátor adhat. A korábbi magánügyfél-fiókok és adataik megmaradnak, partner szerepkörbe kerülnek; céges adataik következő módosításakor ezeket ki kell egészíteni.",
         ],
       },
       {
@@ -100,7 +100,8 @@ export const legalDocuments: LegalDocument[] = [
         title: "Az éles adatkezelés céljai és jogalapjai",
         paragraphs: [
           "Az adatkezelési tájékoztató megismerése nem általános hozzájárulás minden adatkezeléshez. Az ÁSZF elfogadása, az érintett tájékoztatása és az esetleges marketing-hozzájárulás külön kérdés.",
-          "Éles, természetes személy ügyfelek fiókjánál és időpontkérésénél a szolgáltatáshoz szükséges adatok kezelésének alapja tipikusan a GDPR 6. cikk (1) b) pontja, a szerződés vagy az érintett kérésére tett szerződéskötést megelőző lépések. Céges kapcsolattartóknál és biztonsági naplózásnál az adott célhoz megfelelő jogalapot külön kell meghatározni, jogos érdek esetén érdekmérlegeléssel. A panaszkezelés és a kötelező megőrzés jogi kötelezettségen is alapulhat. A marketing nem része az időpontfoglaláshoz szükséges adatkezelésnek.",
+          "Éles, természetes személy ügyfelek időpontkérésénél a szolgáltatáshoz szükséges adatok kezelésének alapja tipikusan a GDPR 6. cikk (1) b) pontja, a szerződés vagy az érintett kérésére tett szerződéskötést megelőző lépések. Céges kapcsolattartóknál és biztonsági naplózásnál az adott célhoz megfelelő jogalapot külön kell meghatározni, jogos érdek esetén érdekmérlegeléssel. A panaszkezelés és a kötelező megőrzés jogi kötelezettségen is alapulhat. A marketing nem része az időpontfoglaláshoz szükséges adatkezelésnek.",
+          "Bekapcsolt Gmail SMTP esetén az értesítési levelek a Google levelezési szolgáltatásán is áthaladnak. A használt céges vagy tesztpostafiókot, a szolgáltató jogi adatait, szerződéses feltételeit és az esetleges EU-n kívüli adattovábbítás garanciáit az üzemeltetőnek kell a tényleges beállításhoz igazítania.",
           "Az éles célokat, adatfeldolgozókat, naplózást, megőrzési időket és az esetleges EU-n kívüli adattovábbítás garanciáit a tényleges telepítés szerint kell kitölteni. Ennek hiányában a dokumentum minta állapotú marad.",
         ],
         facts: [

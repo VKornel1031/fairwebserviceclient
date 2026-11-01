@@ -4,25 +4,27 @@ Hungarian service portal built with Next.js, React and TypeScript, matching [Fai
 
 ## Account management
 
-Accounts now use **PocketBase**, without SMTP or email verification:
+Accounts use **PocketBase**, without requiring email verification:
 
-- Register as a **customer**, then sign in immediately using email and password.
-- Save personal and optional company details across devices.
+- Register a **company partner** with a company name and Hungarian tax number, then sign in immediately using email and password. Individuals book as guests.
+- Save contact details and required company details across devices.
 - Save, edit, search and delete cars in PocketBase, and choose a default vehicle. Customers and partners have private garages; admins can manage all vehicles. Fleet lists are paginated.
 - Accounts display initials; profile picture controls and their setup message have been removed.
 - Change email address or password with your current password.
-- Admins create, search, edit, suspend and delete accounts, and assign `customer`, `partner`, `reception`, `manager` or `admin` roles.
+- Admins create, search, edit, suspend and delete accounts, and assign `partner`, `reception`, `manager` or `admin` roles.
 - Navigation follows the current PocketBase role. The demo role switcher and password-free profile switching have been removed.
 - Admin changes require the admin's password. Self-demotion/deletion and changes to a protected root admin are blocked.
 - Sessions use HttpOnly cookies; real tokens, passwords and profiles are not stored in browser localStorage. Each authenticated API call checks PocketBase again.
 
 **Setup is required on your PocketBase and Vercel deployment.** Follow [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md), including the versioned migration, first normal `users` admin, and environment settings. No superuser credentials or API keys belong in this app. No avatar setup is needed for the current UI. Public registration defaults to disabled until explicitly enabled after migration.
 
+**Company-only registration:** apply the forward migration and hook using [docs/COMPANY_ACCOUNTS.md](./docs/COMPANY_ACCOUNTS.md). Existing accounts, cars and bookings are preserved; legacy customer accounts become partners. The removed Customer role cannot be selected or created.
+
 Saved cars additionally need the single migration in [`docs/SAVED_VEHICLES.md`](./docs/SAVED_VEHICLES.md). It uses native PocketBase permissions and does **not** require custom hooks, SMTP, or new Vercel credentials. Appointment setup is described below.
 
 ## Appointments
 
-Guest, customer and partner requests now persist in PocketBase. Saved contact details prefill the booking form for every signed-in role, including admins and staff. Staff use a separate “Ügyfélnek foglalok” option for blank customer intake. A single saved car fills automatically; multiple cars require a choice. New guest forms stay blank. Accounts can save a VIN with each car; every new appointment requires it. Customers manage their own requests; reception staff confirm by phone, cancel or reschedule, and managers/admins also start and complete work, manage closures and view real reports.
+Guest and company partner requests now persist in PocketBase. Saved contact details prefill the booking form for every signed-in role, including admins and staff. Staff use a separate “Ügyfélnek foglalok” option for blank customer intake. A single saved car fills automatically; multiple cars require a choice. New guest forms stay blank. Accounts can save a VIN with each car; every new appointment requires it. Customers manage their own requests; reception staff confirm by phone, cancel or reschedule, and managers/admins also start and complete work, manage closures and view real reports.
 
 **Pending requests do not reserve capacity. Phone confirmation reserves it atomically.** Concurrent confirmations cannot exceed workshop capacity. Rescheduling returns a request to awaiting confirmation. Availability, access rules and status changes are enforced in PocketBase, including direct API calls.
 
@@ -51,11 +53,11 @@ Production authentication requires HTTPS and `AUTH_APP_ORIGIN` matching the depl
 
 ## Current scope
 
-**Real:** account/profile management, role assignment, private garages, guest/customer/partner appointment requests, phone confirmation, workshop status tracking, cancellation/rescheduling, history, closures and aggregate reports. Guest access uses an HttpOnly capability cookie; account access follows the stored PocketBase role. Requests and personal data are not kept in localStorage.
+**Real:** account/profile management, role assignment, private garages, guest/partner appointment requests, phone confirmation, workshop status tracking, cancellation/rescheduling, history, closures and aggregate reports. Guest access uses an HttpOnly capability cookie; account access follows the stored PocketBase role. Requests and personal data are not kept in localStorage.
 
 **Remaining:** shared company membership across multiple accounts, verified/reliable production mail setup and account email recovery, repair contracts, work orders and invoicing. A partner's fleet currently belongs to that individual account. There is no hard-delete control for appointment history.
 
-Optional appointment notifications use a durable PocketBase outbox and its native mail client; delivery defaults to **off**. Admins can view sanitized queue/transport status and retry failed handoffs without resending accepted messages. Unix Sendmail setup and the CasaOS localhost fix are in [docs/LOCAL_SENDMAIL.md](./docs/LOCAL_SENDMAIL.md); activation and price details are in [docs/APPOINTMENT_PRICES_AND_MAIL.md](./docs/APPOINTMENT_PRICES_AND_MAIL.md). There is no email preview, verification mail or email password recovery. For now, an admin can reset another user's password after independently checking their identity. Mail workflow and remaining operator requirements are in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
+Optional appointment notifications use a durable PocketBase outbox and its native mail client; delivery defaults to **off**. Admins can view sanitized queue/transport status and retry failed handoffs without resending accepted messages. Gmail SMTP settings, tested with delivery to the operator’s own inbox, are in [docs/GMAIL_SMTP.md](./docs/GMAIL_SMTP.md). The selected company mailbox still needs its own supported sending credentials. Unix Sendmail setup and the CasaOS localhost fix are in [docs/LOCAL_SENDMAIL.md](./docs/LOCAL_SENDMAIL.md); activation and price details are in [docs/APPOINTMENT_PRICES_AND_MAIL.md](./docs/APPOINTMENT_PRICES_AND_MAIL.md). There is no email preview, verification mail or email password recovery. For now, an admin can reset another user's password after independently checking their identity. Mail workflow and remaining operator requirements are in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
 
 ## Checks
 

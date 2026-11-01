@@ -1,3 +1,5 @@
+> Korábbi demó történeti leírása. A jelenlegi alkalmazás valódi PocketBase-fiókokat használ, szerepkörváltó nélkül. Nyilvános regisztráció csak cégeknek: [COMPANY_ACCOUNTS.md](./COMPANY_ACCOUNTS.md).
+
 > Historical walkthrough for the previous local demo. The public role switcher and local account login have been removed. Use [the PocketBase account setup guide](./POCKETBASE_SETUP.md) for the current version. For the current real booking/workshop backend and installation commands, see [APPOINTMENTS.md](./APPOINTMENTS.md). The instructions below describe only the retired local demo.
 
 # Fair Autószerviz – a helyi demó bemutatása

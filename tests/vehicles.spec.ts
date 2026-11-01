@@ -30,6 +30,8 @@ async function customer(api: APIRequestContext) {
           password,
           passwordConfirm: password,
           acceptTerms: true,
+          companyName: "Integration Test Kft.",
+          companyTax: "12345678-2-19",
         },
       })
     ).status(),
@@ -213,10 +215,12 @@ test("customers are isolated; admin can edit all cars; forged owners and prefere
       {
         data: {
           name: "Forged default",
+          companyName: "Forged Default Kft.",
+          companyTax: "12345678-2-19",
           email: `forged-${crypto.randomUUID()}@example.test`,
           password,
           passwordConfirm: password,
-          role: "customer",
+          role: "partner",
           active: true,
           termsVersion: "test",
           termsAcceptedAt: new Date().toISOString(),
@@ -318,7 +322,7 @@ test("car APIs enforce authentication, CSRF and input bounds", async ({
   ).toBe(400);
 });
 
-test("customer and partner screens save cars, edit and delete them, update summaries and work on mobile", async ({
+test("partner screens save cars, edit and delete them, update summaries and work on mobile", async ({
   page,
 }) => {
   await customer(page.request);
@@ -340,9 +344,9 @@ test("customer and partner screens save cars, edit and delete them, update summa
   await expect(page.locator(".vehicle-card")).toContainText("Superb");
   await page
     .locator(".sidebar")
-    .getByRole("link", { name: "Áttekintés", exact: true })
+    .getByRole("link", { name: "Partnerközpont", exact: true })
     .click();
-  await expect(page.locator(".customer-car-row")).toContainText("Škoda Superb");
+  await expect(page.locator(".vehicle-card")).toContainText("Superb");
   expect(
     await page.evaluate(
       () => localStorage.getItem("fairauto-prototype-v1") || "",
@@ -350,7 +354,7 @@ test("customer and partner screens save cars, edit and delete them, update summa
   ).not.toContain("Superb");
   await page
     .locator(".sidebar")
-    .getByRole("link", { name: "Járműveim", exact: true })
+    .getByRole("link", { name: "Járműpark", exact: true })
     .click();
   await page.screenshot({
     path: test.info().outputPath("vehicles-desktop.png"),
@@ -500,7 +504,7 @@ test("changing accounts never shows the previous account's cars while the new ga
     ).status(),
   ).toBe(200);
   await page.goto("/attekintes");
-  await expect(page.locator(".customer-car-row")).toContainText(
+  await expect(page.locator(".vehicle-card")).toContainText(
     "Private previous car",
   );
   let release!: () => void;
@@ -514,13 +518,9 @@ test("changing accounts never shows the previous account's cars while the new ga
   await login(page.request, next.email);
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(page.locator(".user-menu")).toContainText("Second Driver");
-  await expect(page.locator(".customer-car-row")).not.toContainText(
-    "Private previous car",
-  );
+  await expect(page.locator("main")).not.toContainText("Private previous car");
   release();
-  await expect(page.locator(".customer-car-row")).toContainText(
-    "Mentsd el a járműved",
-  );
+  await expect(page.getByText("Az első autód helye már megvan.")).toBeVisible();
   await other.dispose();
 });
 

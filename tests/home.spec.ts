@@ -33,7 +33,7 @@ test("quiet account and partner links still reach their working flows", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Saját fiók létrehozása" }).click();
+  await page.getByRole("link", { name: "Céges fiók létrehozása" }).click();
   await expect(page).toHaveURL(/\/fiok\?mode=register$/);
   await expect(
     page.getByRole("heading", { name: "Ismerjük meg egymást." }),

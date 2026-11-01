@@ -18,6 +18,8 @@ async function customer(api: APIRequestContext) {
           password,
           passwordConfirm: password,
           acceptTerms: true,
+          companyName: "Integration Test Kft.",
+          companyTax: "12345678-2-19",
         },
       })
     ).status(),
@@ -59,7 +61,7 @@ test("avatars persist in users.avatar, are processed safely and are private to t
   const result = await upload(request, await picture());
   expect(result.status()).toBe(200);
   const saved = (await result.json()).user;
-  expect(saved.role).toBe("customer");
+  expect(saved.role).toBe("partner");
   expect(saved.avatar).toMatch(/\.webp$/);
   const image = await request.get("/api/account/avatar");
   expect(image.status()).toBe(200);
@@ -156,7 +158,7 @@ test("avatar uploads reject invalid files, oversize bodies, CSRF and extra accou
   ).toBe(403);
   expect(
     (await (await request.get("/api/auth/session")).json()).user,
-  ).toMatchObject({ avatar: filename, role: "customer" });
+  ).toMatchObject({ avatar: filename, role: "partner" });
 });
 
 test("the profile uses initials without picture controls or avatar requests", async ({

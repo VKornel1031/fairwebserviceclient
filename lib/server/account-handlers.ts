@@ -27,6 +27,7 @@ import {
 import { site } from "@/content/site";
 import { roleLabels } from "../permissions";
 import type { Role } from "../demo";
+import { normalizedCompanyTax, validCompany } from "../company";
 
 export async function handle(
   request: NextRequest,
@@ -50,7 +51,6 @@ const profileFields = [
   "companyName",
   "companyTax",
   "companyCity",
-  "partnerRequested",
 ] as const;
 function profile(data: Record<string, unknown>, required = false) {
   const result: Record<string, unknown> = {};
@@ -64,13 +64,22 @@ function profile(data: Record<string, unknown>, required = false) {
   ] as const)
     if ((required && key === "name") || data[key] !== undefined)
       result[key] = text(data, key, max, key === "name" ? 2 : 0);
-  for (const key of ["reminders", "partnerRequested"] as const)
+  if (typeof result.companyTax === "string")
+    result.companyTax = normalizedCompanyTax(result.companyTax);
+  for (const key of ["reminders"] as const)
     if (data[key] !== undefined) {
       if (typeof data[key] !== "boolean")
         throw new AccountError(400, "Hibás beállítás.");
       result[key] = data[key];
     }
   return result;
+}
+function requireCompany(details: Record<string, unknown>) {
+  if (!validCompany(details.companyName, details.companyTax))
+    throw new AccountError(
+      400,
+      "Add meg a cég nevét és az adószámát (például: 12345678-2-19).",
+    );
 }
 function newPassword(data: Record<string, unknown>) {
   const value = password(data, "password", true);
@@ -148,8 +157,21 @@ export async function authPost(request: NextRequest, action: string) {
         "A regisztrációhoz fogadd el a használati feltételeket.",
       );
     const details = profile(data, true);
-    if (data.partnerRequested === true && !details.companyName)
-      throw new AccountError(400, "Céges fiókigényhez add meg a cég nevét.");
+    requireCompany(details);
+    try {
+      const policy = await pb<{ companyOnly: boolean }>(
+        "/api/fairauto/account/registration-policy",
+        "GET",
+      );
+      if (!policy.companyOnly) throw new PocketBaseError(404);
+    } catch (error) {
+      if (error instanceof PocketBaseError)
+        throw new AccountError(
+          503,
+          "A céges regisztrációhoz az üzemeltetőnek telepítenie kell a fiókmigrációt és a hozzá tartozó hookot.",
+        );
+      throw error;
+    }
     try {
       // PocketBase has already persisted the account on a successful create response.
       // Public responses may omit internal fields; they are not a schema-readiness probe.
@@ -159,7 +181,7 @@ export async function authPost(request: NextRequest, action: string) {
         password: secret,
         passwordConfirm: secret,
         emailVisibility: false,
-        role: "customer",
+        role: "partner",
         active: true,
         termsVersion: site.legal.version,
         termsAcceptedAt: new Date().toISOString(),
@@ -221,11 +243,17 @@ export async function updateProfile(request: NextRequest) {
   const data = await body(request, profileFields);
   const details = profile(data);
   if (
+    session.user.role === "partner" &&
+    ((details.companyName !== undefined &&
+      details.companyName !== session.user.companyName) ||
+      (details.companyTax !== undefined &&
+        details.companyTax !== session.user.companyTax))
+  )
+    requireCompany({ ...session.user, ...details });
+  if (
     !session.user.setupReady &&
     Object.keys(details).some((key) =>
-      ["companyName", "companyTax", "companyCity", "partnerRequested"].includes(
-        key,
-      ),
+      ["companyName", "companyTax", "companyCity"].includes(key),
     )
   )
     requireSetup(session.user);
@@ -288,13 +316,16 @@ export async function createAccount(request: NextRequest) {
   throttle(request, "admin-write", session.user.id, 40);
   await reauthenticate(session, password(data, "adminPassword"));
   const secret = newPassword(data);
+  const details = profile(data, true);
+  const role = selectedRole(data);
+  if (role === "partner") requireCompany(details);
   const result = await recordWrite<Record<string, unknown>>(
     "/api/collections/users/records",
     "POST",
     {
-      ...profile(data, true),
+      ...details,
       email: email(data),
-      role: selectedRole(data),
+      role,
       active: flag(data, "active", true),
       emailVisibility: false,
       password: secret,
@@ -353,6 +384,15 @@ export async function modifyAccount(
   if (data.email !== undefined) details.email = email(data);
   if (data.role !== undefined) details.role = selectedRole(data);
   if (data.active !== undefined) details.active = flag(data, "active");
+  if (
+    (details.role ?? target.role) === "partner" &&
+    ((details.role !== undefined && details.role !== target.role) ||
+      (details.companyName !== undefined &&
+        details.companyName !== target.companyName) ||
+      (details.companyTax !== undefined &&
+        details.companyTax !== target.companyTax))
+  )
+    requireCompany({ ...target, ...details });
   if (data.password !== undefined && data.password !== "") {
     const secret = newPassword(data);
     details.password = secret;

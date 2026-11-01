@@ -1,6 +1,8 @@
 # PocketBase fiókkezelés – e-mail és ellenőrzés nélkül
 
-Ez a dokumentum a most bekötött fiókkezeléshez tartozik. A korábbi `verified = true` belépési szabályt felváltja az `active = true`. SMTP nem szükséges. A PocketBase-superuser jelszavát vagy tokenjét **ne add meg a weboldalnak, Vercelnek vagy a csevegésben**.
+**Céges regisztráció frissítése:** az alapmigráció után a [COMPANY_ACCOUNTS.md](./COMPANY_ACCOUNTS.md) másolható blokkját is alkalmazd. A jelenlegi szerepek: `partner`, `reception`, `manager`, `admin`. A régi `customer` szerepkört a továbbvivő migráció adatvesztés nélkül kivezeti.
+
+Ez a dokumentum az alap fiókkezelési migrációhoz tartozik. A korábbi `verified = true` belépési szabályt felváltja az `active = true`. SMTP nem szükséges. A PocketBase-superuser jelszavát vagy tokenjét **ne add meg a weboldalnak, Vercelnek vagy a csevegésben**.
 
 A megadott `argonptg/pocketbase` image-hez és `/DATA/AppData/pocketbase/pb_data` mappádhoz külön, konkrét lépések: **[CASAOS_POCKETBASE.md](./CASAOS_POCKETBASE.md)**.
 
@@ -32,21 +34,21 @@ A fenti útvonalak helyőrzők, ne másold őket változatlanul. Az automatikus 
 
 A rendszermezőket (`id`, `email`, `password`, `verified`, stb.) PocketBase kezeli. A jelszóhoz ne készíts saját text/hash mezőt.
 
-| Mező               | Típus / beállítás                                                                   |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| `name`             | Text, legalább 2, legfeljebb 100 karakter                                           |
-| `phone`            | Text, max. 25                                                                       |
-| `city`             | Text, max. 100                                                                      |
-| `reminders`        | Bool; jelenleg nincs levelezés és nincs ilyen beállítás a felületen                 |
-| `role`             | Select, kötelező, egy érték: `customer`, `partner`, `reception`, `manager`, `admin` |
-| `companyName`      | Text, max. 120                                                                      |
-| `companyTax`       | Text, max. 30                                                                       |
-| `companyCity`      | Text, max. 100                                                                      |
-| `partnerRequested` | Bool, fenntartott mező; önmagában nem ad szerepkört                                 |
-| `active`           | Bool, a belépéshez `true` szükséges                                                 |
-| `protectedRoot`    | Bool, a védett alapadminnál `true`; csak superuser állítsa                          |
-| `termsVersion`     | Text, max. 100; a szerver állítja regisztrációnál                                   |
-| `termsAcceptedAt`  | Date; a szerver állítja regisztrációnál                                             |
+| Mező               | Típus / beállítás                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| `name`             | Text, legalább 2, legfeljebb 100 karakter                                                        |
+| `phone`            | Text, max. 25                                                                                    |
+| `city`             | Text, max. 100                                                                                   |
+| `reminders`        | Bool; jelenleg nincs levelezés és nincs ilyen beállítás a felületen                              |
+| `role`             | Select, kötelező, egy érték: `partner`, `reception`, `manager`, `admin` (a céges frissítés után) |
+| `companyName`      | Text, max. 120                                                                                   |
+| `companyTax`       | Text, max. 30                                                                                    |
+| `companyCity`      | Text, max. 100                                                                                   |
+| `partnerRequested` | Bool, fenntartott mező; önmagában nem ad szerepkört                                              |
+| `active`           | Bool, a belépéshez `true` szükséges                                                              |
+| `protectedRoot`    | Bool, a védett alapadminnál `true`; csak superuser állítsa                                       |
+| `termsVersion`     | Text, max. 100; a szerver állítja regisztrációnál                                                |
+| `termsAcceptedAt`  | Date; a szerver állítja regisztrációnál                                                          |
 
 Password auth: engedélyezve, identity mező `email`; új jelszó 12–64 karakter, legfeljebb 72 UTF-8 bájt. Auth token élettartam 28 800 másodperc (8 óra). **Auth rule: `active = true`**. A `verified` nem belépési feltétel. OAuth2, OTP és e-mailes MFA ne legyen bekapcsolva ehhez az első verzióhoz.
 
@@ -82,7 +84,7 @@ A változtatás után új Vercel deployment szükséges. A PocketBase-cím **ala
 ## 5. Kipróbálás
 
 1. Nyisd meg a `/fiok` oldalt; nincs Demó mód vagy szerepkörválasztó.
-2. Regisztrálj új ügyfelet, majd lépj be: nincs aktiváló levél és nincs e-mail-ellenőrzés. Új fiók mindig `customer`.
+2. Regisztrálj új céges partnert, majd lépj be: nincs aktiváló levél és nincs e-mail-ellenőrzés. A céges frissítés után az új fiók `partner`, cégnév és adószám szükséges.
 3. Ments telefonszámot, települést vagy céges adatokat; másik böngészőben is ellenőrizd a mentést.
 4. Lépj be az adminnal, nyisd meg az `/admin` oldalt. Hozz létre fiókot, vagy módosítsd egy másik felhasználó szerepét. Minden adminmódosításhoz a saját adminjelszó kell.
 5. A felhasználó oldalfrissítéskor, fókuszváltáskor vagy legfeljebb percenkénti ellenőrzéskor megkapja az új nézetet. Minden hitelesített API-hívás azonnal újraellenőrzi a PocketBase-fiókot és szerepkört.

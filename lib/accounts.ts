@@ -15,7 +15,6 @@ export type Account = {
   companyName: string;
   companyTax: string;
   companyCity: string;
-  partnerRequested: boolean;
   setupReady: boolean;
   avatar: string;
   defaultVehicle: string;

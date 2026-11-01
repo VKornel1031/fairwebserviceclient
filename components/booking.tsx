@@ -453,9 +453,9 @@ export default function Booking() {
           </div>
           {!user && (
             <p className="success-account">
-              Legközelebb még egyszerűbb.{" "}
-              <Link href="/fiok">
-                Hozz létre saját fiókot <ArrowUpRight size={13} />
+              Céges autókat kezelsz?{" "}
+              <Link href="/fiok?mode=register">
+                Hozz létre céges fiókot <ArrowUpRight size={13} />
               </Link>
             </p>
           )}

@@ -11,7 +11,7 @@ export type View =
   | "reception"
   | "admin"
   | "management";
-export type Role = "customer" | "partner" | "reception" | "manager" | "admin";
+export type Role = "partner" | "reception" | "manager" | "admin";
 export type Profile = {
   name: string;
   email: string;
@@ -228,7 +228,7 @@ export function initialStore(): Store {
       managerDemoUser,
       receptionDemoUser,
       adminDemoUser,
-      { ...contact, id: "demo-customer", role: "customer" },
+      { ...contact, id: "demo-customer", role: "partner" },
       {
         ...contact,
         id: "demo-partner",

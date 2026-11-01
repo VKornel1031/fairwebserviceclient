@@ -35,6 +35,8 @@ async function register(api: APIRequestContext, prefix: string) {
       password: testPassword,
       passwordConfirm: testPassword,
       acceptTerms: true,
+      companyName: "Integration Test Kft.",
+      companyTax: "12345678-2-19",
     },
   });
   expect(result.status()).toBe(202);
@@ -77,6 +79,8 @@ test("successful registration stays successful when its response omits internal 
       password: testPassword,
       passwordConfirm: testPassword,
       acceptTerms: true,
+      companyName: "Integration Test Kft.",
+      companyTax: "12345678-2-19",
     },
   });
   expect(response.status()).toBe(202);
@@ -84,7 +88,7 @@ test("successful registration stays successful when its response omits internal 
   const user = await login(request, email);
   expect(user).toMatchObject({
     email,
-    role: "customer",
+    role: "partner",
     active: true,
     setupReady: true,
   });
@@ -100,7 +104,7 @@ test("successful registration stays successful when its response omits internal 
     },
   );
   expect(await record.json()).toMatchObject({
-    role: "customer",
+    role: "partner",
     active: true,
     termsVersion: site.legal.version,
   });
@@ -121,6 +125,8 @@ test("registration, profile persistence and logout use PocketBase without verifi
   await loaded(page, "/fiok?mode=register");
   await expect(page.getByRole("button", { name: "Demó mód" })).toHaveCount(0);
   await expect(page.getByRole("combobox")).toHaveCount(0);
+  await page.getByLabel("Cégnév").fill("Böngészős Teszt Kft.");
+  await page.getByLabel("Adószám").fill("12345678-2-19");
   await page.getByLabel("Teljes név").fill("Valódi Fiók Teszt");
   await page.getByLabel(/^E\-mail\-cím(?:\s*\*)?$/).fill(email);
   await page.getByLabel(/^Jelszó(?:\s*\*)?$/).fill(testPassword);
@@ -149,7 +155,7 @@ test("registration, profile persistence and logout use PocketBase without verifi
     "Veszprém",
   );
   const session = await (await page.request.get("/api/auth/session")).json();
-  expect(session.user.role).toBe("customer");
+  expect(session.user.role).toBe("partner");
   expect(session.user.verified).toBe(false);
   expect(session).not.toHaveProperty("token");
   const cookies = await page.context().cookies();
@@ -191,7 +197,6 @@ test("PocketBase roles determine navigation and URL access; local demo identitie
   page,
 }) => {
   const cases = [
-    ["customer", "/attekintes", "Járműveim"],
     ["partner", "/partnerek", "Járműpark"],
     ["reception", "/munkafelvetel", "Munkafelvétel"],
     ["manager", "/vezetes", "Vezetői áttekintés"],
@@ -243,6 +248,8 @@ test("admin creates, assigns roles, suspends and deletes accounts; role changes 
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole("button", { name: "Új fiók", exact: true }).click();
   const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Cégnév").fill("Admin Teszt Kft.");
+  await dialog.getByLabel("Adószám").fill("12345678-2-19");
   await dialog.getByLabel("Teljes név").fill(name);
   await dialog.getByLabel(/^E\-mail\-cím(?:\s*\*)?$/).fill(email);
   await dialog.getByLabel(/^Fiók\ új\ jelszava(?:\s*\*)?$/).fill(testPassword);
@@ -411,6 +418,8 @@ test("account APIs reject CSRF, mass assignment, oversized input and non-admin a
           ...payload,
           passwordConfirm: testPassword,
           acceptTerms: true,
+          companyName: "Integration Test Kft.",
+          companyTax: "12345678-2-19",
           role: "admin",
         },
         "POST",
@@ -472,12 +481,12 @@ test("native PocketBase rules prevent privilege escalation, cross-account reads 
   ]) {
     const changed = await raw.patch(path, { headers, data });
     if (changed.status() === 200)
-      expect((await changed.json()).role).toBe("customer");
+      expect((await changed.json()).role).toBe("partner");
     else expect([400, 403, 404]).toContain(changed.status());
   }
   const unchanged = await raw.get(path, { headers });
   expect(await unchanged.json()).toMatchObject({
-    role: "customer",
+    role: "partner",
     active: true,
     protectedRoot: false,
     verified: false,
@@ -509,7 +518,7 @@ test("native PocketBase rules prevent privilege escalation, cross-account reads 
   expect(
     (
       await write(request, `/api/admin/accounts/${root.id}`, {
-        role: "customer",
+        role: "partner",
         adminPassword: testPassword,
       })
     ).status(),
@@ -517,7 +526,7 @@ test("native PocketBase rules prevent privilege escalation, cross-account reads 
   expect(
     (
       await write(request, `/api/admin/accounts/${other.id}`, {
-        role: "customer",
+        role: "partner",
         adminPassword: testPassword,
       })
     ).status(),

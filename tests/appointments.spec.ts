@@ -38,6 +38,8 @@ async function customer(api: APIRequestContext) {
           password,
           passwordConfirm: password,
           acceptTerms: true,
+          companyName: "Integration Test Kft.",
+          companyTax: "12345678-2-19",
         },
       })
     ).status(),
@@ -723,7 +725,7 @@ test("multiple saved cars require a choice, guests stay blank, and a new guest r
   await expect(page.getByLabel("Település")).toHaveValue("Pákozd");
   await expect(page.getByLabel("Rendszám")).toHaveValue("");
   await page
-    .getByLabel("Mentett jármű kiválasztása")
+    .getByLabel("Jármű a céges flottából")
     .selectOption({ label: "Ford Fiesta · SECOND123" });
   await expect(page.getByLabel("Rendszám")).toHaveValue("SECOND123");
   await expect(page.getByLabel("Modell")).toHaveValue("Fiesta");

@@ -339,7 +339,7 @@ export default function Administration() {
                   <select
                     name="role"
                     id="account-role"
-                    defaultValue={editor.account?.role || "customer"}
+                    defaultValue={editor.account?.role || "partner"}
                   >
                     {(Object.keys(roleLabels) as Role[]).map((role) => (
                       <option value={role} key={role}>
@@ -367,6 +367,7 @@ export default function Administration() {
                   name="companyTax"
                   defaultValue={editor.account?.companyTax}
                   maxLength={30}
+                  hint="Céges partnerhez a cégnév és az adószám kötelező."
                 />
                 <Field
                   label="Cég települése"

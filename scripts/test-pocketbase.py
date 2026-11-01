@@ -54,6 +54,13 @@ migrate((app) => {
   c.fields.add(new TextField({ name: "subject", max: 500 }));
   c.fields.add(new TextField({ name: "html", max: 50000 }));
   app.save(c);
+  const legacy = new Record(app.findCollectionByNameOrId("users"));
+  legacy.set("name", "Legacy Personal Account");
+  legacy.set("email", "legacy@fairauto.test");
+  legacy.setPassword("Local-integration-only-928374!");
+  legacy.set("role", "customer");
+  legacy.set("active", true);
+  app.save(legacy);
 }, () => {});
 ''')
     (hooks / "mail-interceptor.pb.js").write_text('''
@@ -109,11 +116,13 @@ onRecordEnrich((event) => {
         status, auth = api("POST", "/api/collections/_superusers/auth-with-password",
                            {"identity": "root@fairauto.test", "password": secret})
         assert status == 200, "Local superuser authentication failed"
-        for role in ["admin", "customer", "partner", "reception", "manager"]:
+        for role in ["admin", "partner", "reception", "manager"]:
             status, record = api("POST", "/api/collections/users/records", {
                 "name": "Test " + role, "email": role + "@fairauto.test", "password": secret,
                 "passwordConfirm": secret, "role": role, "active": True,
                 "protectedRoot": role == "admin", "emailVisibility": False,
+                "companyName": "Seed Test Kft." if role == "partner" else "",
+                "companyTax": "12345678-2-19" if role == "partner" else "",
             }, auth["token"])
             assert status == 200, f"Could not seed {role}: {record}"
         print("Disposable PocketBase ready on 127.0.0.1:3101", flush=True)

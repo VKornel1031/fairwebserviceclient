@@ -16,6 +16,7 @@ import { accountRequest, type Account as AccountRecord } from "@/lib/accounts";
 import { usePortal } from "./provider";
 import { Field } from "./fields";
 import { Modal, PageHeading } from "./ui";
+import { companyTaxHint, companyTaxPattern } from "@/lib/company";
 import Vehicles from "./vehicles";
 import AppointmentList from "./appointment-list";
 export { Account } from "./account";
@@ -96,8 +97,8 @@ export function Partners() {
               </Link>
             </div>
             <p className="small muted">
-              Hozz létre ügyfélfiókot, majd kérj partnerhozzáférést az
-              adminisztrátortól.
+              Regisztrálj cégnévvel és adószámmal; a fiókod céges partnerként
+              indul.
             </p>
           </div>
           <Building2 size={150} strokeWidth={0.6} />
@@ -224,6 +225,9 @@ export function Partners() {
               name="tax"
               label="Adószám"
               maxLength={30}
+              required={user?.role === "partner"}
+              pattern={user?.role === "partner" ? companyTaxPattern : undefined}
+              hint={companyTaxHint}
               defaultValue={company.tax}
             />
             <Field

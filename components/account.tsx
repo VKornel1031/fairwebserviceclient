@@ -8,6 +8,7 @@ import { PageHeading } from "./ui";
 import { accountRequest, type Account as AccountRecord } from "@/lib/accounts";
 import { roleLabels } from "@/lib/permissions";
 import { AccountAvatar } from "./account-avatar";
+import { companyTaxHint, companyTaxPattern } from "@/lib/company";
 
 export function Account() {
   const { user, capabilities, acceptAccount, sessionError, refreshSession } =
@@ -48,6 +49,8 @@ export function Account() {
           "POST",
           {
             name: data.get("name"),
+            companyName: data.get("companyName"),
+            companyTax: data.get("companyTax"),
             email: data.get("email"),
             password: data.get("password"),
             passwordConfirm: data.get("passwordConfirm"),
@@ -72,7 +75,7 @@ export function Account() {
       <PageHeading
         eyebrow="SAJÁT FIÓK"
         title="Saját hely az autós ügyeidnek."
-        description="Hozz létre fiókot, és mentsd el a kapcsolattartási adataidat."
+        description="Céges fiókkal elmentheted a kapcsolattartási és járműadatokat. Magánszemélyként vendégként kérhetsz időpontot."
       />
       <div className="auth-layout">
         <section className="panel auth-panel">
@@ -104,7 +107,7 @@ export function Account() {
           <p className="muted">
             {mode === "login"
               ? "Lépj be az e-mail-címeddel és jelszavaddal."
-              : "Minden új fiók magánügyfélként indul. Céges és munkatársi hozzáférést az adminisztrátor adhat."}
+              : "Regisztráció cégeknek, cégnévvel és adószámmal. Az új fiók céges partnerként indul; munkatársi hozzáférést az adminisztrátor adhat."}
           </p>
           {sessionError && (
             <div className="info-box" role="alert">
@@ -132,14 +135,33 @@ export function Account() {
           )}
           <form key={mode} className="stack-form" onSubmit={submit}>
             {mode === "register" && (
-              <Field
-                name="name"
-                label="Teljes név"
-                autoComplete="name"
-                required
-                minLength={2}
-                maxLength={100}
-              />
+              <>
+                <Field
+                  name="companyName"
+                  label="Cégnév"
+                  autoComplete="organization"
+                  required
+                  minLength={2}
+                  maxLength={120}
+                />
+                <Field
+                  name="companyTax"
+                  label="Adószám"
+                  required
+                  maxLength={13}
+                  pattern={companyTaxPattern}
+                  hint={companyTaxHint}
+                />
+                <Field
+                  name="name"
+                  label="Teljes név"
+                  autoComplete="name"
+                  required
+                  minLength={2}
+                  maxLength={100}
+                  hint="A céges kapcsolattartó neve."
+                />
+              </>
             )}
             <Field
               name="email"
@@ -228,6 +250,10 @@ export function Account() {
           <p className="demo-footnote">
             E-mailes ellenőrzés és jelszó-visszaállítás egyelőre nem érhető el.
             Elfelejtett jelszó esetén keresd az üzemeltetőt.
+          </p>
+          <p className="small muted">
+            Magánszemélyként{" "}
+            <Link href="/idopont">regisztráció nélkül kérhetsz időpontot</Link>.
           </p>
         </section>
         <div className="auth-promo">
@@ -363,7 +389,10 @@ function Profile() {
                 />
               </div>
               {user!.setupReady && (
-                <details className="account-details">
+                <details
+                  className="account-details"
+                  open={user!.role === "partner"}
+                >
                   <summary>Céges adatok</summary>
                   <div className="form-grid">
                     <Field
@@ -371,6 +400,8 @@ function Profile() {
                       name="companyName"
                       defaultValue={user!.companyName}
                       maxLength={120}
+                      required={user!.role === "partner"}
+                      minLength={user!.role === "partner" ? 2 : undefined}
                       autoComplete="organization"
                     />
                     <Field
@@ -378,6 +409,13 @@ function Profile() {
                       name="companyTax"
                       defaultValue={user!.companyTax}
                       maxLength={30}
+                      required={user!.role === "partner"}
+                      pattern={
+                        user!.role === "partner" ? companyTaxPattern : undefined
+                      }
+                      hint={
+                        user!.role === "partner" ? companyTaxHint : undefined
+                      }
                     />
                     <Field
                       label="Cég települése"
@@ -387,9 +425,8 @@ function Profile() {
                     />
                   </div>
                   <p className="small muted">
-                    A céges adatok kitöltése nem változtatja meg a
-                    szerepkörödet. Partnerhozzáférésért keresd az
-                    adminisztrátort.
+                    A céges partnerfiókhoz cégnév és adószám szükséges. A
+                    munkatársi szerepköröket az adminisztrátor kezeli.
                   </p>
                 </details>
               )}

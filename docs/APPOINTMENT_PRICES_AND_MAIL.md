@@ -4,7 +4,7 @@
 
 A már működő időpontkezeléshez az új **`1793512800_prices_vin_and_mail.js`** migráció és a friss foglalási hookok szükségesek. Az [APPOINTMENTS.md](./APPOINTMENTS.md) két másolható blokkját futtasd: a korábban alkalmazott migráció kimarad, az új az aktív `/pocketbase/pb_data` adatbázisba kerül. A meglévő konténer és járműadatok megmaradnak. API-kulcs vagy új Vercel-változó nem kell.
 
-A friss `content/booking.json` is szükséges: a tájékoztatók közös verziója `2026-11-01.4-draft`. Levelezés alapból ki van kapcsolva; az árkezelés ettől függetlenül működik.
+A friss `content/booking.json` is szükséges: a tájékoztatók közös verziója `2026-11-01.5-draft`. Levelezés alapból ki van kapcsolva; az árkezelés ettől függetlenül működik.
 
 ## Admin automatikus kitöltés és levelezési állapot javítása
 
@@ -57,6 +57,8 @@ A megjelenített összeg **tájékoztató bruttó árbecslés**, nem számla vag
 ## Opcionális e-mail
 
 A `fairauto-mail.json` a PocketBase hookmappájában található helyi beállítás; mintája a repó [`pocketbase/mail.example.json`](../pocketbase/mail.example.json) fájlja. Titok nem kell bele. A feladó név/cím és esetleges SMTP-hitelesítés a PocketBase Mail settings része. A `newMailClient()` SMTP kikapcsolásakor Unix `sendmail` klienst választ.
+
+A választott Gmail SMTP-küldés beállítása: **[GMAIL_SMTP.md](./GMAIL_SMTP.md)**. A saját Gmail-fiókkal küldött PocketBase-teszt megérkezett; az üzemi céges postafiókot külön kell beállítani.
 
 A felhasználónál már működő host Sendmail és a konténer localhost-eltérésének javítása: **[LOCAL_SENDMAIL.md](./LOCAL_SENDMAIL.md)**. A javítás nem küld levelet. Előbb a PocketBase saját tesztjével, saját postafiókba ellenőrizd a tényleges beérkezést.
 

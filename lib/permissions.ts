@@ -10,12 +10,6 @@ export const roleRules: Record<
     administration: boolean;
   }
 > = {
-  customer: {
-    appointments: false,
-    workshop: false,
-    reports: false,
-    administration: false,
-  },
   partner: {
     appointments: false,
     workshop: false,
@@ -42,14 +36,12 @@ export const roleRules: Record<
   },
 };
 export const roleLabels: Record<Role, string> = {
-  customer: "Magánügyfél",
   partner: "Céges partner",
   reception: "Munkafelvevő",
   manager: "Tulajdonos / vezető",
   admin: "Adminisztrátor",
 };
 export const roleHome: Record<Role, string> = {
-  customer: "/attekintes",
   partner: "/partnerek",
   reception: "/munkafelvetel",
   manager: "/vezetes",
