@@ -20,11 +20,15 @@ Az időpont- és fióklevelek a portál színeit követő, mobilon is olvasható
 
 A tesztek helyi, átmeneti adatbázist és elfogott leveleket használnak. A homelabon nem hoztunk létre tesztfiókot vagy időpontot, és nem indítottunk valódi levélküldést. A lejárt vendégkérés törlésénél a határidőt, az aktív ügyek védelmét, a kapcsolódó adatmásolatok törlését és a folyamatban lévő levélátadás kihagyását is ellenőriztük.
 
+### A weboldal logója a levelekben
+
+A későbbi logófrissítés után az időpont- és címigazolási levél két célzott tesztje is sikeres. A böngésző a tényleges PNG-t tölti be mobilnézetben; ugyanennek a fájlnak a nyilvános webes elérhetősége és egyezése is ellenőrzött. A három natív fióksablont módosító előremutató migráció frissítési próbája PocketBase 0.26.6 és 0.26.3 alatt sikeres. A telepítési parancsok az [EMAIL_LOGO.md](./EMAIL_LOGO.md) fájlban találhatók.
+
 ## Telepítés a saját végső próba előtt
 
 A nyilvános frontend és a backend olvasási ellenőrzése sikeres volt: az anonim munkamenet üres, az admin API belépést kér, a levélstátusz végpont tiltja az anonim hozzáférést, és a natív listák nem adnak ki idegen rekordot. A backend az ellenőrzéskor még a korábbi `2026-11-01.5-draft` konfigurációt használta.
 
-**A GitHub/Vercel frissítése mellett a PocketBase két új migrációját és hookjait is telepíteni kell.** Az egyben bemásolható parancsok és a rövid kézi próbasor a [FINAL_UPDATE.md](./FINAL_UPDATE.md) fájlban vannak. A parancsok a tényleges `/pocketbase/pb_data` adatbázist használják a meglévő konténerben, és megőrzik a működő SMTP-beállítást. Frissítés után jelentkezz be újra. A saját postaládás kézi próba igazolja majd az éles levélkézbesítést.
+**A GitHub/Vercel frissítése mellett a PocketBase új migrációit és hookjait is telepíteni kell.** Az egyben bemásolható parancsok és a rövid kézi próbasor a [FINAL_UPDATE.md](./FINAL_UPDATE.md) fájlban vannak. A parancsok a tényleges `/pocketbase/pb_data` adatbázist használják a meglévő konténerben, és megőrzik a működő SMTP-beállítást. Frissítés után jelentkezz be újra. A saját postaládás kézi próba igazolja majd az éles levélkézbesítést.
 
 ## Nyitott üzemeltetői adatok
 

@@ -271,7 +271,11 @@ function designedMessage(job, info) {
   return (
     '<!doctype html><html lang="hu"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f3f2ed;color:#202724;font-family:Arial,sans-serif"><div style="display:none;max-height:0;overflow:hidden">' +
     escape(titles[job.event] + " · " + a.reference) +
-    '</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f3f2ed"><tr><td style="padding:24px 12px"><table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;background:#ffffff;border:1px solid #e2e6df;border-radius:12px;overflow:hidden"><tr><td bgcolor="#202724" style="padding:25px 26px;color:#ffffff;border-top:5px solid #a9bea0"><p style="margin:0;font-size:28px;letter-spacing:-1px;font-weight:bold">fair<span style="font-weight:normal;font-size:15px;letter-spacing:0"> autószerviz</span></p><p style="font-size:10px;letter-spacing:2px;margin:9px 0 0;color:#cad6c8">SZÉKESFEHÉRVÁR · ÜGYFÉLPORTÁL</p></td></tr><tr><td style="padding:26px"><h1 style="font-size:25px;line-height:1.35;margin:0 0 14px;font-weight:600">' +
+    '</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f3f2ed"><tr><td style="padding:24px 12px"><table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;background:#ffffff;border:1px solid #e2e6df;border-radius:12px;overflow:hidden"><tr><td bgcolor="#f7f8f4" style="padding:25px 26px;color:#202724;border-top:5px solid #a9bea0"><a href="' +
+    escape(config.appUrl.replace(/\/$/, "")) +
+    '" style="display:inline-block;text-decoration:none"><img src="' +
+    escape(config.appUrl.replace(/\/$/, "") + "/images/fair-logo.png") +
+    '" width="156" height="69" alt="Fair Autószerviz" style="display:block;width:156px;max-width:100%;height:auto;border:0"></a><p style="font-size:10px;letter-spacing:2px;margin:9px 0 0;color:#68726b">SZÉKESFEHÉRVÁR · ÜGYFÉLPORTÁL</p></td></tr><tr><td style="padding:26px"><h1 style="font-size:25px;line-height:1.35;margin:0 0 14px;font-weight:600">' +
     escape(titles[job.event]) +
     "</h1>" +
     body +

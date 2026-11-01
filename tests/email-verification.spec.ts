@@ -119,8 +119,25 @@ test("new companies must prove their email; opening the link does not confirm or
   await expect(
     page.getByText("E-mail-cím megerősítve.", { exact: true }),
   ).toBeVisible();
+  await page.route(
+    "https://fairwebserviceclient.vercel.app/images/fair-logo.png",
+    (route) =>
+      route.fulfill({
+        path: "public/images/fair-logo.png",
+        contentType: "image/png",
+      }),
+  );
   await page.setContent(mail.html);
   await page.setViewportSize({ width: 390, height: 844 });
+  const logo = page.getByRole("img", { name: "Fair Autószerviz", exact: true });
+  await expect(logo).toHaveAttribute(
+    "src",
+    "https://fairwebserviceclient.vercel.app/images/fair-logo.png",
+  );
+  await expect(logo).toBeVisible();
+  expect(
+    await logo.evaluate((image: HTMLImageElement) => image.naturalWidth),
+  ).toBe(1883);
   await expect(
     page.getByRole("link", { name: "E-mail-cím megerősítése", exact: true }),
   ).toBeVisible();

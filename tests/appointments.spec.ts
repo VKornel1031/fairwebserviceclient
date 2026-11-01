@@ -1077,7 +1077,24 @@ test("mail uses durable snapshots, separate recipients and retries; repeated eve
   expect(html).toContain("50 000 Ft");
   expect(html).toContain("Fékbetét &lt;script&gt;");
   expect(html).not.toContain("<script>");
+  await page.route(
+    "https://fairwebserviceclient.vercel.app/images/fair-logo.png",
+    (route) =>
+      route.fulfill({
+        path: "public/images/fair-logo.png",
+        contentType: "image/png",
+      }),
+  );
   await page.setContent(html);
+  const logo = page.getByRole("img", { name: "Fair Autószerviz", exact: true });
+  await expect(logo).toHaveAttribute(
+    "src",
+    "https://fairwebserviceclient.vercel.app/images/fair-logo.png",
+  );
+  await expect(logo).toBeVisible();
+  expect(
+    await logo.evaluate((image: HTMLImageElement) => image.naturalWidth),
+  ).toBe(1883);
   for (const width of [390, 640]) {
     await page.setViewportSize({ width, height: 900 });
     expect(

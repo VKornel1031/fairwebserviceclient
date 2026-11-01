@@ -182,7 +182,7 @@ with tempfile.TemporaryDirectory(prefix="fair-migration-check-") as directory:
         assert status == 200
         started = time.time()
         stop()
-        for name in ["1793541600_guest_retention.js", "1793545200_email_verification.js"]:
+        for name in ["1793541600_guest_retention.js", "1793545200_email_verification.js", "1793548800_email_website_logo.js"]:
             shutil.copyfile(source / name, migrations / name)
         subprocess.run([binary, "migrate", "up", *options], check=True, stdout=subprocess.DEVNULL)
         token = start()
@@ -202,6 +202,11 @@ with tempfile.TemporaryDirectory(prefix="fair-migration-check-") as directory:
         assert preserved["role"] == "partner" and preserved["defaultVehicle"] == car["id"]
         status, still_disabled = api("GET", f'/api/collections/users/records/{legacy["id"]}', token=token)
         assert status == 200 and not still_disabled["active"] and still_disabled["protectedRoot"]
+        status, branded_users = api("GET", "/api/collections/users", token=token)
+        assert status == 200
+        for name in ["verificationTemplate", "resetPasswordTemplate", "confirmEmailChangeTemplate"]:
+            assert 'src="{APP_URL}/images/fair-logo.png"' in branded_users[name]["body"]
+            assert 'fair<span' not in branded_users[name]["body"]
         print("PASS: account/car/appointment data and field IDs preserved; legacy access retained without falsifying verification; disabled admins stay disabled; guest deadlines backfilled from closure history or a fresh grace period, with no migration-time deletion.")
     finally:
         stop()
