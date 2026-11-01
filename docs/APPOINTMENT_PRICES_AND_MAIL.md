@@ -58,6 +58,8 @@ A megjelenített összeg **tájékoztató bruttó árbecslés**, nem számla vag
 
 A `fairauto-mail.json` a PocketBase hookmappájában található helyi beállítás; mintája a repó [`pocketbase/mail.example.json`](../pocketbase/mail.example.json) fájlja. Titok nem kell bele. A feladó név/cím és esetleges SMTP-hitelesítés a PocketBase Mail settings része. A `newMailClient()` SMTP kikapcsolásakor Unix `sendmail` klienst választ.
 
+A szerviztelefonszámokat az új levelekben a `booking.json` közös `phoneContacts` listája adja. A helyi `workshopPhone` mező a korábbi, ilyen lista nélküli konfigurációk tartaléka. Frissítés: [SERVICE_BOOKING.md](./SERVICE_BOOKING.md).
+
 A választott Gmail SMTP-küldés beállítása: **[GMAIL_SMTP.md](./GMAIL_SMTP.md)**. A saját Gmail-fiókkal küldött PocketBase-teszt megérkezett; az üzemi céges postafiókot külön kell beállítani.
 
 A felhasználónál már működő host Sendmail és a konténer localhost-eltérésének javítása: **[LOCAL_SENDMAIL.md](./LOCAL_SENDMAIL.md)**. A javítás nem küld levelet. Előbb a PocketBase saját tesztjével, saját postafiókba ellenőrizd a tényleges beérkezést.

@@ -3,7 +3,7 @@
 ## `content/site.ts` – nyilvános alapadatok
 
 - Név, város, logó, fő weboldal.
-- Telefon és a hozzá tartozó `tel:` hivatkozás, e-mail, műhelycím.
+- E-mail és műhelycím. A telefonszámok a `booking.json` közös `phoneContacts` listájából származnak.
 - Nyitvatartási feliratok.
 - Cégadatok és a jogi dokumentumok állapota, frissítési dátuma.
 - A lábléc jogi linkjeinek felirata és útvonala (`legalNavigation`).
@@ -13,6 +13,8 @@ Ez TypeScript-forrásfájl: módosítás után újra kell buildelni/telepíteni 
 ## `content/booking.json` – szolgáltatások és szerveroldali foglalási szabályok
 
 - Szolgáltatásnév, leírás, becsült időtartam és opcionális `priceLabel` árfelirat. Üres árfeliratnál nem jelenik meg ár.
+- `bookingMode`: `online` = választható, `phone` = kizárólag telefonos egyeztetés, online kérés nem menthető. A műszaki vizsga telefonos, gumiszerviz nincs a kínálatban. A frissítés másolható parancsai: [SERVICE_BOOKING.md](./SERVICE_BOOKING.md).
+- `phoneContacts`: telefonszámok és `tel:` hivatkozásaik; ezeket használja a foglaló, lábléc, kapcsolat és az új időpontértesítés is.
 - Nyitás/zárás, idősávköz, zárt hétköznapok, párhuzamos kapacitás és foglalási horizont.
 - A `termsVersion` a webes és PocketBase-oldali feltételverzió közös forrása.
 - Vendég-hozzáférési idő és függő kérések korlátja.

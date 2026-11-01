@@ -2,6 +2,10 @@
   "version": 1,
   "termsVersion": "2026-11-01.5-draft",
   "guestCookieDays": 120,
+  "phoneContacts": [
+    { "label": "06 20 347 3705", "href": "tel:+36203473705" },
+    { "label": "06 20 405 6299", "href": "tel:+36204056299" }
+  ],
   "schedule": {
     "opensAt": "06:00",
     "closesAt": "17:00",
@@ -16,6 +20,7 @@
   "services": [
     {
       "id": "maintenance",
+      "bookingMode": "online",
       "name": "Karbantartás és javítás",
       "short": "Karbantartás",
       "description": "Olajcsere, időszakos szerviz, megelőző gondoskodás.",
@@ -26,9 +31,10 @@
     },
     {
       "id": "inspection",
+      "bookingMode": "phone",
       "name": "Műszaki vizsga",
       "short": "Műszaki vizsga",
-      "description": "Felkészítés és helyszíni vizsgáztatás, egy helyen.",
+      "description": "Időpontot kizárólag telefonon tudunk egyeztetni.",
       "duration": 60,
       "icon": "shield",
       "tag": "Nyugodtan tovább",
@@ -36,6 +42,7 @@
     },
     {
       "id": "diagnostics",
+      "bookingMode": "online",
       "name": "Diagnosztika",
       "short": "Diagnosztika",
       "description": "Pontos hibafeltárás korszerű diagnosztikai eszközökkel.",
@@ -45,17 +52,8 @@
       "priceLabel": ""
     },
     {
-      "id": "tyres",
-      "name": "Gumi- és futóműszerviz",
-      "short": "Gumi és futómű",
-      "description": "Szezonális gumicsere, centrírozás és futóműellenőrzés.",
-      "duration": 60,
-      "icon": "wheel",
-      "tag": "Biztos úttartás",
-      "priceLabel": ""
-    },
-    {
       "id": "other",
+      "bookingMode": "online",
       "name": "Egyéb szervizigény",
       "short": "Egyéb szerviz",
       "description": "Mondd el, miben segíthetünk az autóddal kapcsolatban.",

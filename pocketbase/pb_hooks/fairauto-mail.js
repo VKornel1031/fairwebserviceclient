@@ -1,4 +1,5 @@
 // Optional durable appointment notifications. Credentials stay in PocketBase mail settings.
+const booking = require(__hooks + "/fairauto-booking.json");
 let config,
   warned = false;
 try {
@@ -174,7 +175,10 @@ function message(job, app) {
   if (a.organization) lines.push("Cég: " + a.companyName);
   lines.push(
     "Szerviz: " + config.workshopAddress,
-    "Telefon: " + config.workshopPhone,
+    "Telefon: " +
+      (booking.phoneContacts
+        ? booking.phoneContacts.map((phone) => phone.label).join(" / ")
+        : config.workshopPhone),
   );
   if (a.note) lines.push("Megjegyzés: " + a.note);
   if (a.price) {

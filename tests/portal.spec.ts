@@ -124,7 +124,7 @@ test("desktop and mobile navigation, theme and no horizontal overflow", async ({
 
 test("mobile guest can complete the entire booking form", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await ready(page, "/idopont?service=inspection");
+  await ready(page, "/idopont?service=diagnostics");
   await page.getByRole("button", { name: "Tovább az időpontokhoz" }).click();
   await chooseSlot(page);
   await fillDetails(page);

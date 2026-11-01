@@ -223,6 +223,11 @@
   align-items: center;
   gap: 25px;
 }
+.home-contact-phones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
 .home-footer-links a {
   font-size: 10px;
   display: inline-flex;

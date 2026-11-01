@@ -20,13 +20,56 @@ test("the welcome page takes a guest into the complete booking flow", async ({
     page.getByRole("heading", { name: "Miben segíthetünk?" }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: /Műszaki vizsga Felkészítés/ })
+    .getByRole("button", { name: /Diagnosztika Pontos hibafeltárás/ })
     .click();
   await page.getByRole("button", { name: "Tovább az időpontokhoz" }).click();
   await expect(
     page.getByRole("heading", { name: "Mikor találkozzunk?" }),
   ).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("inspection is phone-only with both call links and tire service is absent", async ({
+  page,
+}) => {
+  await page.goto("/idopont?service=inspection");
+  const card = page.getByRole("group", {
+    name: "Műszaki vizsga – telefonos időpontegyeztetés",
+  });
+  await expect(card).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Műszaki vizsga/ }),
+  ).toHaveCount(0);
+  await expect(
+    card.getByRole("link", { name: "06 20 347 3705" }),
+  ).toHaveAttribute("href", "tel:+36203473705");
+  await expect(
+    card.getByRole("link", { name: "06 20 405 6299" }),
+  ).toHaveAttribute("href", "tel:+36204056299");
+  await expect(page.locator(".service-options")).not.toContainText(
+    /gumi|futómű/i,
+  );
+  await card.getByText("Műszaki vizsga", { exact: true }).click();
+  await expect(
+    page.locator('.service-options button[aria-pressed="true"]'),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Tovább az időpontokhoz" }).click();
+  await expect(page.locator("main").getByRole("alert")).toContainText(
+    "Válassz egy szolgáltatást",
+  );
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await card.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: test.info().outputPath("phone-inspection-mobile.png"),
+  });
 });
 
 test("quiet account and partner links still reach their working flows", async ({

@@ -1,5 +1,5 @@
 /** Szerkeszthető nyilatkozatminták. Letöltésük nem jelent beküldést. */
-import { site } from "./site";
+import { site, contactPhoneLabel } from "./site";
 const recipientAddress =
   site.legal.complaintsAddress ||
   site.legal.registeredOffice ||
@@ -38,7 +38,7 @@ Használata nem kötelező; saját szövegű panasz is benyújtható.
 Címzett: ${site.legal.companyName}
 Postai cím: ${recipientAddress}
 E-mail: ${site.legal.complaintsEmail}
-Telefon: ${site.contact.phone}
+Telefon: ${contactPhoneLabel}
 
 Bejelentő neve: ______________________________
 Kapcsolattartási / válaszcím: ______________________________

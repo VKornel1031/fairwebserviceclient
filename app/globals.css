@@ -1029,6 +1029,21 @@ select {
   border-color: var(--ink);
   background: var(--bg);
 }
+.service-phone:hover {
+  background: var(--surface);
+}
+.service-phone-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-block: 6px;
+}
+.service-phone-links a {
+  font-size: 12px;
+  line-height: 1.8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .option-icon {
   height: 43px;
   width: 43px;

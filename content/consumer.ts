@@ -1,6 +1,6 @@
 /** Szerkeszthető fogyasztói tájékoztató. Az időpontkérés és a javítási szerződés különbözik. */
 import type { LegalDocument } from "./legal";
-import { legalNavigation, site } from "./site";
+import { legalNavigation, site, contactPhoneLabel } from "./site";
 const required = (value: string) =>
   value || "Kitöltés szükséges az éles használat előtt";
 export const consumerDocument: LegalDocument = {
@@ -27,7 +27,7 @@ export const consumerDocument: LegalDocument = {
           value: required(site.legal.complaintsAddress),
         },
         { label: "E-mail", value: site.legal.complaintsEmail },
-        { label: "Telefon", value: site.contact.phone },
+        { label: "Telefon", value: contactPhoneLabel },
       ],
       paragraphs: [
         "Panaszodat szóban, e-mailben vagy postai levélben is közölheted a feltüntetett elérhetőségeken. A panaszhoz add meg a kapcsolattartáshoz szükséges adatokat, az érintett szolgáltatást vagy azonosítót és a kifogásod lényegét. A saját szövegű panasz is elfogadható; az alábbi minta használata nem kötelező.",

@@ -10,7 +10,7 @@ import {
   type AppointmentDetail,
 } from "@/lib/live-appointments";
 import SavedVehiclePicker from "./saved-vehicle-picker";
-import { site, locationLabel } from "@/content/site";
+import { site, locationLabel, contactPhones } from "@/content/site";
 import {
   ArrowLeft,
   ArrowRight,
@@ -25,6 +25,7 @@ import {
   Download,
   UserRound,
   Info,
+  Phone,
 } from "lucide-react";
 import { usePortal } from "./provider";
 import { canCoordinateAppointments } from "@/lib/permissions";
@@ -48,6 +49,17 @@ const blankContact: Profile = {
   reminders: true,
 };
 const blankCar = { plate: "", make: "", model: "", year: "", vin: "" };
+function ServicePhoneLinks() {
+  return (
+    <span className="service-phone-links">
+      {contactPhones.map((phone) => (
+        <a key={phone.href} href={phone.href}>
+          {phone.label}
+        </a>
+      ))}
+    </span>
+  );
+}
 export default function Booking() {
   const {
     user,
@@ -120,6 +132,13 @@ export default function Booking() {
           );
           if (controller.signal.aborted) return;
           const a = details.appointment;
+          const currentService = result.config.services.find(
+            (item) => item.id === a.service,
+          );
+          if (!currentService || currentService.bookingMode === "phone")
+            throw new Error(
+              "Ehhez a szolgáltatáshoz telefonon tudsz időpontot egyeztetni.",
+            );
           setOnBehalf(coordinator && a.owner !== user?.id);
           if (!["requested", "confirmed"].includes(a.status))
             throw new Error("Ez az időpontkérés már nem módosítható.");
@@ -149,7 +168,11 @@ export default function Booking() {
             setSavedCar("");
           }
           const sid = params.get("service");
-          if (result.config.services.some((item) => item.id === sid))
+          if (
+            result.config.services.some(
+              (item) => item.id === sid && item.bookingMode !== "phone",
+            )
+          )
             setService(sid!);
           const date = params.get("date"),
             time = params.get("time");
@@ -185,7 +208,7 @@ export default function Booking() {
     }
   }, [garage.summary, user?.id, onBehalf]);
   useEffect(() => {
-    if (!context || !serviceId) return;
+    if (!context || !serviceId || service?.bookingMode === "phone") return;
     const controller = new AbortController();
     setAvailability(null);
     const params = new URLSearchParams({ service: serviceId });
@@ -210,6 +233,12 @@ export default function Booking() {
     return () => controller.abort();
   }, [context, serviceId, editId, availabilityRevision]);
   function changeService(value: string) {
+    if (
+      !services.some(
+        (item) => item.id === value && item.bookingMode !== "phone",
+      )
+    )
+      return;
     setAvailability(null);
     setService(value);
     setTime("");
@@ -222,7 +251,7 @@ export default function Booking() {
   }
   function next() {
     setError("");
-    if (step === 0 && !service) {
+    if (step === 0 && (!service || service.bookingMode === "phone")) {
       setError("Válassz egy szolgáltatást a folytatáshoz.");
       return;
     }
@@ -239,7 +268,16 @@ export default function Booking() {
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (busy || !context || !service || !day || !time || !consent) return;
+    if (
+      busy ||
+      !context ||
+      !service ||
+      service.bookingMode === "phone" ||
+      !day ||
+      !time ||
+      !consent
+    )
+      return;
     setBusy(true);
     setError("");
     if (!requestId.current) requestId.current = crypto.randomUUID();
@@ -325,6 +363,7 @@ export default function Booking() {
               <p className="form-error" role="alert">
                 {contextError}
               </p>
+              <ServicePhoneLinks />
               <button
                 className="button button-outline"
                 onClick={() => setContextRevision((value) => value + 1)}
@@ -556,29 +595,49 @@ export default function Booking() {
                 <p>Válaszd ki a számodra megfelelő szolgáltatást.</p>
               </div>
               <div className="service-options">
-                {services.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => changeService(s.id)}
-                    className={`service-option ${serviceId === s.id ? "selected" : ""}`}
-                    aria-pressed={serviceId === s.id}
-                  >
-                    <span className="option-icon">
-                      <ServiceIcon name={s.icon} />
-                    </span>
-                    <span>
-                      <strong>{s.name}</strong>
-                      <small>{s.description}</small>
-                      <em>
-                        kb. {s.duration} perc
-                        {s.priceLabel && ` · ${s.priceLabel}`}
-                      </em>
-                    </span>
-                    <span className="radio-mark">
-                      {serviceId === s.id && <span />}
-                    </span>
-                  </button>
-                ))}
+                {services.map((s) =>
+                  s.bookingMode === "phone" ? (
+                    <div
+                      key={s.id}
+                      className="service-option service-phone"
+                      role="group"
+                      aria-label={`${s.name} – telefonos időpontegyeztetés`}
+                    >
+                      <span className="option-icon">
+                        <ServiceIcon name={s.icon} />
+                      </span>
+                      <span>
+                        <strong>{s.name}</strong>
+                        <small>{s.description}</small>
+                        <em>Kizárólag telefonos időpontegyeztetés</em>
+                        <ServicePhoneLinks />
+                      </span>
+                      <Phone size={18} aria-hidden="true" />
+                    </div>
+                  ) : (
+                    <button
+                      key={s.id}
+                      onClick={() => changeService(s.id)}
+                      className={`service-option ${serviceId === s.id ? "selected" : ""}`}
+                      aria-pressed={serviceId === s.id}
+                    >
+                      <span className="option-icon">
+                        <ServiceIcon name={s.icon} />
+                      </span>
+                      <span>
+                        <strong>{s.name}</strong>
+                        <small>{s.description}</small>
+                        <em>
+                          kb. {s.duration} perc
+                          {s.priceLabel && ` · ${s.priceLabel}`}
+                        </em>
+                      </span>
+                      <span className="radio-mark">
+                        {serviceId === s.id && <span />}
+                      </span>
+                    </button>
+                  ),
+                )}
               </div>
               <div className="panel-actions">
                 <span className="muted small">

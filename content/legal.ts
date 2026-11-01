@@ -1,6 +1,6 @@
 /** A jogi oldalak szerkeszthető szövege. A PocketBase-fiókokat, járműveket és időpontkéréseket írja le.
  * Levelezés vagy analitika bekötésekor a tényleges adatfolyamokkal együtt frissítsd. */
-import { address, site, legalNavigation } from "./site";
+import { address, site, legalNavigation, contactPhoneLabel } from "./site";
 import { consumerDocument } from "./consumer";
 export type LegalSection = {
   id: string;
@@ -156,7 +156,7 @@ export const legalDocuments: LegalDocument[] = [
         facts: [
           { label: "Cégnév", value: site.legal.companyName },
           { label: "Műhely", value: address },
-          { label: "Telefon", value: site.contact.phone },
+          { label: "Telefon", value: contactPhoneLabel },
           { label: "E-mail", value: site.contact.email },
         ],
       },
@@ -228,7 +228,7 @@ export const legalDocuments: LegalDocument[] = [
         id: "kapcsolat",
         title: "Kapcsolat és panaszkezelés",
         paragraphs: [
-          `Kérdéssel vagy panasszal a ${site.contact.email} címen vagy a ${site.contact.phone} telefonszámon keresheted a szervizt. A részletes panaszkezelési, békéltetési, elállási és javítási jótállási szabályokat a lábléc Fogyasztói tájékoztató oldala ismerteti.`,
+          `Kérdéssel vagy panasszal a ${site.contact.email} címen vagy a ${contactPhoneLabel} telefonszámokon keresheted a szervizt. A részletes panaszkezelési, békéltetési, elállási és javítási jótállási szabályokat a lábléc Fogyasztói tájékoztató oldala ismerteti.`,
         ],
       },
     ],
@@ -324,7 +324,7 @@ export const legalDocuments: LegalDocument[] = [
         title: "Kapcsolat",
         facts: [
           { label: "Műhely címe", value: address },
-          { label: "Telefon", value: site.contact.phone },
+          { label: "Telefon", value: contactPhoneLabel },
           { label: "E-mail", value: site.contact.email },
           { label: "Nyitvatartás", value: site.hours.long },
         ],

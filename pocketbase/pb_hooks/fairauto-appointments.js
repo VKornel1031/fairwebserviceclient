@@ -152,6 +152,8 @@ function configuration() {
     if (
       !/^[a-z][a-z0-9_-]{0,39}$/.test(item.id) ||
       ids.indexOf(item.id) >= 0 ||
+      (item.bookingMode !== undefined &&
+        ["online", "phone"].indexOf(item.bookingMode) < 0) ||
       !Number.isInteger(item.duration) ||
       item.duration < 15 ||
       item.duration > minute(s.closesAt) - minute(s.opensAt)
@@ -454,7 +456,9 @@ function details(app, actor, data) {
   if (data.viewerId !== (actor.user ? actor.user.id : "guest"))
     fail(409, "session_changed");
   const service = cfg.services.find((item) => item.id === data.service);
-  if (!service || data.acceptTerms !== true) fail(400, "invalid_details");
+  if (!service) fail(400, "service_unavailable");
+  if (service.bookingMode === "phone") fail(400, "service_phone_only");
+  if (data.acceptTerms !== true) fail(400, "invalid_details");
   if (data.termsVersion !== cfg.termsVersion) fail(409, "terms_changed");
   const contact = object(data.contact, [
     "name",
@@ -661,7 +665,8 @@ exports.availabilityRoute = (e) => {
   const actor = guard($app, e, false),
     q = e.request.url.query(),
     service = cfg.services.find((s) => s.id === q.get("service"));
-  if (!service) fail(400, "invalid_details");
+  if (!service) fail(400, "service_unavailable");
+  if (service.bookingMode === "phone") fail(400, "service_phone_only");
   const exclude = q.get("exclude") || "";
   if (exclude) accessible($app, actor, exclude);
   const now = clock(),

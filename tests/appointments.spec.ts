@@ -113,6 +113,80 @@ async function root(api: APIRequestContext) {
   return { Authorization: (await r.json()).token };
 }
 
+test("phone-only inspection and removed tire service reject online requests while old records remain manageable", async ({
+  request,
+}) => {
+  const data = await payload(request);
+  const appointment = await create(request, data);
+  const guest = (await request.storageState()).cookies.find(
+    (cookie) => cookie.name === "fairauto_guest",
+  )!.value;
+  const nativeHeaders = { "X-Fairauto-Guest": guest };
+  for (const [service, code] of [
+    ["inspection", "service_phone_only"],
+    ["tyres", "service_unavailable"],
+  ]) {
+    const availability = await request.get(
+      `/api/appointments/availability?service=${service}`,
+    );
+    expect(availability.status()).toBe(400);
+    expect((await availability.json()).code).toBe(code);
+    const nativeAvailability = await request.get(
+      `${backend}/api/fairauto/appointments/availability?service=${service}`,
+      { headers: nativeHeaders },
+    );
+    expect(nativeAvailability.status()).toBe(400);
+    expect((await nativeAvailability.json()).data.fairautoCode.code).toBe(code);
+    for (const [path, method, body] of [
+      ["", "POST", { ...data, service, requestId: crypto.randomUUID() }],
+      [
+        `/${appointment.id}`,
+        "PATCH",
+        {
+          ...data,
+          requestId: undefined,
+          service,
+          revision: appointment.revision,
+        },
+      ],
+    ] as const) {
+      const response = await request.fetch(`/api/appointments${path}`, {
+        method,
+        headers,
+        data: body,
+      });
+      expect(response.status()).toBe(400);
+      expect((await response.json()).code).toBe(code);
+      const native = await request.fetch(
+        `${backend}/api/fairauto/appointments${path}`,
+        { method, headers: nativeHeaders, data: body },
+      );
+      expect(native.status()).toBe(400);
+      expect((await native.json()).data.fairautoCode.code).toBe(code);
+    }
+  }
+  // Seed a historical service snapshot through the disposable DB's superuser API.
+  const edited = await request.patch(
+    `${backend}/api/collections/appointments/records/${appointment.id}`,
+    {
+      headers: await root(request),
+      data: {
+        service: "tyres",
+        serviceName: "Korábban rögzített szolgáltatás",
+      },
+    },
+  );
+  expect(edited.status()).toBe(200);
+  const details = await request.get(`/api/appointments/${appointment.id}`);
+  expect(details.status()).toBe(200);
+  expect((await details.json()).appointment).toMatchObject({
+    service: "tyres",
+    serviceName: "Korábban rögzített szolgáltatás",
+    revision: 1,
+  });
+  expect((await status(request, appointment, "cancelled")).status()).toBe(200);
+});
+
 test("guest requests persist without exposing capability cookies or importing local demo data; retries are idempotent", async ({
   request,
   playwright,
@@ -253,7 +327,7 @@ test("owner, reception and manager permissions protect snapshots, transitions, r
   });
   expect(stale.status()).toBe(409);
   const newData = {
-    ...(await payload(request, "tyres")),
+    ...(await payload(request, "other")),
     requestId: undefined,
     revision: a.revision,
   };
@@ -499,7 +573,7 @@ test("saved customer details book a real appointment; staff confirm and complete
       })
     ).status(),
   ).toBe(201);
-  await page.goto("/idopont?service=inspection");
+  await page.goto("/idopont?service=diagnostics");
   await uiSlot(page);
   await expect(page.getByLabel("Teljes név")).toHaveValue("Booking Customer");
   await expect(page.getByLabel("Mobiltelefonszám")).toHaveValue("+36301234567");
@@ -900,6 +974,8 @@ test("mail uses durable snapshots, separate recipients and retries; repeated eve
   ).json();
   expect(captures.items).toHaveLength(3);
   for (const mail of captures.items) {
+    expect(mail.html).toContain("06 20 347 3705");
+    expect(mail.html).toContain("06 20 405 6299");
     expect(mail.html).toContain("8000 Székesfehérvár");
     expect(mail.html).not.toContain("<script>");
     expect(mail.html).toContain("&lt;script&gt;");

@@ -1,5 +1,7 @@
 # Időpontkérések – a meglévő CasaOS PocketBase bekötése
 
+A műszaki vizsga kizárólag telefonon egyeztethető, gumiszerviz nincs a kínálatban. A jelenlegi szolgáltatáslista és a már működő backend háromfájlos frissítése: [SERVICE_BOOKING.md](./SERVICE_BOOKING.md).
+
 A foglaló a PocketBase-ben menti a vendég-, magánügyfél- és partnerkéréseket. A fiókadatok kitöltődnek; egy mentett autó automatikusan kitöltődik, több autó esetén választani kell. A vendég új foglalási űrlapja üres. A munkafelvevő, vezető és admin telefonos visszaigazolást rögzíthet. **A kapacitást csak a telefonos visszaigazolás foglalja le.** Több függő kérés érkezhet ugyanarra az időre, de a megerősítés tranzakcióban újraellenőrzi a férőhelyet.
 
 **Új frissítés:** automatikus kitöltés és járműválasztás, mentett és foglaláskor kötelező alvázszám (VIN), megerősítés utáni bruttó ár és tételes alkatrész/munkadíj, opcionális e-mail-feladatsor. Részletek és bekapcsolás: [APPOINTMENT_PRICES_AND_MAIL.md](./APPOINTMENT_PRICES_AND_MAIL.md). Korábbi időponttelepítés után is futtatható az alábbi két blokk: a régi migrációt kihagyja, az új `1793512800_prices_vin_and_mail.js` fájlt alkalmazza.

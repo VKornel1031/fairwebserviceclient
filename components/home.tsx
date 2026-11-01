@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import LegalLinks from "./legal-links";
-import { site, locationLabel } from "@/content/site";
+import { site, locationLabel, contactPhones } from "@/content/site";
 import { ArrowUpRight, Moon, Sun } from "lucide-react";
 import { Provider, usePortal } from "./provider";
 
@@ -152,9 +152,13 @@ function Welcome() {
               </Link>
               <Link href="/partnerek">Céges partnerek</Link>
             </nav>
-            <a href={site.contact.phoneHref}>
-              {site.contact.phone} <ArrowUpRight size={13} />
-            </a>
+            <div className="home-contact-phones">
+              {contactPhones.map((phone) => (
+                <a key={phone.href} href={phone.href}>
+                  {phone.label} <ArrowUpRight size={13} />
+                </a>
+              ))}
+            </div>
           </div>
           <LegalLinks />
           <p className="home-demo-note">

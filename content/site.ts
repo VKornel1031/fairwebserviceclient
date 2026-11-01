@@ -8,8 +8,8 @@ export const site = {
   logo: "/images/fair-logo.png",
   mainWebsite: "https://fairautoweb.vercel.app/",
   contact: {
-    phone: "+36 20 405 5958",
-    phoneHref: "tel:+36204055958",
+    phone: bookingConfiguration.phoneContacts[0].label,
+    phoneHref: bookingConfiguration.phoneContacts[0].href,
     email: "kborsos@fairauto.eu",
     postalCode: "8000",
     street: "Balatoni út 8.",
@@ -62,6 +62,10 @@ export const site = {
   },
 };
 export const address = `${site.contact.postalCode} ${site.city}, ${site.contact.street}`;
+export const contactPhones = bookingConfiguration.phoneContacts;
+export const contactPhoneLabel = contactPhones
+  .map((phone) => phone.label)
+  .join(" / ");
 export const locationLabel = `${site.city}, ${site.contact.street}`;
 
 /** Szolgáltatásnevek és becsült időtartamok; az elérhetőség ezeket az időtartamokat használja. */

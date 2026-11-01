@@ -24,6 +24,8 @@ Saved cars additionally need the single migration in [`docs/SAVED_VEHICLES.md`](
 
 ## Appointments
 
+Tire service is not offered. **Műszaki vizsga is arranged only by phone** at 06 20 347 3705 or 06 20 405 6299. Its card cannot be selected for online booking. The existing PocketBase installation needs the three-file update in [docs/SERVICE_BOOKING.md](./docs/SERVICE_BOOKING.md); no new migration is required. Service policies and public contact numbers are editable in `content/booking.json`.
+
 Guest and company partner requests now persist in PocketBase. Saved contact details prefill the booking form for every signed-in role, including admins and staff. Staff use a separate “Ügyfélnek foglalok” option for blank customer intake. A single saved car fills automatically; multiple cars require a choice. New guest forms stay blank. Accounts can save a VIN with each car; every new appointment requires it. Customers manage their own requests; reception staff confirm by phone, cancel or reschedule, and managers/admins also start and complete work, manage closures and view real reports.
 
 **Pending requests do not reserve capacity. Phone confirmation reserves it atomically.** Concurrent confirmations cannot exceed workshop capacity. Rescheduling returns a request to awaiting confirmation. Availability, access rules and status changes are enforced in PocketBase, including direct API calls.

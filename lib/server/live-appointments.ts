@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import type { BookingConfiguration } from "../live-appointments";
-import { site } from "@/content/site";
+import { site, serviceOptions, contactPhones } from "@/content/site";
 import { AccountError, body, json, throttle } from "./http";
 import {
   currentSession,
@@ -18,6 +18,9 @@ const guestCookie =
     : "fairauto_guest";
 const root = "/api/fairauto/appointments";
 const messages: Record<string, string> = {
+  service_unavailable:
+    "Ez a szolgáltatás nem foglalható online. Válassz másik szolgáltatást.",
+  service_phone_only: `Műszaki vizsgára kizárólag telefonon kérhetsz időpontot: ${contactPhones.map((phone) => phone.label).join(" vagy ")}.`,
   mail_disabled:
     "Az időpontértesítések ki vannak kapcsolva. Előbb engedélyezd a levelezést.",
   rate_limited: "Túl sok kérés. Várj egy percet, majd próbáld újra.",
@@ -49,6 +52,21 @@ const messages: Record<string, string> = {
   pending_limit:
     "Már több egyeztetésre váró kérésed van. Új kéréshez keresd a szervizt telefonon.",
 };
+function requireOnlineService(id: unknown) {
+  const service = serviceOptions.find((item) => item.id === id);
+  if (!service)
+    throw new AccountError(
+      400,
+      messages.service_unavailable,
+      "service_unavailable",
+    );
+  if (service.bookingMode === "phone")
+    throw new AccountError(
+      400,
+      messages.service_phone_only,
+      "service_phone_only",
+    );
+}
 async function actor() {
   const jar = await cookies();
   const session = await currentSession();
@@ -112,6 +130,20 @@ export async function bookingContext(request: NextRequest) {
   )
     throw new AccountError(503, messages.booking_setup_required);
   const user = auth.session?.user;
+  // Apply the current website's catalogue while the homelab config is being updated.
+  config.services = config.services.flatMap((service) => {
+    const current = serviceOptions.find((item) => item.id === service.id);
+    return current
+      ? [
+          {
+            ...service,
+            bookingMode: current.bookingMode,
+            description: current.description,
+          },
+        ]
+      : [];
+  });
+  config.phoneContacts = contactPhones;
   const response = json({
     config,
     viewer: user?.id || "guest",
@@ -204,6 +236,7 @@ export async function appointmentProxy(
       path = "";
       break;
     case "availability":
+      requireOnlineService(request.nextUrl.searchParams.get("service"));
       path = "/availability";
       break;
     case "summary":
@@ -229,6 +262,7 @@ export async function appointmentProxy(
     case "create":
       method = "POST";
       payload = await body(request, createKeys);
+      requireOnlineService((payload as Record<string, unknown>).service);
       break;
     case "reschedule":
       method = "PATCH";
@@ -237,6 +271,7 @@ export async function appointmentProxy(
         request,
         createKeys.filter((k) => k !== "requestId").concat(["revision"]),
       );
+      requireOnlineService((payload as Record<string, unknown>).service);
       break;
     case "status":
       method = "POST";

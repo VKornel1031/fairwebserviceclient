@@ -8,7 +8,7 @@ import { AccountAvatar } from "./account-avatar";
 import { canAdminister, canViewReports, roleLabels } from "@/lib/permissions";
 import Link from "next/link";
 import LegalLinks from "./legal-links";
-import { site, address } from "@/content/site";
+import { site, address, contactPhones } from "@/content/site";
 import {
   ArrowUpRight,
   LayoutDashboard,
@@ -273,10 +273,12 @@ function Shell({ view }: { view: View }) {
           </Link>
         </nav>
         <div className="sidebar-bottom">
-          <a className="sidebar-contact" href={site.contact.phoneHref}>
-            <Phone size={15} />
-            <span>{site.contact.phone}</span>
-          </a>
+          {contactPhones.map((phone) => (
+            <a key={phone.href} className="sidebar-contact" href={phone.href}>
+              <Phone size={15} />
+              <span>{phone.label}</span>
+            </a>
+          ))}
           <a
             className="main-site"
             href={site.mainWebsite}
@@ -371,9 +373,11 @@ function Shell({ view }: { view: View }) {
         >
           <div className="help-content">
             <p className="muted">{site.name}</p>
-            <a href={site.contact.phoneHref}>
-              <Phone size={18} /> {site.contact.phone}
-            </a>
+            {contactPhones.map((phone) => (
+              <a key={phone.href} href={phone.href}>
+                <Phone size={18} /> {phone.label}
+              </a>
+            ))}
             <a href={`mailto:${site.contact.email}`}>
               <Mail size={18} /> {site.contact.email}
             </a>
