@@ -210,6 +210,7 @@ export function account(record: Record<string, unknown>): Account {
     protectedRoot: record.protectedRoot === true,
     companyName: field("companyName"),
     avatar: field("avatar"),
+    defaultVehicle: field("defaultVehicle"),
     companyTax: field("companyTax"),
     companyCity: field("companyCity"),
     partnerRequested: record.partnerRequested === true,

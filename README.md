@@ -8,6 +8,7 @@ Accounts now use **PocketBase**, without SMTP or email verification:
 
 - Register as a **customer**, then sign in immediately using email and password.
 - Save personal and optional company details across devices.
+- Save, edit, search and delete cars in PocketBase, and choose a default vehicle. Customers and partners have private garages; admins can manage all vehicles. Fleet lists are paginated.
 - Accounts display initials; profile picture controls and their setup message have been removed.
 - Change email address or password with your current password.
 - Admins create, search, edit, suspend and delete accounts, and assign `customer`, `partner`, `reception`, `manager` or `admin` roles.
@@ -16,6 +17,8 @@ Accounts now use **PocketBase**, without SMTP or email verification:
 - Sessions use HttpOnly cookies; real tokens, passwords and profiles are not stored in browser localStorage. Each authenticated API call checks PocketBase again.
 
 **Setup is required on your PocketBase and Vercel deployment.** Follow [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md), including the versioned migration, first normal `users` admin, and environment settings. No superuser credentials or API keys belong in this app. No avatar setup is needed for the current UI. Public registration defaults to disabled until explicitly enabled after migration.
+
+Saved cars additionally need the single migration in [`docs/SAVED_VEHICLES.md`](./docs/SAVED_VEHICLES.md). It uses native PocketBase permissions and does **not** require custom hooks, SMTP, or new Vercel credentials. Appointment submission remains a separate next step.
 
 ## Run locally
 
@@ -40,7 +43,7 @@ Production authentication requires HTTPS and `AUTH_APP_ORIGIN` matching the depl
 
 **Real:** registration, login/logout, account/profile management, admin account CRUD, suspension and role assignment.
 
-**Still a prototype:** bookings, vehicles, fleets, workshop operations and reports. Signed-in workspaces show the appropriate role layout with empty operational data and an explicit notice. Operational mutations are blocked until their backend is built. Guest booking remains a separate local demonstration using sample details, with availability checks, calendar downloads, rescheduling and cancellation. It does not notify the garage or send email. Accounts never receive this browser's demo data as real company records.
+**Still a prototype:** bookings, shared access to a fleet from multiple accounts, workshop operations and reports. Accounts, individual garages and partner vehicle lists use PocketBase. The remaining operational mutations are blocked until their backend is built. Guest booking remains a separate local demonstration using sample details, with availability checks, calendar downloads, rescheduling and cancellation. It does not notify the garage or send email. Accounts never receive this browser's demo data as real company records.
 
 There is no SMTP, email preview, verification mail or email password recovery. For now, an admin can reset another user's password after independently checking their identity. Future mail requirements remain in [`docs/PRODUCTION_EMAIL_REQUIREMENTS.md`](./docs/PRODUCTION_EMAIL_REQUIREMENTS.md).
 
@@ -56,7 +59,7 @@ PB_BINARY=/path/to/pocketbase npm run test:migration
 
 Integration tests require Python 3, a separately installed PocketBase executable (tested with **0.26.3**) and Chromium (`/usr/bin/chromium`, or set `CHROMIUM_PATH`). They create a disposable SQLite database on **127.0.0.1:3101**, apply the real migration, seed only test accounts and start a separate Next server on **3100**. They never reuse a running app or send test credentials to the homelab. Test data is removed when the server exits. Never run the test seeding script against a company database.
 
-Coverage includes account registration/login/profile persistence, cookie isolation, native PocketBase permissions, CSRF and input rejection, admin CRUD, role changes, suspended/deleted access, email/password updates, protected admin handling and login throttling. Guest booking, capacity, calendar, confirmation rules, legal links, home navigation, mobile layout and themes remain covered.
+Coverage includes account registration/login/profile persistence, cookie isolation, native PocketBase permissions, CSRF and input rejection, admin CRUD, role changes, suspended/deleted access, email/password updates, protected admin handling and login throttling. Saved-car persistence, owner isolation, native owner/default forgery rejection, defaults, duplicate plates, fleet pagination/search, concurrent selections and account-deletion cleanup are tested against a disposable PocketBase. Guest booking, capacity, calendar, confirmation rules, legal links, home navigation, mobile layout and themes remain covered.
 
 ## Editable content and legal documents
 
@@ -66,6 +69,6 @@ The documents describe real PocketBase accounts alongside the local booking demo
 
 ## Next integration steps
 
-PocketBase manages SQLite internally. Remaining work includes company membership/vehicle/appointment collections with independent access rules, transactional server-side capacity reservations, guest management tokens, status history and notification jobs. The existing appointment confirmation workflow remains the basis for the later backend. Browser storage or client-side permissions must never authorize these future operations.
+PocketBase manages SQLite internally. Remaining work includes company membership and appointment collections with independent access rules, transactional server-side capacity reservations, guest management tokens, status history and notification jobs. The existing appointment confirmation workflow remains the basis for the later backend. Browser storage or client-side permissions must never authorize these future operations.
 
 Before company production use, upgrade the old homelab PocketBase, enable backend/edge rate limits, protect superuser routes, test backup restoration and complete the legal/operator settings. See the security boundaries in the setup guide.

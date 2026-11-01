@@ -28,7 +28,7 @@ export const site = {
   },
   legal: {
     updatedAt: "2026-11-01",
-    version: "2026-11-01.1-draft",
+    version: "2026-11-01.2-draft",
     // A jelenlegi folyamat időpontkérés; online javítási szerződést/fizetést nem valósít meg.
     bookingModel: "appointment-request",
     // Maradjon true a tényleges működéshez igazítás és ellenőrzés befejezéséig.

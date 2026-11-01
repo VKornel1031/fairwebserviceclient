@@ -43,7 +43,7 @@ export const legalDocuments: LegalDocument[] = [
         id: "jelenlegi-mukodes",
         title: "A portál jelenlegi működése",
         paragraphs: [
-          "A regisztráció, bejelentkezés, profilmódosítás és adminisztrátori fiókkezelés a szerviz PocketBase-adatbázisával működik. Az adatokat a webhely szervere továbbítja a homelabon működő PocketBase felé, HTTPS-kapcsolaton keresztül.",
+          "A regisztráció, bejelentkezés, profilmódosítás, mentett járművek és adminisztrátori fiókkezelés a szerviz PocketBase-adatbázisával működik, a szükséges migrációk telepítése után. Az adatokat a webhely szervere továbbítja a homelabon működő PocketBase felé, HTTPS-kapcsolaton keresztül.",
           "A vendég időpontfoglaló továbbra is helyi bemutató: nem küld valódi időpontkérést a műhelynek. Ebben csak mintaadatokat adj meg. Jelenleg nincs e-mail-küldés, címellenőrzés vagy e-mailes jelszó-visszaállítás.",
         ],
       },
@@ -52,10 +52,10 @@ export const legalDocuments: LegalDocument[] = [
         title: "Milyen adatokat kezel a portál?",
         items: [
           "Fiók: név, e-mail-cím, opcionális mobiltelefonszám és település, szerepkör, aktív/letiltott állapot és fiókazonosító. Az ÁSZF elfogadott verzióját és időpontját a szerver rögzíti.",
-          "Jármű: rendszám, márka, modell és gyártási év.",
+          "Mentett jármű: rendszám, márka, modell, gyártási év, tulajdonos fiókazonosítója, létrehozási és módosítási időpont, valamint az alapértelmezett jármű kiválasztása. A listát a saját fiókod és az adminisztrátor kezelheti; más ügyfél, partner, munkafelvevő vagy vezető a saját fiókjához tartozó járműveket kezeli.",
           "Időpontkérés: szolgáltatás, nap, időpont, megjegyzés és állapot, valamint a megadott kapcsolattartási és járműadatok másolata.",
           "Korábban feltöltött opcionális profilkép: a users.avatar fájlmezőben tárolt, védett kép. A képfeltöltő backend 512 × 512 pixeles keretbe igazítja, WebP formátumra alakítja és eltávolítja a fotó metaadatait, például az EXIF-helyadatokat. A jelenlegi webes felület kezdőbetűket jelenít meg, profilképet nem kér és nem tölt be.",
-          "Céges profiladatok: opcionális cégnév, adószám és céges település. A flotta adatbázisos kezelése még nem érhető el.",
+          "Céges profiladatok: opcionális cégnév, adószám és céges település. A partnerfiókhoz saját mentett járműlista tartozik; több külön fiók közös flottakezelése még nem érhető el.",
           "Hitelesítés: a jelszó lenyomatát PocketBase tárolja, a jelszó TLS-kapcsolaton jut el a kiszolgálókhoz. A böngésző HttpOnly munkamenetsütit kap; az alkalmazás nem tárol valódi jelszót vagy hitelesítési tokent a localStorage-ban.",
         ],
       },
@@ -63,7 +63,7 @@ export const legalDocuments: LegalDocument[] = [
         id: "celok",
         title: "Mire használjuk ezeket?",
         paragraphs: [
-          "A fiókadatok a belépést, profilkezelést és jogosultságkezelést szolgálják. A fiók és a céges profil adatai PocketBase-ben tárolódnak. A helyi foglalási bemutató és a témabeállítás ettől elkülönülten a böngésző tárhelyét használja.",
+          "A fiókadatok a belépést, profilkezelést és jogosultságkezelést szolgálják. A fiók, a céges profil és a mentett járművek adatai PocketBase-ben tárolódnak. A járműmentéshez nem írjuk az autók adatait a böngésző localStorage-jába. A helyi foglalási bemutató és a témabeállítás ettől elkülönülten a böngésző tárhelyét használja.",
           "Minden új fiók magánügyfélként indul. Partner-, munkafelvevői, vezetői vagy adminisztrátori hozzáférést adminisztrátor adhat. A nyilvános demószerepkör-váltó megszűnt.",
         ],
       },
@@ -71,6 +71,7 @@ export const legalDocuments: LegalDocument[] = [
         id: "tarolas",
         title: "Tárolás és megőrzés",
         paragraphs: [
+          "A mentett jármű adatait a Járműveim vagy Járműpark oldalon módosíthatod és törölheted. A fiók törlése a hozzá tartozó mentett járműveket is törli. Korábbi biztonsági mentésekben az adatok a meghatározott megőrzési ideig még szerepelhetnek. A mentett jármű törlése nem töröl már külön rögzített időpontkérési másolatot.",
           "A korábban feltöltött profilkép eltávolítását az üzemeltetőtől kérheted; a jelenlegi webes felületen nincs képfeltöltő. A PocketBase a korábbi aktuális képfájlt csere vagy törlés után eltávolítja; korábbi biztonsági mentésekben a beállított megőrzési ideig még szerepelhet. A mentések megőrzését az üzemeltetőnek kell meghatároznia.",
           "A fiókok az üzemeltető PocketBase-adatbázisában tárolódnak, másik eszközről is elérhetők. A fiók-, technikai napló- és biztonságimentés-megőrzési időket az alábbi megőrzési adatmezőben az üzemeltetőnek kell meghatároznia. A munkamenetsüti legfeljebb 8 órás; kijelentkezéskor a jelen böngésző sütijét töröljük.",
           "A helyi foglalási bemutató adatai a böngésző webhelyadatainak törléséig maradnak meg, automatikus lejárat nélkül. Törlésük nem törli a PocketBase-fiókot. Korábbi demóverzióból mentett helyi fiókadatok is maradhatnak a tárhelyen, amíg nem törlöd a webhelyadatokat; ezekkel már nem lehet bejelentkezni.",
@@ -215,7 +216,7 @@ export const legalDocuments: LegalDocument[] = [
         id: "fiok",
         title: "Fiók és céges használat",
         paragraphs: [
-          "Regisztráció után e-mail-címmel és jelszóval azonnal bejelentkezhetsz, e-mail-ellenőrzés nélkül. A saját kapcsolattartási és céges profiladatok elmenthetők; az e-mail-cím és jelszó módosításához a jelenlegi jelszó szükséges. Elfelejtett jelszóval az üzemeltetőhöz kell fordulni. A járművek és foglalások adatbázisos kezelése még nem érhető el.",
+          "Regisztráció után e-mail-címmel és jelszóval azonnal bejelentkezhetsz, e-mail-ellenőrzés nélkül. A saját kapcsolattartási és céges profiladatok, valamint a mentett járművek PocketBase-ben tárolhatók. Az e-mail-cím és jelszó módosításához a jelenlegi jelszó szükséges. Elfelejtett jelszóval az üzemeltetőhöz kell fordulni. Az online időpontkérések adatbázisos kezelése még nem érhető el.",
           "A céges és munkatársi nézetek elérését a PocketBase-ben tárolt szerepkör szabályozza. Új fiókhoz az adminisztrátor adhat bővebb hozzáférést. Az admin kezelheti mások fiókjait és hozzáférését; a saját és a védett alapadmin-fiók törlése vagy lefokozása az alkalmazásban nem engedélyezett.",
         ],
       },

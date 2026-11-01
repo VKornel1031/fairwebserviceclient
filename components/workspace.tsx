@@ -13,7 +13,6 @@ import {
   Check,
   Pencil,
   Trash2,
-  Star,
   Download,
   Clock3,
   ChevronLeft,
@@ -37,339 +36,19 @@ import {
 } from "@/lib/permissions";
 import {
   services,
-  id,
   statusNames,
   dateLabel,
   today,
   addDays,
   nextBusinessDay,
   endTime,
-  type Vehicle,
   type Status,
 } from "@/lib/demo";
 
 export { Account } from "./account";
 
-export function Vehicles({ embedded = false }: { embedded?: boolean }) {
-  const { user, store, mutate, notify } = usePortal();
-  const [editing, setEditing] = useState<Vehicle | null>(null);
-  const [removing, setRemoving] = useState<Vehicle | null>(null);
-  const [form, setForm] = useState({
-    plate: "",
-    make: "",
-    model: "",
-    year: "",
-    isDefault: false,
-  });
-  const [open, setOpen] = useState(false);
-  const [fleetQuery, setFleetQuery] = useState("");
-  const cars = store.vehicles.filter(
-    (v) =>
-      v.owner === user?.id &&
-      `${v.plate} ${v.make} ${v.model}`
-        .toLocaleLowerCase("hu")
-        .includes(fleetQuery.toLocaleLowerCase("hu")),
-  );
-  function add() {
-    setEditing(null);
-    setForm({
-      plate: "",
-      make: "",
-      model: "",
-      year: "",
-      isDefault: !store.vehicles.some((v) => v.owner === user?.id),
-    });
-    setOpen(true);
-  }
-  function edit(v: Vehicle) {
-    setEditing(v);
-    setForm(v);
-    setOpen(true);
-  }
-  function save(e: FormEvent) {
-    e.preventDefault();
-    if (!user) return;
-    const ok = mutate((s) => {
-      const plate = form.plate.trim().toUpperCase();
-      if (
-        s.vehicles.some(
-          (v) =>
-            v.owner === user.id && v.plate === plate && v.id !== editing?.id,
-        )
-      )
-        throw new Error("Ezt a rendszámot már elmentetted.");
-      const car: Vehicle = {
-        ...form,
-        plate,
-        make: form.make.trim(),
-        model: form.model.trim(),
-        id: editing?.id || id("CAR"),
-        owner: user.id,
-      };
-      const owned = s.vehicles.filter((v) => v.owner === user.id);
-      if (!owned.length) car.isDefault = true;
-      let vehicles = car.isDefault
-        ? s.vehicles.map((v) =>
-            v.owner === user.id ? { ...v, isDefault: false } : v,
-          )
-        : s.vehicles;
-      if (editing)
-        vehicles = vehicles.map((v) => (v.id === editing.id ? car : v));
-      else vehicles = [...vehicles, car];
-      if (!vehicles.some((v) => v.owner === user.id && v.isDefault)) {
-        const first = vehicles.find((v) => v.owner === user.id);
-        vehicles = vehicles.map((v) =>
-          v.id === first?.id ? { ...v, isDefault: true } : v,
-        );
-      }
-      return { ...s, vehicles };
-    });
-    if (ok) {
-      setOpen(false);
-      notify(
-        editing
-          ? "A jármű adatait frissítettük."
-          : "Új jármű elmentve. A következő foglaláskor már kiválaszthatod.",
-      );
-    }
-  }
-  if (!user)
-    return (
-      <>
-        <PageHeading
-          eyebrow="JÁRMŰVEIM"
-          title="Minden autód, egy helyen."
-          description="Saját fiókkal elmentheted az autóid adatait a gyorsabb foglaláshoz."
-        />
-        <Empty
-          icon={<CarFront size={34} />}
-          title="Adj saját helyet az autódnak."
-          description="Jelentkezz be vagy hozz létre helyi demófiókot a járművek mentéséhez."
-        >
-          <Link href="/fiok" className="button">
-            Bejelentkezés / regisztráció <ArrowRight size={17} />
-          </Link>
-        </Empty>
-      </>
-    );
-  return (
-    <>
-      {!embedded ? (
-        <PageHeading
-          eyebrow={user.role === "partner" ? "CÉGES FLOTTA" : "JÁRMŰVEIM"}
-          title="Ismerjük meg az autóidat."
-          description="A mentett jármű adatai foglaláskor automatikusan kitöltődnek."
-          action={
-            <button className="button" onClick={add}>
-              <Plus size={17} /> Jármű hozzáadása
-            </button>
-          }
-        />
-      ) : (
-        <div className="section-title">
-          <h2>Céges járművek</h2>
-          <button className="button button-outline" onClick={add}>
-            <Plus size={16} /> Jármű hozzáadása
-          </button>
-        </div>
-      )}
-      {user.role === "partner" && (
-        <label className="search-input fleet-search">
-          <Search size={16} />
-          <input
-            aria-label="Céges járművek keresése"
-            value={fleetQuery}
-            onChange={(e) => setFleetQuery(e.target.value)}
-            placeholder="Rendszám, márka vagy modell"
-          />
-        </label>
-      )}
-      {cars.length ? (
-        <div className="vehicles-grid">
-          {cars.map((v) => (
-            <article key={v.id} className="vehicle-card">
-              <div className="vehicle-top">
-                <CarFront size={48} strokeWidth={1} />
-                {v.isDefault && (
-                  <span className="default-badge">
-                    <Star size={11} /> Alapértelmezett
-                  </span>
-                )}
-              </div>
-              <h2>
-                {v.make} <span>{v.model}</span>
-              </h2>
-              <p className="muted">
-                {v.year} ·{" "}
-                {user.role === "partner" ? "Céges jármű" : "Saját jármű"}
-              </p>
-              <span className="license-plate">
-                <span>H</span>
-                {v.plate}
-              </span>
-              <div className="vehicle-actions">
-                <Link href={`/idopont?vehicle=${v.id}`} className="text-link">
-                  Időpontfoglalás <ArrowUpRight size={16} />
-                </Link>
-                <div>
-                  <button
-                    className="icon-button"
-                    title="Szerkesztés"
-                    aria-label={`${v.plate} szerkesztése`}
-                    onClick={() => edit(v)}
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    className="icon-button"
-                    title="Törlés"
-                    aria-label={`${v.plate} törlése`}
-                    onClick={() => setRemoving(v)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <Empty
-          icon={<CarFront size={32} />}
-          title={
-            fleetQuery
-              ? "Nincs ilyen jármű a flottában."
-              : "Az első autód helye már megvan."
-          }
-          description="Add meg a rendszámot és az alapadatokat. Legközelebb már nem kell újra beírnod."
-        >
-          <button className="button" onClick={add}>
-            <Plus size={17} /> Jármű hozzáadása
-          </button>
-        </Empty>
-      )}
-      {open && (
-        <Modal
-          title={editing ? "Jármű szerkesztése" : "Új jármű hozzáadása"}
-          close={() => setOpen(false)}
-        >
-          <form className="modal-form" onSubmit={save}>
-            <div className="form-grid">
-              <Field
-                label="Rendszám"
-                required
-                minLength={3}
-                maxLength={15}
-                pattern=".*\S.*"
-                value={form.plate}
-                placeholder="ABC-123"
-                className="plate-input"
-                onChange={(e) =>
-                  setForm({ ...form, plate: e.target.value.toUpperCase() })
-                }
-              />
-              <Field
-                label="Gyártási év"
-                type="number"
-                required
-                min={1950}
-                max={new Date().getFullYear() + 1}
-                value={form.year}
-                placeholder="2018"
-                onChange={(e) => setForm({ ...form, year: e.target.value })}
-              />
-              <Field
-                label="Márka"
-                required
-                maxLength={60}
-                pattern=".*\S.*"
-                value={form.make}
-                placeholder="Volkswagen"
-                onChange={(e) => setForm({ ...form, make: e.target.value })}
-              />
-              <Field
-                label="Modell"
-                required
-                maxLength={60}
-                pattern=".*\S.*"
-                value={form.model}
-                placeholder="Golf VII"
-                onChange={(e) => setForm({ ...form, model: e.target.value })}
-              />
-            </div>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={form.isDefault}
-                onChange={(e) =>
-                  setForm({ ...form, isDefault: e.target.checked })
-                }
-              />
-              <span>Ez legyen az alapértelmezett járművem</span>
-            </label>
-            <div className="panel-actions">
-              <button
-                type="button"
-                className="text-button"
-                onClick={() => setOpen(false)}
-              >
-                Mégse
-              </button>
-              <button type="submit" className="button">
-                Jármű mentése <Check size={17} />
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
-      {removing && (
-        <Modal title="Törlöd ezt a járművet?" close={() => setRemoving(null)}>
-          <div className="modal-form">
-            <p className="muted">
-              {removing.make} {removing.model} · {removing.plate}
-            </p>
-            <p className="modal-intro">
-              A korábbi foglalásokban szereplő járműadatok megmaradnak.
-            </p>
-            <div className="button-row">
-              <button
-                className="button button-outline"
-                onClick={() => setRemoving(null)}
-              >
-                Mégse
-              </button>
-              <button
-                className="button danger"
-                onClick={() => {
-                  const ok = mutate((s) => {
-                    let vehicles = s.vehicles.filter(
-                      (v) => v.id !== removing.id,
-                    );
-                    if (
-                      !vehicles.some((v) => v.owner === user.id && v.isDefault)
-                    ) {
-                      const first = vehicles.find((v) => v.owner === user.id);
-                      vehicles = vehicles.map((v) =>
-                        v.id === first?.id ? { ...v, isDefault: true } : v,
-                      );
-                    }
-                    return { ...s, vehicles };
-                  });
-                  if (ok) {
-                    setRemoving(null);
-                    notify("A járművet töröltük.");
-                  }
-                }}
-              >
-                Jármű törlése <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-}
+export { default as Vehicles } from "./vehicles";
+import Vehicles from "./vehicles";
 
 export function Appointments({ embedded = false }: { embedded?: boolean }) {
   const { user, store, mutate, notify } = usePortal();
@@ -650,7 +329,7 @@ export function Appointments({ embedded = false }: { embedded?: boolean }) {
 }
 
 export function Partners() {
-  const { user, store, mutate, notify } = usePortal();
+  const { user, store, mutate, notify, garage } = usePortal();
   const [settings, setSettings] = useState(false);
   const [tab, setTab] = useState("fleet");
   const company = store.companies[user?.id || ""] || {
@@ -718,7 +397,7 @@ export function Partners() {
         </div>
       </>
     );
-  const cars = store.vehicles.filter((v) => v.owner === user.id);
+  const vehicleCount = garage.summary?.totalItems || 0;
   const bookings = store.appointments.filter(
     (a) =>
       a.owner === user.id &&
@@ -741,7 +420,11 @@ export function Partners() {
         <div>
           <span>Jármű a flottában</span>
           <strong>
-            {cars.length.toString().padStart(2, "0")}
+            {garage.error
+              ? "—"
+              : garage.loading && !garage.summary
+                ? "…"
+                : vehicleCount.toString().padStart(2, "0")}
             <CarFront size={24} />
           </strong>
           <small>Mindig kéznél lévő járműadatok</small>
@@ -781,9 +464,8 @@ export function Partners() {
       </div>
       {tab === "fleet" ? <Vehicles embedded /> : <Appointments embedded />}
       <p className="demo-footnote">
-        A demóban minden céges fióknak saját flottája és egy kapcsolattartója
-        van. Több munkatárs közös hozzáférése egy későbbi változatban lesz
-        elérhető.
+        A mentett járművek ehhez a partnerfiókhoz tartoznak. Több munkatárs
+        közös hozzáférése egy későbbi változatban lesz elérhető.
       </p>
       {settings && (
         <Modal title="Céges adatok" close={() => setSettings(false)}>

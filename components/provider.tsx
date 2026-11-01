@@ -20,6 +20,7 @@ import {
   type Account,
   type AccountCapabilities,
 } from "@/lib/accounts";
+import type { GarageSummary } from "@/lib/vehicles";
 
 type Context = {
   store: Store;
@@ -32,6 +33,8 @@ type Context = {
   logout: () => Promise<void>;
   mutate: (fn: (s: Store) => Store) => boolean;
   notify: (text: string) => void;
+  garage: { summary: GarageSummary | null; loading: boolean; error: string };
+  refreshGarage: (broadcast?: boolean) => Promise<void>;
 };
 const PortalContext = createContext<Context>(null!);
 export function usePortal() {
@@ -55,6 +58,61 @@ export function Provider({
   const [toast, setToast] = useState("");
   const epoch = useRef(0);
   const channel = useRef<BroadcastChannel | null>(null);
+  const garageEpoch = useRef(0);
+  const [garage, setGarage] = useState({
+    ownerId: "",
+    summary: null as GarageSummary | null,
+    loading: false,
+    error: "",
+  });
+  const ownerId = user?.id || "";
+  const refreshGarage = useCallback(
+    async (broadcast = false) => {
+      if (!ownerId) return;
+      if (broadcast) channel.current?.postMessage("vehicles");
+      const revision = ++garageEpoch.current;
+      setGarage((current) => ({
+        ownerId,
+        summary: current.ownerId === ownerId ? current.summary : null,
+        loading: true,
+        error: "",
+      }));
+      try {
+        const summary = await accountRequest<GarageSummary>(
+          "/api/vehicles/summary",
+        );
+        if (revision === garageEpoch.current && summary.ownerId === ownerId)
+          setGarage({ ownerId, summary, loading: false, error: "" });
+      } catch (error) {
+        if (revision === garageEpoch.current)
+          setGarage({
+            ownerId,
+            summary: null,
+            loading: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "A járművek most nem tölthetők be.",
+          });
+      }
+    },
+    [ownerId],
+  );
+  useEffect(() => {
+    void refreshGarage();
+    const refresh = () => {
+      if (document.visibilityState === "visible") void refreshGarage();
+    };
+    window.addEventListener("focus", refresh);
+    window.addEventListener("fairauto-vehicles", refresh);
+    const timer = setInterval(refresh, 60_000);
+    return () => {
+      ++garageEpoch.current;
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("fairauto-vehicles", refresh);
+    };
+  }, [refreshGarage]);
   const refreshSession = useCallback(async () => {
     const revision = ++epoch.current;
     try {
@@ -104,8 +162,10 @@ export function Provider({
     };
     if (typeof BroadcastChannel !== "undefined") {
       channel.current = new BroadcastChannel("fairauto-account");
-      channel.current.onmessage = () => {
-        void refreshSession();
+      channel.current.onmessage = (event) => {
+        if (event.data === "vehicles")
+          window.dispatchEvent(new Event("fairauto-vehicles"));
+        else void refreshSession();
       };
     }
     const timer = setInterval(focus, 60_000);
@@ -146,7 +206,7 @@ export function Provider({
   function mutate(fn: (s: Store) => Store) {
     if (user) {
       setToast(
-        "A foglalások és járművek adatbázisos kezelése a következő lépés. A fiókadatok a Saját fiók oldalon menthetők.",
+        "A foglalások adatbázisos kezelése a következő lépés. A járműveid a Járművek oldalon, fiókadataid a Saját fiók oldalon menthetők.",
       );
       return false;
     }
@@ -193,6 +253,11 @@ export function Provider({
         logout,
         mutate,
         notify: setToast,
+        garage:
+          user && garage.ownerId === user.id
+            ? garage
+            : { summary: null, loading: !!user, error: "" },
+        refreshGarage,
       }}
     >
       {children}

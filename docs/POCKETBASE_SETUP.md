@@ -89,7 +89,7 @@ A változtatás után új Vercel deployment szükséges. A PocketBase-cím **ala
 6. Tiltott fiók nem léphet be; meglévő munkamenete sem ad további API-hozzáférést. Törlésnél a cél e-mail-címét is meg kell erősíteni. Saját admin és védett alapadmin nem törölhető az appban.
 7. E-mail-cím és jelszó módosítása saját jelenlegi jelszóval lehetséges. Elfelejtett jelszónál az admin ellenőrzött megkeresés után állíthat újat. A fióktulajdonos személyazonosságának ellenőrzése az üzemeltető feladata.
 
-A járművek, időpontok, céges flotta és riportok adatbázisos bekötése még nincs kész. A bejelentkezett munkaterek ezért üres előnézetek, a mentési műveletek nem írnak helyi ál-adatbázisba. A vendégfoglaló külön helyi bemutató marad, mintaadatokkal. Nincs SMTP, levélküldés vagy előnézeti postafiók.
+A mentett járművek és a partner saját járműlistája külön migrációval PocketBase-ben működik: [SAVED_VEHICLES.md](./SAVED_VEHICLES.md). Ehhez nem kell hook vagy új Vercel-hitelesítő adat. Az időpontok, több külön fiók közös flottája és a riportok bekötése még nincs kész; ezek előnézetei nem írnak helyi ál-adatbázisba. A vendégfoglaló külön helyi bemutató marad, mintaadatokkal. Nincs SMTP, levélküldés vagy előnézeti postafiók.
 
 ## 6. Biztonsági határok és üzemeltetés
 

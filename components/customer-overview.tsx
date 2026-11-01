@@ -13,7 +13,7 @@ import { PageHeading } from "./ui";
 import { dateLabel, endTime, services, statusNames, today } from "@/lib/demo";
 
 export default function CustomerOverview() {
-  const { user, store } = usePortal();
+  const { user, store, garage } = usePortal();
   const upcoming = store.appointments
     .filter(
       (a) =>
@@ -23,7 +23,10 @@ export default function CustomerOverview() {
     )
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
   const cars = store.vehicles.filter((v) => v.owner === user?.id);
-  const car = cars.find((v) => v.isDefault) || cars[0];
+  const car = user
+    ? garage.summary?.defaultVehicle
+    : cars.find((v) => v.isDefault) || cars[0];
+  const vehicleCount = user ? garage.summary?.totalItems || 0 : cars.length;
   return (
     <div className="customer-overview">
       <PageHeading
@@ -101,11 +104,15 @@ export default function CustomerOverview() {
             {car ? `${car.make} ${car.model}` : "Az autóid adatai, kéznél."}
           </h3>
           <p>
-            {car
-              ? `${car.plate} · ${car.year}${cars.length > 1 ? ` · +${cars.length - 1} további jármű` : ""}`
-              : user
-                ? "Mentsd el a járműved, és legközelebb kitöltjük helyetted."
-                : "Saját fiókkal elmentheted az autóid adatait."}
+            {user && garage.error
+              ? "A járművek most nem tölthetők be."
+              : user && garage.loading && !garage.summary
+                ? "A járművek betöltése…"
+                : car
+                  ? `${car.plate} · ${car.year}${vehicleCount > 1 ? ` · +${vehicleCount - 1} további jármű` : ""}`
+                  : user
+                    ? "Mentsd el a járműved, és legközelebb kitöltjük helyetted."
+                    : "Saját fiókkal elmentheted az autóid adatait."}
           </p>
         </div>
         <Link href={user ? "/jarmuvek" : "/fiok"} className="text-link">

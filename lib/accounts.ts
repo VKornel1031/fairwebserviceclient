@@ -18,6 +18,7 @@ export type Account = {
   partnerRequested: boolean;
   setupReady: boolean;
   avatar: string;
+  defaultVehicle: string;
 };
 export type AccountCapabilities = { registration: boolean };
 

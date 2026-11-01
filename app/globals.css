@@ -3832,3 +3832,33 @@ select {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+.vehicle-search,
+.vehicle-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 24px;
+}
+.vehicle-search .search-input {
+  flex: 1;
+  min-width: min(240px, 100%);
+}
+.vehicle-pagination {
+  justify-content: space-between;
+  margin: 24px 0 0;
+}
+.vehicle-card h2,
+.vehicle-card > p {
+  overflow-wrap: anywhere;
+}
+.vehicle-card .license-plate {
+  max-width: 100%;
+  font-size: clamp(12px, 1.4vw, 20px);
+  letter-spacing: 1px;
+}
+.vehicle-actions .text-button {
+  font-size: 11px;
+  text-align: left;
+}

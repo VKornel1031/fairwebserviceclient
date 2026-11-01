@@ -255,6 +255,16 @@ function Shell({ view }: { view: View }) {
               )}
             </Link>
           ))}
+          {(management || reception) && (
+            <Link
+              href="/jarmuvek"
+              className={`nav-item ${activeView === "vehicles" ? "active" : ""}`}
+              aria-current={activeView === "vehicles" ? "page" : undefined}
+            >
+              <CarFront size={19} strokeWidth={1.6} />
+              <span>{admin ? "Járművek" : "Járműveim"}</span>
+            </Link>
+          )}
         </nav>
         <div className="sidebar-label second">A FIÓKOD</div>
         <nav aria-label="További oldalak">
@@ -324,12 +334,13 @@ function Shell({ view }: { view: View }) {
           {ready &&
             user &&
             activeView !== "account" &&
+            activeView !== "vehicles" &&
             activeView !== "admin" && (
               <div className="info-box account-scope">
                 <strong>A fiókkezelés már elérhető.</strong>
                 <p>
-                  Az időpontok, járművek és riportok bekötése a következő lépés.
-                  Ezen az oldalon még nincs élő szervizadat.
+                  A járműveidet már elmentheted. Az időpontok és riportok
+                  bekötése a következő lépés; élő időpontkérés még nem történik.
                 </p>
                 <Link className="text-link" href="/fiok">
                   Saját adatok kezelése
