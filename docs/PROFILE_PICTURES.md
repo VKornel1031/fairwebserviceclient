@@ -24,21 +24,9 @@ A saját GitHub-fiókodba belépve töltsd le és a CasaOS fájlkezelőjével m�
 
 A korábbi `1793404800_account_management.js` is legyen a migrációs mappában; ha már alkalmaztad, PocketBase nem futtatja újra. Ez biztosítja a fiókhoz és adminhoz kötött megtekintési szabályt. Privát repóhoz a bejelentkezés nélküli `curl` 404-et adhat; az autentikált terminálos letöltés menete a [CasaOS útmutatóban](./CASAOS_POCKETBASE.md) található.
 
-A CasaOS app kötetkapcsolatai (a tényleges adatkötet célja `/pb_data`; ezt hagyd változatlanul):
+A profilképes backend alapértelmezett könyvtárai az aktív `/pocketbase/pb_data` mellett vannak. A felület továbbra is ki van kapcsolva; a járműkezeléshez ne változtass ezeken. A jelenlegi, kötetmódosítás nélküli migrációt a [járműtelepítési útmutató](./SAVED_VEHICLES.md) írja le.
 
-| Host                                     | Konténer         |
-| ---------------------------------------- | ---------------- |
-| `/DATA/AppData/pocketbase/pb_data`       | `/pb_data`       |
-| `/DATA/AppData/pocketbase/pb_migrations` | `/pb_migrations` |
-| `/DATA/AppData/pocketbase/pb_hooks`      | `/pb_hooks`      |
-
-A kötetek ellenőrzése:
-
-```sh
-sudo docker inspect pocketbase --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}'
-```
-
-Ha csak a `/pb_data` látszik, a migrációs parancs sikerétől függetlenül a hook még nem látható a futó konténerben. A CasaOS → PocketBase → Settings → Volumes alatt add hozzá a két hiányzó csatolást, mentsd, majd indítsd újra a PocketBase-t. A `/pocketbase/pb_hooks` helyett itt a **`/pb_hooks`** a helyes cél: PocketBase alapértelmezetten a `pb_data` mellett keresi ezt a mappát.
+Az indítási argumentumok és a bináris alapértelmezése határozzák meg az aktív adatmappát; egy kötet megléte ezt önmagában nem igazolja. A jelenlegi konténer `/pb_data` csatolása eltér az app által használt `/pocketbase/pb_data` útvonaltól. A hook alapértelmezett helye ennél az indításnál `/pocketbase/pb_hooks`. A kikapcsolt felület miatt most semmilyen kötetmódosításra nincs szükség.
 
 A hook betöltésének ellenőrzése bejelentkezés és jelszó nélkül:
 
@@ -49,29 +37,11 @@ curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' \
 
 **401**: a hook útvonala létezik és bejelentkezést kér; **404**: a hook útvonala nem érhető el. A migráció önmagában nem telepíti a hookot. A 401 után a weboldalon bejelentkezve ellenőrizhető a fájlmező és a megtekintési szabály készültsége.
 
-A belépés és a regisztráció PocketBase beépített végpontjait használja, ezért működhet hiányzó hook mellett is. A helyes, meglévő `/pb_data` csatolást ilyenkor meg kell őrizni; a hiányzó `/pb_hooks` csatolást kell hozzáadni. A már sikeresen alkalmazott migrációt nem kell újra futtatni pusztán a hook 404-es válasza miatt.
+A belépés és a regisztráció PocketBase beépített végpontjait használja, ezért működhet hiányzó hook mellett is. A már sikeresen alkalmazott migrációt nem kell újra futtatni pusztán a hook 404-es válasza miatt. A kikapcsolt profilképfelület miatt jelenleg nincs szükség hook telepítésére.
 
-## 2. Bemásolható migrációs parancs
+## 2. Migráció
 
-A fájlok másolása és a kötetkapcsolatok ellenőrzése után ezt az egész blokkot futtasd. A meglévő `argonptg/pocketbase:0.26.6` image-et használja:
-
-```sh
-sudo test -s /DATA/AppData/pocketbase/pb_migrations/1793404800_account_management.js &&
-sudo test -s /DATA/AppData/pocketbase/pb_migrations/1793491200_private_account_avatars.js &&
-sudo test -s /DATA/AppData/pocketbase/pb_hooks/account.pb.js &&
-sudo docker stop pocketbase &&
-sudo docker run --rm --pull=never --network none \
-  --mount type=bind,src=/DATA/AppData/pocketbase/pb_data,dst=/pb_data \
-  --mount type=bind,src=/DATA/AppData/pocketbase/pb_migrations,dst=/pb_migrations,readonly \
-  --entrypoint /pocketbase/pocketbase \
-  argonptg/pocketbase:0.26.6 \
-  migrate up --dir /pb_data --migrationsDir /pb_migrations &&
-sudo docker start pocketbase
-```
-
-A migráció nem töröl meglévő képet vagy felhasználót. Az `avatar` beállítása: File, nem kötelező, egy fájl, **Protected = true**, max. 1 MiB tárolt fájl, engedélyezett típusok JPEG/PNG/WebP. A backend a feltöltött legfeljebb 2 MiB-os képet tömöríti, ezért az eredeti feltöltési és tárolási korlát különbözik. Az új hook bejelentkezéshez kötött ellenőrzést ad az alkalmazásnak. Ez a védett mezőt és a fiók/admin megtekintési szabályt is vizsgálja, és kizárólag a készültségi állapotot adja vissza.
-
-Ne kapcsold ki a Protected opciót: a weboldal nem igényel nyilvános képfájlokat. A PocketBase-superuserhez a saját adminfelületén továbbra is teljes hozzáférés tartozik.
+A profilképes felület kérésre eltávolítva; most ne telepítsd ezt a kiegészítést. A működő fiókok és a járművek telepítésének aktuális, konténeren belüli menete: [SAVED_VEHICLES.md](./SAVED_VEHICLES.md). A korábbi `/pb_data` célú egyszer használatos konténer parancsát ne használd az aktív adatbázis igazolására.
 
 ## 3. Korábbi felület működése (jelenleg eltávolítva)
 

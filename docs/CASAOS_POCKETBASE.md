@@ -2,11 +2,11 @@
 
 Konténernév: **`pocketbase`**. Telepített image: **`argonptg/pocketbase:0.26.6`**. Meglévő host adatmappa: **`/DATA/AppData/pocketbase/pb_data`**.
 
-A konténer tényleges `docker inspect` kimenete alapján az adatkötet célja **`/pb_data`**. A PocketBase alapértelmezetten az adatmappa mellett keresi a hookokat és migrációkat, ezért ebben a telepítésben **`/pb_hooks`** és **`/pb_migrations`** a helyes cél. A korábban megadott `/pocketbase/pb_*` kötet-célútvonalak nem illettek ehhez a konténerhez. A bináris útvonala továbbra is `/pocketbase/pocketbase`. A meglévő `/pb_data` kötetet ne töröld és ne cseréld le.
+A futó app indítása `WorkingDir=/pocketbase`, `serve --http=0.0.0.0:8090`, külön adatkönyvtár-paraméter nélkül. A `--help` alapján a tényleges adatmappa **`/pocketbase/pb_data`**. A `/pb_data` csatolásból korábban tévesen következtettünk az aktív adatbázisra. A járművekhez a [közvetlenül a jelenlegi konténerben végrehajtott telepítést](./SAVED_VEHICLES.md) használd: az nem változtatja meg az appot vagy a köteteket. A bináris továbbra is `/pocketbase/pocketbase`.
 
-## 1. Mentés, majd leállítás
+## 1. Mentés
 
-A PocketBase kezelőjében készíts és tölts le mentést. Ezután CasaOS-ban állítsd le a PocketBase appot. A mentés és a lentiek alkalmazása nem módosítja a Vercel-projektet.
+A PocketBase kezelőjében készíts és tölts le mentést. A jelenlegi konténeren belüli migrációs parancsokhoz az app maradjon elindítva. A műveletet rövid karbantartási időben végezd; közben ne szerkessz fiókokat. A mentés és a lentiek nem módosítják a Vercel-projektet.
 
 ## 2. Fájlok a CasaOS gépére
 
@@ -51,40 +51,13 @@ sudo install -m 0644 ~/fairauto-pb-setup/account.pb.js \
 
 Ha valamelyik lépés hibát jelez, állj meg az újraindítás előtt. Siker esetén az `install` nem feltétlenül ír ki semmit. A mappák létrehozása és a sikertelen korábbi 404-es letöltés önmagában nem módosította az adatbázist. Ne másold a `scripts/test-pocketbase.py` tesztadat-generátort a homelabra.
 
-## 3. Kötetmappák a CasaOS app beállításaiban
+## 3. Migráció a jelenlegi konténerben
 
-A PocketBase app **Settings → Volumes / Folder mappings** részében:
+A fiók- és járműkezeléshez kövesd a [SAVED_VEHICLES.md bemásolható parancsait](./SAVED_VEHICLES.md). A migrációs JS fájlokat a host mappából a jelenlegi konténerbe másoljuk, a migráció explicit módon az aktív `/pocketbase/pb_data` könyvtárat célozza, majd ugyanaz a konténer újraindul. Nem kell új image, átirányítás, új adatmappa vagy új kötet.
 
-| A CasaOS gépen                           | A konténerben                    |
-| ---------------------------------------- | -------------------------------- |
-| `/DATA/AppData/pocketbase/pb_data`       | `/pb_data` – a meglévő adatkötet |
-| `/DATA/AppData/pocketbase/pb_migrations` | `/pb_migrations` – új kötet      |
-| `/DATA/AppData/pocketbase/pb_hooks`      | `/pb_hooks` – új kötet           |
+Az opcionális e-mail-cím-módosító hook külön funkció; a járműkezeléshez nem szükséges. A hostra letöltött `account.pb.js` fájl a jelenlegi indításnál a konténer `/pocketbase/pb_hooks/account.pb.js` útvonalára kerül, majd az appot újra kell indítani. A profilképes felület továbbra is ki van kapcsolva. A jelenlegi adatcsatolás megváltoztatása nem része ennek az eljárásnak.
 
-Az új kötetek legyenek olvashatók a konténernek. Őrizd meg a meglévő portokat, hálózati és Tunnel-beállításokat. **Ne frissíts most véletlenül másik image-verzióra**, és ne töröld az appot vagy a `pb_data` mappát. Mentsd a beállításokat, majd indítsd el az appot.
-
-A normál PocketBase `serve` indítás automatikusan alkalmazza az új migrációkat. Ellenőrizd a naplót és a `users` collectiont: az `active`, `protectedRoot`, céges és feltétel-elfogadási mezőknek meg kell jelenniük. Az Auth rule ezután `active = true`.
-
-Ha kifejezetten kikapcsoltad az automigrációt, a saját telepítésed indítási beállításai szerint, leállított kiszolgáló mellett futtasd a migrációt; ne indíts párhuzamos PocketBase-példányt ugyanazon adatmappával. A migráció hibánál nem töröl rekordot; ellenőrizd például a meglévő fiókok nevét és szerepkörét, és mentés után javítsd a nem megfelelő adatokat, mielőtt újrapróbálod.
-
-Ha kézzel szeretnéd futtatni a migrációt, a te telepítésedhez ez a bemásolható parancs használható a mentés elkészítése után. A telepített `0.26.6` image-et használja, nem tölt le másik verziót. Csak sikeres migráció után indítja újra az alkalmazást:
-
-```sh
-sudo docker stop pocketbase &&
-sudo docker run --rm --pull=never --network none \
-  --mount type=bind,src=/DATA/AppData/pocketbase/pb_data,dst=/pb_data \
-  --mount type=bind,src=/DATA/AppData/pocketbase/pb_migrations,dst=/pb_migrations,readonly \
-  --entrypoint /pocketbase/pocketbase \
-  argonptg/pocketbase:0.26.6 \
-  migrate up --dir /pb_data --migrationsDir /pb_migrations &&
-sudo docker start pocketbase
-```
-
-A kötetek ellenőrzése:
-
-```sh
-sudo docker inspect pocketbase --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}'
-```
+A futó app aktív adatmappája jelenleg a konténer belső tárhelyén van. Konténercseréhez vagy újralétrehozáshoz mindig legyen külön letöltött mentés.
 
 ## 4. Admin és Vercel
 
