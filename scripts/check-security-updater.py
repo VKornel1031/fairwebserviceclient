@@ -25,7 +25,10 @@ statefile = root / "state.json"
 state = json.loads(statefile.read_text())
 mode = os.environ["UPDATER_MODE"]
 def save(): statefile.write_text(json.dumps(state))
-def remote(value): return container / value.split(":", 1)[1].removeprefix("/pocketbase/").removesuffix("/.")
+def remote(value):
+    path = value.split(":", 1)[1].removesuffix("/.")
+    if path.startswith("/pocketbase/"): return container / path.removeprefix("/pocketbase/")
+    return root / "container-root" / path.lstrip("/")
 if name == "id": print("0"); sys.exit(0)
 if name == "curl":
     if mode == "download_failure": sys.exit(22)
@@ -65,7 +68,8 @@ elif command == "cp":
     from_container = source.startswith("pocketbase:")
     assert not state["running"], "Read or changed a live database/container during installation"
     if mode == "backup_failure" and from_container and "pb_data" in source: sys.exit(1)
-    if mode == "install_failure" and not from_container: sys.exit(1)
+    if mode == "install_failure" and not from_container and "pb_hooks" in source: sys.exit(1)
+    if mode == "timezone_install_failure" and not from_container and "/usr/share/" in target: sys.exit(1)
     src = remote(source) if from_container else Path(source)
     dst = remote(target) if not from_container else Path(target)
     if src.is_dir():
@@ -77,11 +81,12 @@ elif command == "cp":
 else: raise AssertionError(args)
 '''
 
-for mode in ["success", "download_failure", "asset_tamper", "archive_tamper", "backup_failure", "install_failure"]:
+for mode in ["success", "download_failure", "asset_tamper", "archive_tamper", "backup_failure", "timezone_install_failure", "install_failure"]:
     with tempfile.TemporaryDirectory(prefix="fair-updater-") as directory:
         root = Path(directory)
         commands = root / "bin"
         commands.mkdir()
+        (root / "container-root/usr/share").mkdir(parents=True)
         for name in ["docker", "curl", "id"]:
             path = commands / name
             path.write_text(fake)
@@ -107,7 +112,7 @@ for mode in ["success", "download_failure", "asset_tamper", "archive_tamper", "b
         assert json.loads(mail.read_text())["appUrl"] == "https://operator.example.test"
         assert state["running"] == (mode in ["success", "download_failure", "asset_tamper", "archive_tamper"])
         snapshots = list((root / "host").glob("backups/*/snapshot.tar.gz"))
-        assert bool(snapshots) == (mode in ["success", "install_failure"])
+        assert bool(snapshots) == (mode in ["success", "timezone_install_failure", "install_failure"])
         for snapshot in snapshots:
             with tarfile.open(snapshot) as backup:
                 assert backup.extractfile("pb_data/data.db").read() == database.read_bytes()
@@ -118,5 +123,6 @@ for mode in ["success", "download_failure", "asset_tamper", "archive_tamper", "b
             assert (container / "pocketbase").read_bytes() != b"old-binary"
             assert (container / "pb_hooks/security.pb.js").is_file()
             assert (container / "pb_migrations/1793628000_security_hardening.js").is_file()
+            assert (root / "container-root/usr/share/zoneinfo/Europe/Budapest").read_bytes() == Path("/usr/share/zoneinfo/Europe/Budapest").read_bytes()
         if mode in ["download_failure", "asset_tamper", "archive_tamper"]: assert not any(call[0] == "stop" for call in state["calls"])
-print("PASS: updater rejects tampered code/binaries, backs up offline before writes, preserves data/mail config, and stops safely on download, backup or installation failure.")
+print("PASS: updater installs Budapest timezone data, rejects tampered code/binaries, backs up offline before writes, preserves data/mail config, and stops safely on download, backup, timezone or code installation failure.")

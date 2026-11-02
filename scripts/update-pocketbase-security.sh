@@ -10,6 +10,7 @@ container=${PB_CONTAINER:-pocketbase}
 host_root=${PB_HOST_ROOT:-/DATA/AppData/pocketbase}
 [[ $host_root == /* && $host_root != / ]] || { echo 'PB_HOST_ROOT must be an absolute application directory.' >&2; exit 1; }
 for utility in docker curl tar sha256sum mktemp unzip; do command -v "$utility" >/dev/null || { echo "Required command missing: $utility" >&2; exit 1; }; done
+[[ -s /usr/share/zoneinfo/Europe/Budapest ]] || { echo 'Required host timezone data missing. Install tzdata before running this updater.' >&2; exit 1; }
 
 stage=$(mktemp -d /tmp/fairauto-security.XXXXXX)
 backup=''
@@ -44,8 +45,12 @@ case "$architecture" in
 esac
 
 # Finish every download before stopping or modifying the working installation.
-mkdir -p "$stage/pb_hooks" "$stage/pb_migrations"
-chmod 0755 "$stage/pb_hooks" "$stage/pb_migrations"
+mkdir -p "$stage/pb_hooks" "$stage/pb_migrations" "$stage/zoneinfo/Europe"
+chmod 0755 "$stage/pb_hooks" "$stage/pb_migrations" "$stage/zoneinfo" "$stage/zoneinfo/Europe"
+# Minimal CasaOS images may omit tzdata. Use the host's distribution-managed data
+# so booking can verify both winter and summer Budapest offsets after restart.
+cp /usr/share/zoneinfo/Europe/Budapest "$stage/zoneinfo/Europe/Budapest"
+chmod 0644 "$stage/zoneinfo/Europe/Budapest"
 curl --proto '=https' --tlsv1.2 -fsSL --retry 2 --max-time 120 "https://github.com/pocketbase/pocketbase/releases/download/v0.40.6/pocketbase_0.40.6_linux_$archive_arch.zip" -o "$stage/pocketbase.zip"
 printf '%s  %s\n' "$archive_sha" "$stage/pocketbase.zip" | sha256sum -c -
 unzip -p "$stage/pocketbase.zip" pocketbase > "$stage/pocketbase"
@@ -96,7 +101,7 @@ has_hooks=false
 has_migrations=false
 if docker exec "$container" /bin/sh -c 'test -d /pocketbase/pb_hooks'; then has_hooks=true; fi
 if docker exec "$container" /bin/sh -c 'test -d /pocketbase/pb_migrations'; then has_migrations=true; fi
-docker stop --time 30 "$container"
+docker stop -t 30 "$container"
 stopped=true
 mkdir -p "$backup/pb_data" "$backup/pb_hooks" "$backup/pb_migrations"
 docker cp "$container:/pocketbase/pb_data/." "$backup/pb_data/"
@@ -108,6 +113,9 @@ tar -czf "$backup/snapshot.tar.gz" -C "$backup" pb_data pb_hooks pb_migrations p
 tar -tzf "$backup/snapshot.tar.gz" >/dev/null
 (cd "$backup" && sha256sum snapshot.tar.gz > SHA256SUMS && sha256sum -c SHA256SUMS)
 backup_complete=true
+
+# Install only the required zone; retain any other container timezone data.
+docker cp "$stage/zoneinfo" "$container:/usr/share/"
 
 # Merge code only: fairauto-mail.json, sendmail and existing SMTP settings are preserved.
 mkdir -p "$host_root/pb_hooks" "$host_root/pb_migrations"
