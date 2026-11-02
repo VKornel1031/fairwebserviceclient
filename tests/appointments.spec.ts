@@ -1,4 +1,4 @@
-import { verifyAccount } from "./account-mail-helper";
+import { rootHeaders, verifyAccount } from "./account-mail-helper";
 import {
   test,
   expect,
@@ -64,7 +64,9 @@ async function payload(
   const available = await a.json();
   const date =
     target?.date ||
-    Object.keys(available.days).find((day) => available.days[day].length)!;
+    Object.keys(available.days)
+      .sort()
+      .find((day) => available.days[day].length)!;
   const time = target?.time || available.days[date][0];
   return {
     requestId: crypto.randomUUID(),
@@ -107,12 +109,7 @@ async function status(
   });
 }
 async function root(api: APIRequestContext) {
-  const r = await api.post(
-    `${backend}/api/collections/_superusers/auth-with-password`,
-    { data: { identity: "root@fairauto.test", password } },
-  );
-  expect(r.status()).toBe(200);
-  return { Authorization: (await r.json()).token };
+  return rootHeaders(api);
 }
 
 test("phone-only inspection and removed tire service reject online requests while old records remain manageable", async ({
@@ -1151,6 +1148,78 @@ test("guest bookings require a valid VIN; historical appointments can still be r
   const r = await request.get(`/api/appointments/${a.id}`);
   expect(r.status()).toBe(200);
   expect((await r.json()).appointment.vehicle.vin).toBe("");
+});
+
+test("late garage responses cannot fill staff customer bookings", async ({
+  page,
+}) => {
+  const email = `${crypto.randomUUID()}@example.test`;
+  const seeded = await page.request.post(
+    `${backend}/api/collections/users/records`,
+    {
+      headers: await root(page.request),
+      data: {
+        name: "Late Garage Manager",
+        email,
+        password,
+        passwordConfirm: password,
+        role: "manager",
+        active: true,
+      },
+    },
+  );
+  expect(seeded.status()).toBe(200);
+  const seededUser = await seeded.json();
+  await login(page.request, email);
+  expect(
+    (
+      await page.request.post("/api/vehicles", {
+        headers,
+        data: {
+          plate: "LATE123",
+          make: "Ford",
+          model: "Focus",
+          year: 2020,
+          vin: "WVWZZZ1JZXW000001",
+        },
+      })
+    ).status(),
+  ).toBe(201);
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let delivered!: () => void;
+  const completed = new Promise<void>((resolve) => {
+    delivered = resolve;
+  });
+  await page.route("**/api/vehicles/summary", async (route) => {
+    const response = await route.fetch();
+    await gate;
+    await route.fulfill({ response });
+    delivered();
+  });
+  try {
+    await page.goto("/idopont?for=customer&service=other");
+    await expect(page.getByLabel("Ügyfélnek foglalok")).toBeChecked();
+    await uiSlot(page);
+    release();
+    await completed;
+    await expect(page.getByLabel("Teljes név")).toHaveValue("");
+    await expect(page.getByLabel("E-mail-cím")).toHaveValue("");
+    await expect(page.getByLabel("Rendszám")).toHaveValue("");
+    await expect(page.getByLabel("Alvázszám (VIN)")).toHaveValue("");
+  } finally {
+    release();
+    expect(
+      (
+        await page.request.delete(
+          `${backend}/api/collections/users/records/${seededUser.id}`,
+          { headers: await root(page.request) },
+        )
+      ).status(),
+    ).toBe(204);
+  }
 });
 
 test("admin, reception and manager accounts autofill their own profile and car; staff customer bookings stay blank", async ({

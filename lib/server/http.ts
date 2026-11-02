@@ -47,7 +47,14 @@ export function checkOrigin(request: NextRequest) {
     throw new AccountError(503, "A fiókszolgáltatás beállítása hiányos.");
   }
   if (
-    (process.env.NODE_ENV === "production" && expected.protocol !== "https:") ||
+    (process.env.NODE_ENV === "production" &&
+      (!process.env.AUTH_APP_ORIGIN || expected.protocol !== "https:")) ||
+    !["http:", "https:"].includes(expected.protocol) ||
+    expected.username ||
+    expected.password ||
+    expected.search ||
+    expected.hash ||
+    !["", "/"].includes(expected.pathname) ||
     request.headers.get("origin") !== expected.origin ||
     request.headers.get("sec-fetch-site") === "cross-site"
   )
@@ -112,7 +119,7 @@ export function text(
     typeof value !== "string" ||
     value.trim().length < min ||
     value.length > max ||
-    /[\u0000-\u001f]/.test(value)
+    /[\u0000-\u001f\u007f]/.test(value)
   )
     throw new AccountError(400, "Ellenőrizd a megadott adatokat.");
   return value.trim();

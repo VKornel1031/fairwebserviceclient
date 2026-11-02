@@ -1,5 +1,7 @@
 # Frissítés a végső tesztelés előtt
 
+**Aktuális kiadás:** meglévő telepítés frissítéséhez a [biztonsági frissítés teljes eljárását](./SECURITY_UPDATE.md) használd. Az az alábbi, még hiányzó migrációkat is tartalmazza, valamint a friss hookokhoz szükséges új biztonsági migrációt. Az itt megőrzött korábbi részleges parancsblokk önmagában már nem telepíti a teljes aktuális backendet.
+
 A változat tartalmazza a megadott két dokumentum webes és szerkeszthető Word-változatát, az e-mailes fiókkezelést és a vendégadatok törlését. A közös dokumentumverzió **`2026-11-01.6-draft`**. A már működő céges SMTP-feladót és jelszavát a frissítés megőrzi; új API-kulcs vagy Vercel-secret nem kell.
 
 ## A meglévő CasaOS PocketBase frissítése

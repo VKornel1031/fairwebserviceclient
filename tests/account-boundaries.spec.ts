@@ -4,7 +4,7 @@ const origin = "http://127.0.0.1:3100";
 const backend = "http://127.0.0.1:3101";
 const password = "Local-integration-only-928374!"; // Disposable local test DB only.
 
-test("the SMTP-free email hook rejects missing auth, forged targets and wrong passwords", async ({
+test("the retired email hook requires auth and never checks passwords or changes an address", async ({
   request,
 }) => {
   const raw = await apiRequest.newContext({ baseURL: backend });
@@ -23,7 +23,7 @@ test("the SMTP-free email hook rejects missing auth, forged targets and wrong pa
         data: { ...data, password: "wrong-password" },
       })
     ).status(),
-  ).toBe(401);
+  ).toBe(410);
   expect(
     (
       await raw.post(path, {
@@ -31,7 +31,7 @@ test("the SMTP-free email hook rejects missing auth, forged targets and wrong pa
         data: { ...data, id: "otheraccount123" },
       })
     ).status(),
-  ).toBe(400);
+  ).toBe(410);
   const session = await request.post("/api/auth/login", {
     headers: { Origin: origin },
     data: { email: record.email, password },

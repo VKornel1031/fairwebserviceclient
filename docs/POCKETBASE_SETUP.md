@@ -115,7 +115,7 @@ A beállításhoz szervercím, port/TLS mód, SMTP-felhasználó és jelszó, va
 
 Alapértelmezésben PocketBase a Unix `sendmail` parancsot is használhatja. Ez nem jelent automatikusan működő vagy megbízható kézbesítést egy CasaOS/Docker homelabon. A hivatalos [üzemeltetési útmutató](https://pocketbase.io/docs/going-to-production/#use-smtp-mail-server) SMTP-szolgáltatást javasol éles levelezéshez.
 
-Az SMTP beállítása önmagában nem kapcsolja be a weboldal ellenőrző vagy jelszó-visszaállító folyamatait: ezek a felhasználó kérésére jelenleg ki vannak kapcsolva. A mostani regisztráció és belépés levelezés nélkül működik. Az időpontértesítések külön, opcionális funkciók; a Unix sendmail CasaOS-beállítása: [LOCAL_SENDMAIL.md](./LOCAL_SENDMAIL.md). A későbbi emailes folyamatokat külön kell bekötni és tesztelni.
+Az aktuális kiadásban az új céges fiókok belépéséhez e-mail-megerősítés szükséges; a megerősítés, a jelszó-visszaállítás és a címváltoztatás működő fióklevelezést igényel. A teljes backendfrissítést és a bemásolható parancsokat a [biztonsági frissítés útmutatója](./SECURITY_UPDATE.md) tartalmazza. A régi fiókok dokumentált hozzáférése megmarad. Az időpontértesítések ettől külön, opcionális funkciók; a Unix sendmail CasaOS-beállítása: [LOCAL_SENDMAIL.md](./LOCAL_SENDMAIL.md). Nyilvános regisztráció előtt a saját postaládáddal ellenőrizd a teljes megerősítési és helyreállítási folyamatot.
 
 ## 8. „A fiókszolgáltatás kapcsolata most nem használható”
 

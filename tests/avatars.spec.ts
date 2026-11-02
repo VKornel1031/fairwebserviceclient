@@ -1,4 +1,4 @@
-import { verifyAccount } from "./account-mail-helper";
+import { rootHeaders, verifyAccount } from "./account-mail-helper";
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import sharp from "sharp";
 import { AVATAR_UPLOAD_LIMIT } from "../lib/avatar";
@@ -186,13 +186,8 @@ test("the profile uses initials without picture controls or avatar requests", as
 test("uploads are refused before saving when the file or view rule is public", async ({
   request,
 }) => {
-  await customer(request);
-  const root = await request.post(
-    `${backend}/api/collections/_superusers/auth-with-password`,
-    { data: { identity: "root@fairauto.test", password } },
-  );
-  expect(root.status()).toBe(200);
-  const auth = { Authorization: (await root.json()).token };
+  const user = await customer(request);
+  const auth = await rootHeaders(request);
   const collection = await (
     await request.get(`${backend}/api/collections/users`, { headers: auth })
   ).json();
@@ -233,14 +228,30 @@ test("uploads are refused before saving when the file or view rule is public", a
           })
         ).status(),
       ).toBe(200);
-      expect(
-        (await (await request.get("/api/account/avatar/policy")).json()).ready,
-      ).toBe(false);
+      const policy = await request.get("/api/account/avatar/policy");
+      if (change.viewRule === "") {
+        expect(policy.status()).toBe(503);
+        expect((await policy.json()).code).toBe("security_setup_required");
+      } else {
+        expect(policy.status()).toBe(200);
+        expect((await policy.json()).ready).toBe(false);
+      }
       const rejected = await upload(request, await picture());
       expect(rejected.status()).toBe(503);
-      expect((await rejected.json()).code).toBe("avatar_setup_required");
+      expect((await rejected.json()).code).toBe(
+        change.viewRule === ""
+          ? "security_setup_required"
+          : "avatar_setup_required",
+      );
       expect(
-        (await (await request.get("/api/auth/session")).json()).user.avatar,
+        (
+          await (
+            await request.get(
+              `${backend}/api/collections/users/records/${user.id}`,
+              { headers: auth },
+            )
+          ).json()
+        ).avatar,
       ).toBe("");
     } finally {
       expect(

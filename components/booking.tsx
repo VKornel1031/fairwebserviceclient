@@ -156,6 +156,10 @@ export default function Booking() {
           setMonth(a.date.slice(0, 7));
         } else {
           const forCustomer = coordinator && params.get("for") === "customer";
+          // Resolve the booking owner before a late garage response can fill a car.
+          vehicleTouched.current = forCustomer;
+          setCar(blankCar);
+          setSavedCar("");
           setOnBehalf(forCustomer);
           setContact(
             forCustomer
@@ -163,10 +167,6 @@ export default function Booking() {
               : result.prefill?.contact || blankContact,
           );
           setCompanyName(forCustomer ? "" : result.prefill?.companyName || "");
-          if (forCustomer) {
-            setCar(blankCar);
-            setSavedCar("");
-          }
           const sid = params.get("service");
           if (
             result.config.services.some(
@@ -192,11 +192,16 @@ export default function Booking() {
           );
       });
     return () => controller.abort();
-  }, [contextRevision, user?.id]);
+  }, [contextRevision, user?.id, coordinator]);
   useEffect(() => {
     if (
       !user ||
+      !context ||
+      context.viewer !== user.id ||
       onBehalf ||
+      (coordinator &&
+        new URLSearchParams(window.location.search).get("for") ===
+          "customer") ||
       vehicleTouched.current ||
       new URLSearchParams(window.location.search).has("edit")
     )
@@ -206,7 +211,7 @@ export default function Booking() {
       setCar(preferred);
       setSavedCar(preferred.id);
     }
-  }, [garage.summary, user?.id, onBehalf]);
+  }, [context, garage.summary, user?.id, onBehalf, coordinator]);
   useEffect(() => {
     if (!context || !serviceId || service?.bookingMode === "phone") return;
     const controller = new AbortController();
@@ -477,7 +482,7 @@ export default function Booking() {
                   user && !onBehalf && garage.summary?.totalItems === 1
                     ? garage.summary.defaultVehicle
                     : null;
-                vehicleTouched.current = false;
+                vehicleTouched.current = onBehalf;
                 setCar(onlyCar || blankCar);
                 setSavedCar(onlyCar?.id || "");
                 window.history.replaceState(
@@ -536,7 +541,7 @@ export default function Booking() {
                 forCustomer ? "" : context.prefill?.companyName || "",
               );
               setOrganization(false);
-              vehicleTouched.current = false;
+              vehicleTouched.current = forCustomer;
               const onlyCar =
                 !forCustomer && garage.summary?.totalItems === 1
                   ? garage.summary.defaultVehicle

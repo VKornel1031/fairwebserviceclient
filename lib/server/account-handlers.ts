@@ -22,6 +22,7 @@ import {
   reauthenticate,
   requireSession,
   requireSetup,
+  requireSecuritySetup,
   setSession,
 } from "./pocketbase";
 import { site } from "@/content/site";
@@ -131,6 +132,7 @@ async function requestAccountMail(
   }
 }
 async function requireEmailSetup() {
+  await requireSecuritySetup();
   try {
     const policy = await pb<{ emailVerification: boolean }>(
       "/api/fairauto/account/registration-policy",
@@ -263,6 +265,7 @@ export async function authPost(request: NextRequest, action: string) {
       );
     const details = profile(data, true);
     requireCompany(details);
+    await requireSecuritySetup();
     try {
       const policy = await pb<{
         companyOnly: boolean;
@@ -433,7 +436,8 @@ export async function createAccount(request: NextRequest) {
     "adminPassword",
   ]);
   throttle(request, "admin-write", session.user.id, 40);
-  await reauthenticate(session, password(data, "adminPassword"));
+  const adminPassword = password(data, "adminPassword");
+  await reauthenticate(session, adminPassword);
   const secret = newPassword(data);
   const details = profile(data, true);
   const role = selectedRole(data);
@@ -450,6 +454,7 @@ export async function createAccount(request: NextRequest) {
       emailVisibility: false,
       password: secret,
       passwordConfirm: secret,
+      adminPassword,
     },
     session.token,
   );
@@ -489,7 +494,8 @@ export async function modifyAccount(
         ],
   );
   throttle(request, "admin-write", session.user.id, 40);
-  await reauthenticate(session, password(data, "adminPassword"));
+  const adminPassword = password(data, "adminPassword");
+  await reauthenticate(session, adminPassword);
   const path = `/api/collections/users/records/${encodeURIComponent(id)}`;
   const target = account(
     await pb<Record<string, unknown>>(path, "GET", undefined, session.token),
@@ -502,7 +508,7 @@ export async function modifyAccount(
   if (remove) {
     if (email(data, "confirmEmail") !== target.email.toLowerCase())
       throw new AccountError(400, "A megerősítő e-mail-cím nem egyezik.");
-    await recordWrite(path, "DELETE", undefined, session.token);
+    await recordWrite(path, "DELETE", { adminPassword }, session.token);
     return json({ ok: true });
   }
   const details: Record<string, unknown> = profile(data);
@@ -526,7 +532,7 @@ export async function modifyAccount(
   const result = await recordWrite<Record<string, unknown>>(
     path,
     "PATCH",
-    details,
+    { ...details, adminPassword },
     session.token,
   );
   if (details.email && details.email !== target.email) {

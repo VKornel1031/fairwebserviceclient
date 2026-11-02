@@ -1,7 +1,8 @@
 """Disposable, loopback-only PocketBase for integration tests. Never uses the homelab.
 
 PB_BINARY=/path/to/pocketbase python3 scripts/test-pocketbase.py
-Requires PocketBase 0.26.3+; no SMTP or external services are configured.
+Use PocketBase 0.40.6 for the current suite. Older releases are upgrade sources only.
+No SMTP or external services are configured.
 """
 import json
 import os
@@ -101,9 +102,9 @@ onRecordEnrich((event) => {
     # Synthetic retention deadlines are exercised through the protected test endpoint,
     # so a wall-clock cron tick must not race those deliberately aged fixtures.
     (hooks / "retention-scheduler-test.pb.js").write_text('''
-onServe((event) => {
+onBootstrap((event) => {
+  event.next();
   cronAdd("fairauto-guest-retention", "* * * * *", () => {});
-  return event.next();
 });
 ''')
     options = ["--dir", str(root / "pb_data"), "--migrationsDir", str(migrations), "--hooksDir", str(hooks), "--dev=false"]

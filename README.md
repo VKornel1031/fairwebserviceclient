@@ -2,6 +2,8 @@
 
 Hungarian service portal built with Next.js, React and TypeScript, matching [Fair Autószerviz's website](https://fairautoweb.vercel.app/).
 
+**Security update:** install the matching backend release using [docs/SECURITY_UPDATE.md](./docs/SECURITY_UPDATE.md). It adds persistent authentication limits, stricter native permissions, production CSP, and a verified PocketBase 0.40.6 upgrade with an offline backup before changes. Authenticated operations require the updated backend security policy.
+
 ## Account management
 
 Accounts use **PocketBase** with email verification for new accounts:
@@ -16,7 +18,7 @@ Accounts use **PocketBase** with email verification for new accounts:
 - Admin changes require the admin's password. Self-demotion/deletion and changes to a protected root admin are blocked.
 - Sessions use HttpOnly cookies; real tokens, passwords and profiles are not stored in browser localStorage. Each authenticated API call checks PocketBase again.
 
-**Final testing update:** apply [docs/FINAL_UPDATE.md](./docs/FINAL_UPDATE.md) to the existing CasaOS container. It adds the new migrations, account email templates, hooks and the matching legal configuration without changing the working SMTP credentials.
+**Existing CasaOS installation:** use [docs/SECURITY_UPDATE.md](./docs/SECURITY_UPDATE.md). The complete updater also installs pending email/retention migrations and preserves the working SMTP credentials. Earlier partial update commands do not install the current security policy.
 
 **Setup is required on your PocketBase and Vercel deployment.** Follow [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md), including the versioned migration, first normal `users` admin, and environment settings. No superuser credentials or API keys belong in this app. No avatar setup is needed for the current UI. Public registration defaults to disabled until explicitly enabled after migration.
 
@@ -76,7 +78,7 @@ python3 scripts/check-local-sendmail.py
 BUSYBOX_BINARY=/path/to/busybox python3 scripts/check-local-sendmail.py
 ```
 
-Integration tests require Python 3, a separately installed PocketBase executable (tested with **0.26.6**) and Chromium (`/usr/bin/chromium`, or set `CHROMIUM_PATH`). They create a disposable SQLite database on **127.0.0.1:3101**, apply the real migrations and hooks, seed only test accounts and start a separate Next server on **3100**. They never reuse a running app or send test credentials to the homelab. Test data is removed when the server exits. Never run the test seeding script against a company database.
+Integration tests require Python 3, a separately installed PocketBase executable (**0.40.6** for the current suite; **0.26.3/0.26.6** are tested as upgrade sources) and Chromium (`/usr/bin/chromium`, or set `CHROMIUM_PATH`). They create a disposable SQLite database on **127.0.0.1:3101**, apply the real migrations and hooks, seed only test accounts and start a separate Next server on **3100**. They never reuse a running app or send test credentials to the homelab. Test data is removed when the server exits. Never run the test seeding script against a company database.
 
 Coverage includes account registration/login/profile persistence, cookie isolation, native PocketBase permissions, CSRF and input rejection, admin CRUD, role changes, suspended/deleted access, email/password updates, protected admin handling and login throttling. Saved-car persistence, owner isolation, native owner/default forgery rejection, defaults, duplicate plates, fleet pagination/search, concurrent selections and account-deletion cleanup are tested against a disposable PocketBase. Appointment coverage includes native API write restrictions, ownership, guest expiry, idempotent retries after later edits, concurrent confirmations, duration overlaps, closures, legal acceptance, saved-car prefill, staff UI actions, rescheduling, calendar downloads and recovering from a slot becoming full during checkout. VIN persistence and validation, pricing permissions, computed totals, edit conflicts, multi-car selection, blank guest forms and durable mail retries are covered. Mail tests intercept messages locally and never deliver them to a real recipient. Legal links, home navigation, mobile layout and themes remain covered.
 
@@ -90,6 +92,6 @@ The documents describe real PocketBase accounts, vehicles, appointment storage, 
 
 PocketBase manages SQLite internally. Company membership across multiple accounts and scheduled reminders remain future work. Browser storage and client-side permissions never authorize appointment operations.
 
-Before company production use, upgrade the old homelab PocketBase, enable backend/edge rate limits, protect superuser routes, test backup restoration and complete the legal/operator settings. See the security boundaries in the setup guide.
+Before public use, apply the security update, protect superuser access, correct the CasaOS data mount before recreating its container, test off-machine backup restoration and complete the legal/operator settings. The deployment requirements are in the security update guide.
 
 The supplied legal documents are readable from the footer and downloadable as TXT/Word. Editable sources: `content/privacy.ts`, `content/data-security.ts`, `content/legal.ts` and `content/site.ts`. Original uploads and correction notes are in [docs/legal-sources](./docs/legal-sources/README.md). Final test findings are recorded in [docs/FINAL_TESTING.md](./docs/FINAL_TESTING.md).

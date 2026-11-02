@@ -1,5 +1,6 @@
 """Verify upgrading existing accounts and rerunning the migration in a disposable local DB."""
 import json
+import base64
 from datetime import datetime, timezone
 import os
 from pathlib import Path
@@ -11,6 +12,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 
 binary = os.environ.get("PB_BINARY") or shutil.which("pocketbase")
 if not binary:
@@ -207,6 +209,83 @@ with tempfile.TemporaryDirectory(prefix="fair-migration-check-") as directory:
         for name in ["verificationTemplate", "resetPasswordTemplate", "confirmEmailChangeTemplate"]:
             assert 'src="{APP_URL}/images/fair-logo.png"' in branded_users[name]["body"]
             assert 'fair<span' not in branded_users[name]["body"]
-        print("PASS: account/car/appointment data and field IDs preserved; legacy access retained without falsifying verification; disabled admins stay disabled; guest deadlines backfilled from closure history or a fresh grace period, with no migration-time deletion.")
+        # Security upgrade must preserve existing mail credentials, custom rate rules and backup policy.
+        status, settings = api("GET", "/api/settings", token=token)
+        assert status == 200
+        settings["smtp"]["username"] = "isolated-upgrade-fixture"
+        settings["smtp"]["password"] = "not-a-production-credential"
+        settings["backups"]["cron"] = "0 3 * * *"
+        settings["backups"]["cronMaxKeep"] = 9
+        settings["rateLimits"]["rules"].append({"label": "users:authWithPassword", "maxRequests": 73, "duration": 90, "audience": ""})
+        assert api("PATCH", "/api/settings", settings, token)[0] == 200
+        status, before_settings = api("GET", "/api/settings", token=token)
+        assert status == 200
+        # This legacy installation intentionally skipped the optional avatar migration.
+        pixel = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+        boundary = "fair-security-upgrade-fixture"
+        multipart = (f'--{boundary}\r\nContent-Disposition: form-data; name="avatar"; filename="private-pixel.png"\r\nContent-Type: image/png\r\n\r\n'.encode() + pixel + f'\r\n--{boundary}--\r\n'.encode())
+        req = urllib.request.Request(base + f'/api/collections/users/records/{customers[0]["id"]}', method="PATCH", data=multipart,
+                                     headers={"Authorization": token, "Content-Type": "multipart/form-data; boundary=" + boundary})
+        with urllib.request.urlopen(req) as response:
+            avatar_name = json.loads(response.read())["avatar"]
+        avatar_path = f'/api/files/users/{customers[0]["id"]}/' + urllib.parse.quote(avatar_name)
+        with urllib.request.urlopen(base + avatar_path) as response:
+            assert response.status == 200 and response.read() == pixel
+        stop()
+        if os.environ.get("PB_UPGRADE_BINARY"):
+            binary = str(Path(os.environ["PB_UPGRADE_BINARY"]).resolve())
+        migration = source / "1793628000_security_hardening.js"
+        shutil.copyfile(migration, migrations / migration.name)
+        subprocess.run([binary, "migrate", "up", *options], check=True, stdout=subprocess.DEVNULL)
+        # Reapplying the same release must skip its recorded migrations.
+        subprocess.run([binary, "migrate", "up", *options], check=True, stdout=subprocess.DEVNULL)
+        hooks = root / "hooks"
+        shutil.copytree(source.parent / "pb_hooks", hooks)
+        shutil.copy2(source.parents[1] / "content/booking.json", hooks / "fairauto-booking.json")
+        (hooks / "retention-test.pb.js").write_text('''
+onBootstrap((e) => { e.next(); cronAdd("fairauto-guest-retention", "* * * * *", () => {}); });
+''')
+        options.extend(["--hooksDir", str(hooks)])
+        token = start()
+        status, after_settings = api("GET", "/api/settings", token=token)
+        assert status == 200
+        assert after_settings["smtp"] == before_settings["smtp"]
+        assert after_settings["backups"] == before_settings["backups"]
+        for key in ["appName", "appURL", "senderName", "senderAddress"]:
+            assert after_settings["meta"][key] == before_settings["meta"][key], key
+        assert after_settings["trustedProxy"] == before_settings["trustedProxy"]
+        assert after_settings["rateLimits"]["enabled"] and not after_settings["batch"]["enabled"]
+        assert next(r for r in after_settings["rateLimits"]["rules"] if r["label"] == "users:authWithPassword")["maxRequests"] == 73
+        assert api("GET", "/api/fairauto/security-policy")[1] == {"version": 1, "ready": True}
+        status, preserved = api("GET", f'/api/collections/users/records/{customers[0]["id"]}', token=token)
+        assert status == 200 and preserved["defaultVehicle"] == car["id"] and not preserved["verified"]
+        assert preserved["avatar"] == avatar_name, "Upgrade changed the historical file reference"
+        try:
+            with urllib.request.urlopen(base + avatar_path):
+                raise AssertionError("Historical avatar remained anonymously accessible")
+        except urllib.error.HTTPError as error:
+            assert error.code in [401, 403, 404]
+        status, owner = api("POST", "/api/collections/users/auth-with-password", {"identity": customers[0]["email"], "password": password})
+        assert status == 200
+        status, file_token = api("POST", "/api/files/token", token=owner["token"])
+        assert status == 200
+        with urllib.request.urlopen(base + avatar_path + "?" + urllib.parse.urlencode({"token": file_token["token"]})) as response:
+            assert response.status == 200 and response.read() == pixel
+        for collection, identifier in [("vehicles", car["id"]), ("appointments", appointment["id"]), ("users", legacy["id"])]:
+            assert api("GET", f"/api/collections/{collection}/records/{identifier}", token=token)[0] == 200
+        for guest in guest_records:
+            assert api("GET", f'/api/collections/appointments/records/{guest["id"]}', token=token)[0] == 200
+        identity = "restart-limit@example.test"
+        for _ in range(8):
+            assert api("POST", "/api/collections/users/auth-with-password", {"identity": identity, "password": "incorrect"})[0] == 400
+        stop()
+        token = start()
+        assert api("POST", "/api/collections/users/auth-with-password", {"identity": identity, "password": "incorrect"})[0] == 429, "Restart reset the password failure budget"
+        status, counters = api("GET", "/api/collections/security_limits/records", token=token)
+        assert status == 200 and all(len(row["key"]) == 64 and identity not in str(row) for row in counters["items"])
+        for row in counters["items"]:
+            assert api("PATCH", f'/api/collections/security_limits/records/{row["id"]}', {"expiresAt": 1}, token)[0] == 200
+        assert api("POST", "/api/collections/users/auth-with-password", {"identity": identity, "password": "incorrect"})[0] == 400, "Expired failures kept the account locked"
+        print("PASS: account, vehicle and booking data preserved; SMTP, custom limits and backups preserved; security migration repeat-safe; failure budgets survive restart and expire correctly.")
     finally:
         stop()

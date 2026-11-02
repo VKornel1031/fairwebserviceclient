@@ -16,9 +16,9 @@ test("guest cleanup removes only due terminal records and their personal-data co
   const available = await (
     await request.get("/api/appointments/availability?service=other")
   ).json();
-  const date = Object.keys(available.days).find(
-    (day) => available.days[day].length,
-  )!;
+  const date = Object.keys(available.days)
+    .sort()
+    .find((day) => available.days[day].length)!;
   const users = (
     await (
       await request.get(`${backend}/api/collections/users/records`, {
@@ -39,9 +39,9 @@ test("guest cleanup removes only due terminal records and their personal-data co
     const availability = await (
       await request.get("/api/appointments/availability?service=other")
     ).json();
-    const openDate = Object.keys(availability.days).find(
-      (day) => availability.days[day].length,
-    )!;
+    const openDate = Object.keys(availability.days)
+      .sort()
+      .find((day) => availability.days[day].length)!;
     const response = await request.post("/api/appointments", {
       headers,
       data: {

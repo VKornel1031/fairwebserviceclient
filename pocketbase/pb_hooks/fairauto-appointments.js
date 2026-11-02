@@ -8,7 +8,8 @@ const statuses = [
   "completed",
   "cancelled",
 ];
-const signedRule = '@request.auth.id != "" && @request.auth.active = true';
+const signedRule =
+  '@request.auth.id != "" && @request.auth.active = true && (@request.auth.verified = true || @request.auth.emailVerificationRequired = false)';
 const staffRule =
   signedRule +
   ' && (@request.auth.role = "reception" || @request.auth.role = "manager" || @request.auth.role = "admin")';
@@ -46,9 +47,10 @@ function object(value, keys) {
 }
 function body(e, keys) {
   if (
-    !(e.request.header.get("Content-Type") || "")
-      .toLowerCase()
-      .startsWith("application/json")
+    (e.request.header.get("Content-Type") || "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase() !== "application/json"
   )
     fail(415, "invalid_details");
   return object(e.requestInfo().body, keys);
@@ -262,7 +264,11 @@ function identity(app, e) {
     } catch {
       fail(401, "session_expired");
     }
-    if (!user.getBool("active")) fail(401, "session_expired");
+    if (
+      !user.getBool("active") ||
+      (user.getBool("emailVerificationRequired") && !user.getBool("verified"))
+    )
+      fail(401, "session_expired");
   }
   const token = e.request.header.get("X-Fairauto-Guest") || "";
   if (token && !/^[a-f0-9]{64}$/.test(token)) fail(400, "invalid_details");
@@ -436,7 +442,7 @@ function slot(app, day, time, duration, exclude) {
     now = clock(),
     start = minute(time);
   if (
-    !/^\d{2}:\d{2}$/.test(time) ||
+    !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time) ||
     !openDay(app, day) ||
     start < minute(s.opensAt) ||
     start + duration > minute(s.closesAt) ||

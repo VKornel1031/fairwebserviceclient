@@ -2,7 +2,9 @@ import { expect, type APIRequestContext } from "@playwright/test";
 const backend = "http://127.0.0.1:3101";
 const origin = "http://127.0.0.1:3100";
 // These credentials exist only in scripts/test-pocketbase.py's disposable database.
+let rootToken: string | undefined;
 export async function rootHeaders(api: APIRequestContext) {
+  if (rootToken) return { Authorization: rootToken };
   const auth = await api.post(
     `${backend}/api/collections/_superusers/auth-with-password`,
     {
@@ -13,7 +15,8 @@ export async function rootHeaders(api: APIRequestContext) {
     },
   );
   expect(auth.status()).toBe(200);
-  return { Authorization: (await auth.json()).token as string };
+  rootToken = (await auth.json()).token as string;
+  return { Authorization: rootToken };
 }
 export async function accountMailLink(
   api: APIRequestContext,

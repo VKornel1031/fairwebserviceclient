@@ -1,4 +1,8 @@
-import { verifyAccount, accountMailLink } from "./account-mail-helper";
+import {
+  rootHeaders,
+  verifyAccount,
+  accountMailLink,
+} from "./account-mail-helper";
 import {
   test,
   expect,
@@ -55,12 +59,7 @@ async function write(
 }
 async function rootToken() {
   const api = await playwrightRequest.newContext({ baseURL: backend });
-  const response = await api.post(
-    "/api/collections/_superusers/auth-with-password",
-    { data: { identity: "root@fairauto.test", password: testPassword } },
-  );
-  expect(response.status()).toBe(200);
-  const { token } = await response.json();
+  const { Authorization: token } = await rootHeaders(api);
   await api.dispose();
   return token as string;
 }

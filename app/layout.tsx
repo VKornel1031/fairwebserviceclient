@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { site } from "@/content/site";
 import "./globals.css";
 import "./fonts.css";
@@ -8,13 +9,15 @@ export const metadata: Metadata = {
   title: `${site.shortName} · Ügyfélportál`,
   description: `Saját fiók, céges és munkatársi hozzáférés. ${site.name} – ügyfélportál.`,
 };
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const nonce = (await headers()).get("x-nonce") || undefined;
   return (
     <html lang="hu" suppressHydrationWarning>
       <head>
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `try{document.documentElement.dataset.theme=localStorage.getItem('fairauto-theme')||'light'}catch{}`,
           }}

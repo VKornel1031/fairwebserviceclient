@@ -28,6 +28,8 @@ export class PocketBaseError extends Error {
   }
 }
 function baseUrl() {
+  if (process.env.NODE_ENV === "production" && !process.env.POCKETBASE_URL)
+    throw new AccountError(503, "A fiókszolgáltatás beállítása hiányos.");
   let url: URL;
   try {
     url = new URL(
@@ -247,6 +249,24 @@ export function account(record: Record<string, unknown>): Account {
   };
 }
 export type Session = { token: string; user: Account };
+export async function requireSecuritySetup() {
+  try {
+    const policy = await pb<{ version: number; ready: boolean }>(
+      "/api/fairauto/security-policy",
+      "GET",
+    );
+    if (policy.version !== 1 || policy.ready !== true)
+      throw new PocketBaseError(404);
+  } catch (error) {
+    if (error instanceof PocketBaseError)
+      throw new AccountError(
+        503,
+        "A fiókszolgáltatás karbantartás alatt áll. Próbáld újra később.",
+        "security_setup_required",
+      );
+    throw error;
+  }
+}
 function authenticated(result: {
   token: string;
   record: Record<string, unknown>;
@@ -257,7 +277,11 @@ function authenticated(result: {
   )
     throw new AccountError(503, "A fiókszolgáltatás hibás választ adott.");
   const user = account(result.record);
-  if (!user.active || !user.email)
+  if (
+    !user.active ||
+    !user.email ||
+    (user.emailVerificationRequired && !user.verified)
+  )
     throw new AccountError(
       401,
       "A fiók le van tiltva, vagy a belépési adatok hibásak.",
@@ -268,6 +292,7 @@ export async function authenticate(
   identity: string,
   password: string,
 ): Promise<Session> {
+  await requireSecuritySetup();
   try {
     return authenticated(
       await pb("/api/collections/users/auth-with-password", "POST", {
@@ -291,6 +316,7 @@ export async function currentSession(): Promise<Session | null> {
   const token = (await cookies()).get(sessionCookie)?.value;
   if (!token) return null;
   if (!/^[A-Za-z0-9._-]{16,4096}$/.test(token)) return null;
+  await requireSecuritySetup();
   try {
     const fresh = authenticated(
       await pb<{ token: string; record: Record<string, unknown> }>(
