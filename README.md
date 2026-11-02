@@ -18,7 +18,7 @@ Accounts use **PocketBase** with email verification for new accounts:
 - Admin changes require the admin's password. Self-demotion/deletion and changes to a protected root admin are blocked.
 - Sessions use HttpOnly cookies; real tokens, passwords and profiles are not stored in browser localStorage. Each authenticated API call checks PocketBase again.
 
-**Existing CasaOS installation:** use [docs/SECURITY_UPDATE.md](./docs/SECURITY_UPDATE.md). The complete updater also installs pending email/retention migrations and preserves the working SMTP credentials. Earlier partial update commands do not install the current security policy.
+**Existing CasaOS installation:** copy the complete [CasaOS deployment command block](./docs/SECURITY_UPDATE.md#copy-paste-installation-on-the-casaos-host), with the reviewed commit and checksum already filled in. It installs the host prerequisites, checks the documented Debian/Ubuntu and Docker setup, makes an offline backup, upgrades PocketBase, applies pending update migrations and verifies readiness. Working SMTP credentials are preserved. The [Hungarian CasaOS guide](./docs/CASAOS_POCKETBASE.md) contains the same block. Earlier partial update commands do not install the current security policy.
 
 **Setup is required on your PocketBase and Vercel deployment.** Follow [`docs/POCKETBASE_SETUP.md`](./docs/POCKETBASE_SETUP.md), including the versioned migration, first normal `users` admin, and environment settings. No superuser credentials or API keys belong in this app. No avatar setup is needed for the current UI. Public registration defaults to disabled until explicitly enabled after migration.
 

@@ -4,20 +4,25 @@ The verified flow is company registration and email confirmation → authenticat
 
 ## Results
 
-| Check                                                         | Result                                                                                                                                                              |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Complete browser/API/data regression suite, PocketBase 0.40.6 | **77 passed**                                                                                                                                                       |
-| Avatar checks after hardening historical file metadata        | **4 passed**                                                                                                                                                        |
-| Production Next.js build and TypeScript                       | Passed                                                                                                                                                              |
-| Production browser security check                             | Passed: fresh nonces, private caching, hydration, persistent theme, blocked injected HTML scripts/handlers, secure cookie flags, CSRF and missing-backend rejection |
-| 0.26.3 → 0.40.6 upgrade                                       | Passed                                                                                                                                                              |
-| 0.26.6 → 0.40.6 upgrade                                       | Passed                                                                                                                                                              |
-| Actual updater shell script with a filesystem Docker double   | Passed: success, download failure, corrupted code, corrupted binary, backup failure and installation failure                                                        |
-| Dependency audit, including development dependencies          | **0 known vulnerabilities**                                                                                                                                         |
-| Sendmail wrapper checks                                       | 6 passed; optional real BusyBox check skipped                                                                                                                       |
-| Formatting, shell syntax, Python compilation and whitespace   | Passed                                                                                                                                                              |
+| Check                                                                          | Result                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Complete browser/API/data regression suite, PocketBase 0.40.6                  | **77 passed**                                                                                                                                                                            |
+| Avatar checks after hardening historical file metadata                         | **4 passed**                                                                                                                                                                             |
+| Production Next.js build and TypeScript                                        | Passed                                                                                                                                                                                   |
+| Production browser security check                                              | Passed: fresh nonces, private caching, hydration, persistent theme, blocked injected HTML scripts/handlers, secure cookie flags, CSRF and missing-backend rejection                      |
+| 0.26.3 → 0.40.6 upgrade                                                        | Passed                                                                                                                                                                                   |
+| 0.26.6 → 0.40.6 upgrade                                                        | Passed                                                                                                                                                                                   |
+| Actual updater shell script with a filesystem Docker double                    | Passed: success, download failure, corrupted code, corrupted binary, backup failure, timezone installation failure and code installation failure                                         |
+| Real Docker compatibility, Debian 12 and `argonptg/pocketbase:0.26.6` on AMD64 | Passed: offline backup, 0.40.6 upgrade, automatic migrations, Budapest timezone installation, readiness, legacy login, retained uploads/mail configuration and unchanged container/mount |
+| Dependency audit, including development dependencies                           | **0 known vulnerabilities**                                                                                                                                                              |
+| Sendmail wrapper checks                                                        | 6 passed; optional real BusyBox check skipped                                                                                                                                            |
+| Formatting, shell syntax, Python compilation and whitespace                    | Passed                                                                                                                                                                                   |
 
 The upgrade checks preserve account credentials, roles, suspensions, protected admins, vehicle ownership/defaults, appointments, file contents, SMTP settings and custom backup/rate-limit configuration. A previously public legacy avatar is denied anonymously after upgrade and remains accessible to its owner through a signed file token. Applying the same migration files twice is safe through the migration history. Failure counters survive restart and expire correctly.
+
+The real Docker check used the documented image (`sha256:0481dcd7d226252f4b341f070bd1cb76db58d44025a49c5ea53d7c9ec7d542e7`) and reproduced the historical `/pb_data` mount while keeping the active database at `/pocketbase/pb_data`. The original updater reached security readiness but failed the booking check because the minimal image lacked Budapest timezone data. The corrected updater copies the host's distribution-managed timezone file after the offline backup and before restart. The full real-container check then passed, including booking's winter/summer timezone validation and a login using the legacy test account's original password.
+
+The English, Hungarian and earlier update guides now carry the same complete deployment block, including prerequisites, the release commit and script checksum. All shell blocks have valid Bash syntax; the installation blocks contain no placeholders and check the script hash before execution.
 
 ## Boundaries checked
 
@@ -33,7 +38,7 @@ The React review checked abort cleanup, current-viewer checks and booking-mode r
 
 ## Deployment scope
 
-The production browser check uses a local production build. No live customer database was used or changed, and no real email was sent. The updater's Docker operations were tested with a filesystem double; actual database upgrades used real PocketBase executables. Live Docker storage, proxy policies and off-machine restoration still require operator verification.
+The production browser check uses a local production build. No live customer database was used or changed, and no real email was sent. The updater's Docker operations were tested with both a filesystem double and a real disposable AMD64 container using the documented image. The real host-prerequisite check ran in a disposable Debian 12 container. This checks the Docker procedure, not the CasaOS web interface or the user's live server. ARM64 is supported by the updater but was not executed in this Docker check. Live storage, proxy policies and off-machine restoration still require operator verification.
 
 Use [the complete security updater](./SECURITY_UPDATE.md), which verifies the executable and every code/configuration asset before stopping the existing container and making an offline backup. The guide identifies the existing CasaOS data-mount mismatch, native superuser protection/MFA, OS/CA updates and off-machine backup requirements.
 

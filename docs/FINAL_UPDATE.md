@@ -1,51 +1,30 @@
 # Frissítés a végső tesztelés előtt
 
-**Aktuális kiadás:** meglévő telepítés frissítéséhez a [biztonsági frissítés teljes eljárását](./SECURITY_UPDATE.md) használd. Az az alábbi, még hiányzó migrációkat is tartalmazza, valamint a friss hookokhoz szükséges új biztonsági migrációt. Az itt megőrzött korábbi részleges parancsblokk önmagában már nem telepíti a teljes aktuális backendet.
+**Aktuális kiadás:** meglévő telepítés frissítéséhez a [biztonsági frissítés teljes eljárását](./SECURITY_UPDATE.md) használd. Az alábbi bemásolható blokk ugyanezt a teljes frissítőt használja, beleértve a hiányzó migrációkat és az új biztonsági szabályokat.
 
 A változat tartalmazza a megadott két dokumentum webes és szerkeszthető Word-változatát, az e-mailes fiókkezelést és a vendégadatok törlését. A közös dokumentumverzió **`2026-11-01.6-draft`**. A már működő céges SMTP-feladót és jelszavát a frissítés megőrzi; új API-kulcs vagy Vercel-secret nem kell.
 
 ## A meglévő CasaOS PocketBase frissítése
 
-Előbb készíts és tölts le mentést a PocketBase adminfelületén. A következő blokk a már működő `pocketbase` konténert és a tényleges **`/pocketbase/pb_data`** adatbázist használja; kötetet és indítási útvonalat nem változtat. Négy új migrációt alkalmaz, majd bemásolja a hozzájuk tartozó hookokat. A migráció önmagában nem töröl időpontot. Az újraindítás után a percenkénti feladat már törölheti a bizonyíthatóan legalább 30 napja lezárt vendégkéréseket; az ismeretlen lezárási idejű régi vendégkérések friss türelmi időt kapnak.
+A teljes aktuális frissítő telepíti a 0.40.6-os PocketBase-binárist, az új biztonsági migrációt, a még hiányzó négy e-mail-/adatmegőrzési migrációt és az összes hozzájuk tartozó hookot. Ellenőrzött offline mentést készít a módosítások előtt, megőrzi a működő SMTP-beállításokat, és ellenőrzi az új backend készenlétét. A korábbi fiók-, jármű- és időpontkezelő alapséma előfeltétel.
 
-Másold be ezt az egész blokkot:
+A Debian/Ubuntu alapú CasaOS gép host termináljába másold be az egész blokkot. Semmit nem kell benne átírnod:
 
-```sh
-sudo mkdir -p /DATA/AppData/pocketbase/pb_migrations /DATA/AppData/pocketbase/pb_hooks &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_migrations/1793541600_guest_retention.js -o /DATA/AppData/pocketbase/pb_migrations/1793541600_guest_retention.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_migrations/1793545200_email_verification.js -o /DATA/AppData/pocketbase/pb_migrations/1793545200_email_verification.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_migrations/1793548800_email_website_logo.js -o /DATA/AppData/pocketbase/pb_migrations/1793548800_email_website_logo.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_migrations/1793552400_email_portal_caption.js -o /DATA/AppData/pocketbase/pb_migrations/1793552400_email_portal_caption.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/content/booking.json -o /DATA/AppData/pocketbase/pb_hooks/fairauto-booking.json &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/fairauto-retention.js -o /DATA/AppData/pocketbase/pb_hooks/fairauto-retention.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/fairauto-appointments.js -o /DATA/AppData/pocketbase/pb_hooks/fairauto-appointments.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/appointments.pb.js -o /DATA/AppData/pocketbase/pb_hooks/appointments.pb.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/fairauto-mail.js -o /DATA/AppData/pocketbase/pb_hooks/fairauto-mail.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/account.pb.js -o /DATA/AppData/pocketbase/pb_hooks/account.pb.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/company-accounts.pb.js -o /DATA/AppData/pocketbase/pb_hooks/company-accounts.pb.js &&
-sudo curl -fsSL https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/main/pocketbase/pb_hooks/email-verification.pb.js -o /DATA/AppData/pocketbase/pb_hooks/email-verification.pb.js &&
-sudo docker exec pocketbase mkdir -p /pocketbase/fairauto_final_migrations /pocketbase/pb_hooks &&
-sudo docker cp /DATA/AppData/pocketbase/pb_migrations/1793541600_guest_retention.js pocketbase:/pocketbase/fairauto_final_migrations/1793541600_guest_retention.js &&
-sudo docker cp /DATA/AppData/pocketbase/pb_migrations/1793545200_email_verification.js pocketbase:/pocketbase/fairauto_final_migrations/1793545200_email_verification.js &&
-sudo docker cp /DATA/AppData/pocketbase/pb_migrations/1793548800_email_website_logo.js pocketbase:/pocketbase/fairauto_final_migrations/1793548800_email_website_logo.js &&
-sudo docker cp /DATA/AppData/pocketbase/pb_migrations/1793552400_email_portal_caption.js pocketbase:/pocketbase/fairauto_final_migrations/1793552400_email_portal_caption.js &&
-sudo docker exec pocketbase /pocketbase/pocketbase migrate up --dev=false --dir /pocketbase/pb_data --migrationsDir /pocketbase/fairauto_final_migrations &&
-sudo docker cp /DATA/AppData/pocketbase/pb_hooks/fairauto-booking.json pocketbase:/pocketbase/pb_hooks/fairauto-booking.json &&
-sudo docker cp /DATA/AppData/pocketbase/pb_hooks/fairauto-retention.js pocketbase:/pocketbase/pb_hooks/fairauto-retention.js &&
-sudo docker cp /DATA/AppData/pocketbase/pb_hooks/fairauto-appointments.js pocketbase:/pocketbase/pb_hooks/fairauto-appointments.js &&
-sudo docker cp /DATA/AppData/pocketbase/pb_hooks/appointments.pb.js pocketbase:/pocketbase/pb_hooks/appointments.pb.js &&
-sudo docker cp /DATA/AppData/pocketbase/pb_hooks/fairauto-mail.js pocketbase:/pocketbase/pb_hooks/fairauto-mail.js &&
-sudo docker cp /DATA/AppData/pocketbase/pb_hooks/account.pb.js pocketbase:/pocketbase/pb_hooks/account.pb.js &&
-sudo docker cp /DATA/AppData/pocketbase/pb_hooks/company-accounts.pb.js pocketbase:/pocketbase/pb_hooks/company-accounts.pb.js &&
-sudo docker cp /DATA/AppData/pocketbase/pb_hooks/email-verification.pb.js pocketbase:/pocketbase/pb_hooks/email-verification.pb.js &&
-sudo docker restart pocketbase
+```bash
+sudo apt-get update &&
+sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y bash ca-certificates coreutils curl tar unzip tzdata &&
+sudo curl --proto '=https' --tlsv1.2 -fsSL --retry 2 --max-time 120 https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/57b6a2c9fbe834f4005d174a02e1f65dbc9b990b/scripts/update-pocketbase-security.sh -o /root/fairauto-security-update.sh &&
+printf '%s  %s\n' '02901801b25c2c3e9d6de43892e6f39e6709a2ec17e9e52940d1931852eafaca' '/root/fairauto-security-update.sh' | sudo sha256sum -c - &&
+sudo bash /root/fairauto-security-update.sh 57b6a2c9fbe834f4005d174a02e1f65dbc9b990b &&
+sudo docker exec pocketbase /pocketbase/pocketbase --version &&
+sudo docker exec pocketbase /bin/sh -c 'wget -qO- http://127.0.0.1:8090/api/fairauto/security-policy'
 ```
 
-Privát repó 404-es raw linkjénél a saját GitHub-hozzáféréseddel töltsd le ezeket a fájlokat a megadott hostmappákba, majd a `docker` parancsoktól folytasd. Ne írj GitHub-, SMTP- vagy PocketBase-jelszót a parancsba vagy csevegésbe.
+Ez ugyanaz a rögzített és ellenőrzött blokk, mint a [biztonsági frissítés útmutatójában](./SECURITY_UPDATE.md#copy-paste-installation-on-the-casaos-host). Külön `migrate up` vagy újraindítás nem kell. Az ellenőrző összegnél `OK`, a végén `pocketbase version 0.40.6` és `"ready":true`, `"version":1` jelzi a sikert. A pontos mentési útvonalat a frissítő kiírja; töltsd le külön gépre.
 
-A weboldal új verzióját és a backendfrissítést együtt használd. A dokumentumverzió eltérésénél a foglalás beállítási hibát jelez. A PocketBase az auth szabály módosításakor visszavonhat korábbi munkameneteket: frissítés után jelentkezz be újra. A meglévő jelszavak, szerepek, letiltások és védett admin megmaradnak.
+A meglévő `pocketbase` konténert és a valódi `/pocketbase/pb_data` adatbázist használja. A konténert, köteteket és indítási útvonalat megtartja. Frissítés után jelentkezz be újra a weboldalon. A regisztrált felhasználók, jelszavak, szerepek, letiltások és védett admin megmaradnak.
 
-A levelek a weboldal saját PNG-logóját használják. Ha a korábbi, kétmigrációs frissítést már elvégezted, elegendő a rövid [logófrissítés](./EMAIL_LOGO.md).
+A migráció önmagában nem töröl időpontot. Az újraindítás után a percenkénti feladat már törölheti a bizonyíthatóan legalább 30 napja lezárt vendégkéréseket; az ismeretlen lezárási idejű régi vendégkérések friss türelmi időt kapnak. Az éles üzemhez még szükséges [külön szolgáltatói és üzemeltetési beállításokat](./SECURITY_UPDATE.md#server-side-work-before-public-operation) a frissítő nem helyettesíti.
 
 ## Mit állít be a fiókmigráció?
 

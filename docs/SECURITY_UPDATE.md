@@ -2,6 +2,63 @@
 
 This release hardens the website and PocketBase together. Install the backend update in a short maintenance window, then sign in again. The website refuses authenticated operations against an older or incomplete backend security policy.
 
+## Copy-paste installation on the CasaOS host
+
+On your existing Debian/Ubuntu CasaOS machine, open an SSH session or the host terminal where you previously ran `sudo docker` commands. Copy the **entire block below**. No commit, path, password, API key or other value needs replacing. Run it on the host, outside the PocketBase container.
+
+```bash
+sudo apt-get update &&
+sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y bash ca-certificates coreutils curl tar unzip tzdata &&
+sudo curl --proto '=https' --tlsv1.2 -fsSL --retry 2 --max-time 120 https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/57b6a2c9fbe834f4005d174a02e1f65dbc9b990b/scripts/update-pocketbase-security.sh -o /root/fairauto-security-update.sh &&
+printf '%s  %s\n' '02901801b25c2c3e9d6de43892e6f39e6709a2ec17e9e52940d1931852eafaca' '/root/fairauto-security-update.sh' | sudo sha256sum -c - &&
+sudo bash /root/fairauto-security-update.sh 57b6a2c9fbe834f4005d174a02e1f65dbc9b990b &&
+sudo docker exec pocketbase /pocketbase/pocketbase --version &&
+sudo docker exec pocketbase /bin/sh -c 'wget -qO- http://127.0.0.1:8090/api/fairauto/security-policy'
+```
+
+Enter your normal CasaOS/Linux sudo password if the terminal asks. The repository is public, so GitHub login is unnecessary. The SHA-256 check must print `OK` before the updater runs. The download and its installed assets are pinned to the reviewed backend release, even if this documentation is updated later.
+
+The block installs the required host utilities and `tzdata`, checks compatibility, downloads and verifies the release, stops the existing container, saves a verified offline backup, upgrades PocketBase to **0.40.6**, installs the matching hooks and configuration, starts the same container, and checks security readiness. It copies the distribution-managed Budapest timezone data into the container so booking can validate winter and summer time. Pending included migrations run automatically at startup; applied migrations are skipped. You do not need a separate `migrate up` or restart command.
+
+Success ends with `pocketbase version 0.40.6` and a JSON response containing `"ready":true` and `"version":1`. The updater prints the offline backup path under `/DATA/AppData/pocketbase/backups/`. Download that backup to a separate machine and sign in to the website again.
+
+If a command fails, later commands in the block stop. Read the error and use the diagnostics below; do not recreate the container. The update completes the PocketBase work described here. The [account-specific production settings](#server-side-work-before-public-operation) remain separate.
+
+## CasaOS compatibility
+
+[CasaOS supports Docker apps and recommends Debian 12](https://github.com/IceWhaleTech/CasaOS#system-compatibility). These commands use the existing Docker engine and standard Debian/Ubuntu host packages. The updater uses documented Docker operations, including [copying files from and into a stopped container](https://docs.docker.com/reference/cli/docker/container/cp/).
+
+This procedure targets the installation recorded in your earlier terminal output:
+
+| Item                        | Required value                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| Host                        | Debian/Ubuntu with `apt-get`, `sudo`, Bash and the existing CasaOS Docker engine           |
+| Existing container          | `pocketbase`, already running                                                              |
+| Container working directory | `/pocketbase`                                                                              |
+| Startup                     | `serve --http=0.0.0.0:8090`, default hook/migration paths and automatic migrations enabled |
+| Active database             | `/pocketbase/pb_data/data.db`                                                              |
+| Executable                  | `/pocketbase/pocketbase`                                                                   |
+| Accepted starting versions  | 0.26.3, 0.26.6 or an already updated 0.40.6                                                |
+| Container architecture      | `x86_64` / AMD64 or `aarch64` / ARM64                                                      |
+| Container utilities         | `/bin/sh` and `wget`                                                                       |
+
+The host `tzdata` package provides `/usr/share/zoneinfo/Europe/Budapest`; the command block installs it automatically.
+
+CasaOS also supports ARMv7, but this updater does not install a 32-bit binary. Custom startup directories or disabled automatic migrations stop the preflight. The updater checks the version, architecture, paths and required utilities before stopping PocketBase. It preserves the existing container and its mounts; it does not reinstall Docker or CasaOS.
+
+CasaOS may still display the original `argonptg/pocketbase:0.26.6` image tag. The version command verifies the actual updated executable. Before recreating the app or installing a new image through CasaOS, complete the [persistence step below](#server-side-work-before-public-operation).
+
+Optional read-only checks for the recorded container settings:
+
+```sh
+sudo docker inspect pocketbase --format 'Running={{.State.Running}} WorkingDir={{.Config.WorkingDir}} Args={{json .Args}}' &&
+sudo docker exec pocketbase uname -m &&
+sudo docker exec pocketbase /pocketbase/pocketbase --version &&
+sudo docker exec pocketbase /bin/sh -c 'test -s /pocketbase/pb_data/data.db && command -v wget'
+```
+
+Your earlier output established the container paths, not the current health of the live server. Compatibility and upgrade tests use disposable data; the command above performs the live preflight when you run it.
+
 ## What changed
 
 - User and superuser password failures are counted atomically in PocketBase's SQLite database: eight attempts per address and auth collection in 15 minutes. Success clears that address's failures. Refreshing a session does not use the failure budget. Counts survive restarts and apply across frontend instances, collection names/IDs and forged forwarding headers. An application user cannot exhaust a same-address superuser's separate budget.
@@ -14,26 +71,12 @@ This release hardens the website and PocketBase together. Install the backend up
 - Production pages use a different CSP nonce on every response, with no inline-script or eval allowance. React and the initial theme script receive that nonce. Objects, framing, inline event handlers and external browser connections are blocked. Nonce-bearing pages and API responses are not cached. Production HTTPS/origin/backend configuration is checked explicitly.
 - Direct bookings reject overflowing times such as `05:60` and misleading JSON media types.
 - The updater installs pinned **PocketBase 0.40.6**, including newer upstream security fixes. SHA-256 checksums for all installed code/configuration assets and the official AMD64/ARM64 ZIPs are embedded in the script; the executable is downloaded and verified before stopping the current container.
+- Minimal CasaOS images receive the host's distribution-managed `Europe/Budapest` timezone data. Booking verifies both winter and summer offsets; missing host timezone data stops the preflight before downtime.
 - Daily native backups are enabled when no schedule exists, with at least seven copies. Existing schedules, backup destinations, proxy trust, sender settings, SMTP credentials and appointment-mail configuration are retained.
 
 The CSP permits inline styles because React and the current UI use style attributes. Script execution uses nonces and `strict-dynamic`. Authorization remains in API handlers and PocketBase rules; middleware adds browser protections.
 
-## Copy-paste installation on the CasaOS host
-
-Use the exact commit SHA linked in the delivery message. The repository is currently public. Install `unzip` if missing (`sudo apt-get install unzip` on Debian/CasaOS).
-
-```bash
-FAIRAUTO_REF=PASTE_THE_FULL_DELIVERED_COMMIT_SHA
-FAIRAUTO_SCRIPT=$(mktemp /tmp/fairauto-security.XXXXXX.sh) &&
-curl --proto '=https' --tlsv1.2 -fsSL \
-  "https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/$FAIRAUTO_REF/scripts/update-pocketbase-security.sh" \
-  -o "$FAIRAUTO_SCRIPT" &&
-sudo bash "$FAIRAUTO_SCRIPT" "$FAIRAUTO_REF"
-```
-
-The delivery message includes the script's SHA-256 to verify the download before execution. No password or API key belongs in this command.
-
-The updater targets the existing `pocketbase` container, `/pocketbase/pb_data/data.db`, default hook/migration paths and `WorkingDir=/pocketbase`. It accepts documented 0.26.3/0.26.6 installations or an already updated 0.40.6 installation on Linux AMD64/ARM64. Custom startup directories or disabled automatic migrations stop the preflight. It does not create a container, redirect data or change mounts.
+## Backup, migrations and diagnostics
 
 All downloads finish first. The container is stopped, and the actual database, uploads, old executable, hooks, migrations and container metadata are copied into a root-private host directory. A checked `snapshot.tar.gz` and `SHA256SUMS` are created **before** installing code. Download the archive to a separate machine. The archive and container metadata may contain personal data or secrets; keep them private.
 
@@ -50,6 +93,15 @@ sudo docker exec pocketbase /bin/sh -c \
 sudo docker exec pocketbase /bin/sh -c \
   'wget -qO- http://127.0.0.1:8090/api/fairauto/appointments/config'
 ```
+
+If the updater reports a startup or readiness failure, inspect the state and recent logs:
+
+```sh
+sudo docker inspect pocketbase --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}}' &&
+sudo docker logs --tail 100 pocketbase
+```
+
+Review logs locally; avoid posting customer data or credentials. A failed installation may intentionally leave PocketBase stopped so the error can be investigated before further changes.
 
 ## Recovery
 
