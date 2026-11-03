@@ -13,11 +13,11 @@ A Debian/Ubuntu alapú CasaOS gép host termináljába másold be az egész blok
 ```bash
 sudo apt-get update &&
 sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y bash ca-certificates coreutils curl tar unzip tzdata &&
-sudo curl --proto '=https' --tlsv1.2 -fsSL --retry 2 --max-time 120 https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/57b6a2c9fbe834f4005d174a02e1f65dbc9b990b/scripts/update-pocketbase-security.sh -o /root/fairauto-security-update.sh &&
-printf '%s  %s\n' '02901801b25c2c3e9d6de43892e6f39e6709a2ec17e9e52940d1931852eafaca' '/root/fairauto-security-update.sh' | sudo sha256sum -c - &&
-sudo bash /root/fairauto-security-update.sh 57b6a2c9fbe834f4005d174a02e1f65dbc9b990b &&
+sudo curl --proto '=https' --tlsv1.2 -fsSL --retry 2 --max-time 120 https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/543ded9df350e5df66a03e520d069d93e8403a18/scripts/update-pocketbase-security.sh -o /root/fairauto-security-update.sh &&
+printf '%s  %s\n' 'c76572745c4f26af46fdc8a8abe13a3f4c9333a1bbce3e777bd515b83f0ca936' '/root/fairauto-security-update.sh' | sudo sha256sum -c - &&
+sudo bash /root/fairauto-security-update.sh 543ded9df350e5df66a03e520d069d93e8403a18 &&
 sudo docker exec pocketbase /pocketbase/pocketbase --version &&
-sudo docker exec pocketbase /bin/sh -c 'wget -qO- http://127.0.0.1:8090/api/fairauto/security-policy'
+sudo docker exec pocketbase /bin/sh -c 'wget -qO- http://127.0.0.1:8090/api/fairauto/appointments/documents-policy'
 ```
 
 Ez ugyanaz a rögzített és ellenőrzött blokk, mint a [biztonsági frissítés útmutatójában](./SECURITY_UPDATE.md#copy-paste-installation-on-the-casaos-host). Külön `migrate up` vagy újraindítás nem kell. Az ellenőrző összegnél `OK`, a végén `pocketbase version 0.40.6` és `"ready":true`, `"version":1` jelzi a sikert. A pontos mentési útvonalat a frissítő kiírja; töltsd le külön gépre.
