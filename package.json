@@ -13,7 +13,8 @@
     "legal:check": "node --experimental-strip-types scripts/check-legal.mjs",
     "test:migration": "python3 scripts/check-account-migration.py",
     "test:production-security": "node scripts/check-production-security.mjs",
-    "test:updater": "python3 scripts/check-security-updater.py"
+    "test:updater": "python3 scripts/check-security-updater.py",
+    "test:auth-latency": "node scripts/check-auth-latency.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

@@ -56,8 +56,8 @@ printf '%s  %s\n' "$archive_sha" "$stage/pocketbase.zip" | sha256sum -c -
 unzip -p "$stage/pocketbase.zip" pocketbase > "$stage/pocketbase"
 chmod 0755 "$stage/pocketbase"
 source_url="https://raw.githubusercontent.com/VKornel1031/fairwebserviceclient/$release_ref"
-hooks=(account.pb.js appointments.pb.js company-accounts.pb.js email-verification.pb.js fairauto-appointments.js fairauto-mail.js fairauto-retention.js fairauto-security.js security.pb.js)
-migrations=(1793541600_guest_retention.js 1793545200_email_verification.js 1793548800_email_website_logo.js 1793552400_email_portal_caption.js 1793628000_security_hardening.js)
+hooks=(account.pb.js appointments.pb.js company-accounts.pb.js email-verification.pb.js fairauto-appointments.js fairauto-mail.js fairauto-retention.js fairauto-security.js security.pb.js fairauto-documents.js)
+migrations=(1793541600_guest_retention.js 1793545200_email_verification.js 1793548800_email_website_logo.js 1793552400_email_portal_caption.js 1793628000_security_hardening.js 1793721600_appointment_documents.js)
 for file in "${hooks[@]}"; do
   curl --proto '=https' --tlsv1.2 -fsSL --retry 2 --max-time 60 "$source_url/pocketbase/pb_hooks/$file" -o "$stage/pb_hooks/$file"
   test -s "$stage/pb_hooks/$file"
@@ -76,20 +76,22 @@ chmod 0644 "$stage/pb_hooks/fairauto-booking.json"
 # BEGIN ASSET CHECKSUMS
 (cd "$stage" && sha256sum -c - <<'FAIRAUTO_ASSETS'
 fc5c73ac2f5b5887bd3b4d6c316a1267b0a1b11e4021e828180ae501d1ec960c  pb_hooks/account.pb.js
-a55eff0f926236f73488871dd044ca646d79322f84e1ff908908729e07f0494a  pb_hooks/appointments.pb.js
+3e7cd04e6f8015224cabcc033a9c495b3cb3ba01e5469ce3401603511c684a68  pb_hooks/appointments.pb.js
 944e8b75b77aaf12ccd59ec9ffa3eaa3827e7634e4a949dbb229b53738f19acc  pb_hooks/company-accounts.pb.js
 e82f6c0d87ec97d4ddf18fb1af940694218407d94055e03adcdd46e5338b007c  pb_hooks/email-verification.pb.js
-fbeb861278e8fec6e99a989349292c1564538cd3c98b95fb54e3bb3b1449ec20  pb_hooks/fairauto-appointments.js
-bacd2929754719159ca61f24880fe35334e44929b2ae5e9c96bf9f1ce741d8b4  pb_hooks/fairauto-mail.js
+3679433b243d41ceb70f7a3c1cec86eb9bf946da881209ff9f76b980dbb452c5  pb_hooks/fairauto-appointments.js
+a79f386511569acbe266cec535968f39edccddc57875a32e623ba607746b9475  pb_hooks/fairauto-mail.js
 1f2ddd5cb143e57a1672033c9914ac0f50e903225d4c9e42436944f23304cb7c  pb_hooks/fairauto-retention.js
 e9976e172df3c35e97ddf0ca6c9fbb78a3bd3c1ff7130581c6215d37bdce0220  pb_hooks/fairauto-security.js
 4eaef9da532d25b4dab40730a9e6e5f8865a51968c0d3fee775342a8a608d7af  pb_hooks/security.pb.js
+9aa8bc928cb5cef8551cabb933a13b1b609f5e196f603d3aa696e5e3c1e78b8f  pb_hooks/fairauto-documents.js
 29dd00e75352fcf9c52059b5044fd02e37627d6808f21f2af1b6c53ff5a3c912  pb_migrations/1793541600_guest_retention.js
 6ab5304fa4fc64f97518d99eb082471ef0a23a1e28beff2762b33320dab1809e  pb_migrations/1793545200_email_verification.js
 feef547bc99e87f11926353939f55348dc932f758de1fcf270bf921b8d646d7c  pb_migrations/1793548800_email_website_logo.js
 bd5aae5f03a4fec9a34cf06cc386f21133d29f74088e7718a253aee780c01e01  pb_migrations/1793552400_email_portal_caption.js
 3beba393e6d78a6586a9105689abb0e822451a8e8af02b2b41195931cc9b599b  pb_migrations/1793628000_security_hardening.js
-c0dae9291301d60c9344be840376a29a82e728b398ee66ff134eea71139cfb31  pb_hooks/fairauto-booking.json
+f491950b5b63112709a108ee0e001afb2aad60823d8906f33c0c80de303e450d  pb_migrations/1793721600_appointment_documents.js
+6fcd16f605296f383ea71e15d5bb4dea7a17ffbfca5645b0b8ba6893e07256b7  pb_hooks/fairauto-booking.json
 FAIRAUTO_ASSETS
 )
 # END ASSET CHECKSUMS
@@ -136,6 +138,9 @@ done
 [[ $ready == true ]] || { echo 'PocketBase did not pass its security readiness check. Inspect docker logs pocketbase.' >&2; exit 1; }
 [[ $(docker exec "$container" /pocketbase/pocketbase --version) == 'pocketbase version 0.40.6' ]] || { echo 'PocketBase binary version check failed.' >&2; exit 1; }
 docker exec "$container" /bin/sh -c 'wget -qO- http://127.0.0.1:8090/api/fairauto/appointments/config >/dev/null'
+documents_policy=$(docker exec "$container" /bin/sh -c 'wget -qO- http://127.0.0.1:8090/api/fairauto/appointments/documents-policy')
+documents_policy=${documents_policy//[[:space:]]/}
+[[ $documents_policy == *'"ready":true'* && $documents_policy == *'"version":1'* ]] || { echo 'Service document migration/readiness check failed.' >&2; exit 1; }
 echo "Security update installed from $release_ref"
 echo "Offline backup: $backup/snapshot.tar.gz"
 echo 'Download that backup to a separate machine. Sign in again on the website.'

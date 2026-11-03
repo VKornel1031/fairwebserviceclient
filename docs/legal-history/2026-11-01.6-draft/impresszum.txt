@@ -1,0 +1,24 @@
+Impresszum – Fair Autószerviz Fehérvár
+Változat: 2026-11-01.6-draft
+Frissítve: 2026-11-01
+
+Üzemeltetői adatok
+Cégnév: Fair Autószerviz Fehérvár Kft.
+Székhely: 8105 Pétfürdő, Fazekas M. utca 8/b.
+Cégjegyzékszám: 19-09-520902
+Adószám: 27277777-2-19
+Nyilvántartó hatóság: Kitöltés szükséges az éles használat előtt
+Képviselő: Vida Zoltán
+Engedélyezés / szabályozott tevékenység: Kitöltés szükséges az éles használat előtt
+
+Kapcsolat
+Műhely címe: 8000 Székesfehérvár, Balatoni út 8.
+Telefon: 06 20 347 3705 / 06 20 405 6299
+E-mail: kborsos@fairauto.eu
+Nyitvatartás: Hétfő–péntek · 06:00–17:00
+
+Tárhely és technikai szolgáltatók
+Tárhelyszolgáltató: Vercel Inc.
+Szolgáltató címe / elérhetősége: 440 N Barranca Avenue #4133, Covina, CA 91723, USA
+Tárhelyszolgáltató e-mail: privacy@vercel.com
+A frontend Vercelen, a PocketBase az üzemeltető homelabján, Cloudflare Tunnel közvetítésével működik. A szolgáltatók pontos jogi adatait, adatfeldolgozói szerepeit, földrajzi helyét és továbbítási garanciáit az üzemeltetőnek a tényleges telepítés szerint ki kell töltenie. Az opcionális levelezés az üzemeltető által beállított PocketBase-levélklienst és saját vagy választott levelezőkiszolgálót használja; a tényleges szolgáltatót és adatkezelést az üzemeltetőnek meg kell neveznie.

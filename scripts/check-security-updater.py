@@ -53,8 +53,9 @@ elif command == "exec":
     assert state["running"], "exec attempted on a stopped container"
     if args[2:] == ["uname", "-m"]: print("x86_64")
     elif args[2] == "/pocketbase/pocketbase":
-        print("pocketbase version " + ("0.26.6" if (container / "pocketbase").read_bytes() == b"old-binary" else "0.40.6"))
+        print("pocketbase version " + (("0.40.6" if mode == "success_current" else "0.26.6") if (container / "pocketbase").read_bytes() == b"old-binary" else "0.40.6"))
     elif "security-policy" in args[-1]: print('{"ready":true,"version":1}')
+    elif "documents-policy" in args[-1]: print('{"ready":true,"version":1,"maxBytes":3145728}')
     elif "appointments/config" in args[-1]: print('{}')
     elif args[-1].startswith("test -d "):
         sys.exit(0 if (container / args[-1].split("/pocketbase/")[1]).is_dir() else 1)
@@ -81,7 +82,7 @@ elif command == "cp":
 else: raise AssertionError(args)
 '''
 
-for mode in ["success", "download_failure", "asset_tamper", "archive_tamper", "backup_failure", "timezone_install_failure", "install_failure"]:
+for mode in ["success", "success_current", "download_failure", "asset_tamper", "archive_tamper", "backup_failure", "timezone_install_failure", "install_failure"]:
     with tempfile.TemporaryDirectory(prefix="fair-updater-") as directory:
         root = Path(directory)
         commands = root / "bin"
@@ -106,23 +107,25 @@ for mode in ["success", "download_failure", "asset_tamper", "archive_tamper", "b
                "PB_HOST_ROOT": str(root / "host"), "PB_RELEASE_ARCHIVE": str(archive)}
         result = subprocess.run(["bash", str(repo / "scripts/update-pocketbase-security.sh"), "a" * 40],
                                 env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
-        assert (result.returncode == 0) == (mode == "success"), (mode, result.stdout, result.stderr)
+        assert (result.returncode == 0) == (mode in ["success", "success_current"]), (mode, result.stdout, result.stderr)
         state = json.loads((root / "state.json").read_text())
         assert database.read_bytes() == b"existing-account-and-booking-data"
         assert json.loads(mail.read_text())["appUrl"] == "https://operator.example.test"
-        assert state["running"] == (mode in ["success", "download_failure", "asset_tamper", "archive_tamper"])
+        assert state["running"] == (mode in ["success", "success_current", "download_failure", "asset_tamper", "archive_tamper"])
         snapshots = list((root / "host").glob("backups/*/snapshot.tar.gz"))
-        assert bool(snapshots) == (mode in ["success", "timezone_install_failure", "install_failure"])
+        assert bool(snapshots) == (mode in ["success", "success_current", "timezone_install_failure", "install_failure"])
         for snapshot in snapshots:
             with tarfile.open(snapshot) as backup:
                 assert backup.extractfile("pb_data/data.db").read() == database.read_bytes()
                 assert backup.extractfile("pocketbase").read() == b"old-binary"
                 assert backup.extractfile("pb_hooks/fairauto-mail.json").read() == mail.read_bytes()
-        if mode != "success": assert (container / "pocketbase").read_bytes() == b"old-binary"
+        if mode not in ["success", "success_current"]: assert (container / "pocketbase").read_bytes() == b"old-binary"
         else:
             assert (container / "pocketbase").read_bytes() != b"old-binary"
             assert (container / "pb_hooks/security.pb.js").is_file()
+            assert (container / "pb_hooks/fairauto-documents.js").is_file()
+            assert (container / "pb_migrations/1793721600_appointment_documents.js").is_file()
             assert (container / "pb_migrations/1793628000_security_hardening.js").is_file()
             assert (root / "container-root/usr/share/zoneinfo/Europe/Budapest").read_bytes() == Path("/usr/share/zoneinfo/Europe/Budapest").read_bytes()
         if mode in ["download_failure", "asset_tamper", "archive_tamper"]: assert not any(call[0] == "stop" for call in state["calls"])
-print("PASS: updater installs Budapest timezone data, rejects tampered code/binaries, backs up offline before writes, preserves data/mail config, and stops safely on download, backup, timezone or code installation failure.")
+print("PASS: updater supports an already-updated 0.40.6 installation, installs Budapest timezone data, rejects tampered code/binaries, backs up offline before writes, preserves data/mail config, and stops safely on download, backup, timezone or code installation failure.")

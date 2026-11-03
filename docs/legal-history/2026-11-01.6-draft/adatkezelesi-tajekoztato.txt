@@ -1,0 +1,72 @@
+Adatkezelési Tájékoztató – Fair Autószerviz Fehérvár
+Változat: 2026-11-01.6-draft
+Frissítve: 2026-11-01
+
+Az adatkezelő és az elérhetőségek
+Adatkezelő: Fair Autószerviz Fehérvár Kft.
+Székhely: 8105 Pétfürdő, Fazekas M. utca 8/b.
+Telephely / műhely: 8000 Székesfehérvár, Balatoni út 8.
+Cégjegyzékszám: 19-09-520902
+Adószám: 27277777-2-19
+Képviselő / ügyvezető: Vida Zoltán
+Adatkezelési kapcsolattartás: kborsos@fairauto.eu
+Telefon: 06 20 347 3705 / 06 20 405 6299
+
+Vendégként történő időpontkérés
+Magánszemélyek regisztráció nélkül kérhetnek időpontot. Kezelt adatok: teljes név, e-mail-cím, mobiltelefonszám, település, rendszám, gépjárműmárka és -modell, gyártási év, alvázszám (VIN), választott szolgáltatás, kért időpont, megjegyzés és állapot. A kérés azonosítója, az elfogadott feltételverzió és az elfogadás időpontja, valamint a későbbi módosítások előzménye is tárolódik.
+Az adatkezelés célja a kérés kezelése, kapcsolatfelvétel, telefonos egyeztetés, visszaigazolás és a kapcsolódó ügyintézés. Természetes személy saját kérésénél a jogalap a GDPR 6. cikk (1) bekezdés b) pontja: az érintett kérésére szerződéskötést megelőző lépések megtétele. Az egyes külön célokhoz, például jogi igények kezeléséhez önálló jogalap és szükséges megőrzés tartozhat.
+Az online kérés nem hoz létre javítási megrendelést és nem jelent online fizetést. Műhelykapacitást a munkatárs telefonos visszaigazolása biztosít. A műszaki vizsga időpontját kizárólag telefonon lehet egyeztetni.
+A vendég által indított időpontkérés és a hozzá kapcsolódó webes előzmények, illetve értesítési adatmásolatok a befejezés vagy lemondás rögzítését követő 30 nap elteltével automatikusan törlődnek az aktív webes adatbázisból. A működő rendszer percenként ellenőrzi a lejárt tételeket; üzemszünet után a következő futás folytatja a törlést. A még függő, visszaigazolt vagy folyamatban lévő kéréseket ez az időzített törlés nem érinti.
+A munkatárs által telefonon felvett, vendég-hozzáférési azonosító nélküli ügyfélkérés, valamint a korábban fiókhoz tartozó kérés megőrzését az üzemeltető külön kezeli. A webes törlés nem törli a már kézbesített levelet a címzett postaládájából, a jogszerűen megőrzött külön szerviziratokat vagy a korábbi biztonsági mentéseket.
+
+Céges ügyfélportál és mentett járművek
+Nyilvános regisztrációhoz cégnév és magyar adószám szükséges. A kapcsolattartó neve és e-mail-címe kötelező, telefonszáma, települése és a cég települése a profilban megadható. A rendszer tárolja a fiókazonosítót, szerepkört, aktív vagy letiltott állapotot és az elfogadott feltételek verzióját, időpontját. Az adószám formátumellenőrzése nem igazolja a cég létezését vagy a regisztráló képviseleti jogát.
+A mentett gépjármű adatai: rendszám, márka, modell, gyártási év, opcionális VIN, a fiókhoz tartozás és az alapértelmezett jármű kiválasztása. Új időpontkéréshez a VIN kötelező. A céges portál saját járműlistát, időpontokat, rögzített állapotokat és esetleges tételes árbecslést mutat; nem teljes körű munkalap-, számlázási vagy hatósági nyilvántartás, és jelenleg nem biztosít több külön fióknak közös flottát.
+A jelszót PocketBase jelszólenyomatként tárolja. A belépési adatok titkosított HTTPS-kapcsolaton jutnak el a webhely kiszolgálóihoz. A böngésző nem kap olvasható hitelesítési tokent, és a valódi fiók- vagy foglalási adatok nem kerülnek a localStorage-ba. Új fióknál a bejelentkezéshez az e-mail-cím megerősítése szükséges. A korábbi fiókok hozzáférése megmarad, de címük ettől nem válik automatikusan igazolttá. Új megerősítő levél és e-mailes jelszó-visszaállítás kérhető; az e-mail-cím módosítása az új címre küldött hivatkozás és a jelenlegi jelszó megadásával véglegesíthető.
+A céges kapcsolattartói adatok kezelésének célja a partnerkapcsolat, a fiók és a szervizügyintézés kezelése. Alkalmazandó jogalap lehet az adatkezelő dokumentált jogos érdeke a GDPR 6. cikk (1) bekezdés f) pontja szerint; ennek érdekmérlegelését az üzemeltetőnek kell rögzítenie. Az érintettel közvetlenül fennálló vagy előkészített szerződésnél a b) pont lehet alkalmazandó. Az ÁSZF elfogadása és a tájékoztató megismerése nem általános hozzájárulás minden adatkezeléshez.
+A profil és a mentett járművek a felületen módosíthatók; a saját járművek törölhetők. A fiók törlését az adatkezelőnél lehet kérni, a végrehajtást jogosult adminisztrátor végzi. A fiók törlése törli a hozzá tartozó mentett járműveket, de az időpontban külön mentett kapcsolattartási és járműmásolatot nem törli automatikusan. A fiókos időpontokra nem vonatkozik a vendégadatok időzített törlése; ezek megőrzését és a törlési kérelmek teljesítését külön kell rendezni.
+Korábbi magánügyfél-fiókok adataik megőrzésével partner szerepkörbe kerültek. Korábbi profilképet a jelenlegi webes felület nem kér és nem jelenít meg; a meglévő kép eltávolítását az üzemeltetőtől lehet kérni.
+
+Szolgáltatási e-mailek
+A fiók megerősítéséhez, jelszó-visszaállításhoz és e-mail-cím módosításához egyszer használatos vagy időben korlátozott megerősítő hivatkozást küldünk. A címigazolási link 24 órás, a jelszó-visszaállítási és címváltoztatási link 30 perces. A hivatkozás megnyitása önmagában nem hajt végre módosítást. A link titkos részét a weboldal URL-töredékből olvassa ki és csak a megerősítéskor, titkosított POST-kérésben továbbítja; nem tárolja helyi tárhelyen. Bekapcsolt időpontértesítéseknél a kérés átvételéről, telefonos visszaigazolásról, módosításról, lemondásról, árbecslésről és a munka elkészültéről küldhető értesítés. A levél tartalmazhatja a kapcsolattartó nevét, e-mail-címét, telefonszámát, települését, az időpont és szolgáltatás adatait, a cég nevét, a gépjármű és VIN adatait, a megjegyzést és a rögzített árbecslés tételeit. Ezek ügyintézési üzenetek; a portál nem küld marketinghírlevelet.
+A kapcsolattartó és a jogosult aktív munkafelvevői, illetve vezetői fiókok külön levelet kapnak. Az adminisztrátor akkor címzett, ha az üzemeltető a belső értesítési körbe bevonta. Az ügyfél levele nem mutatja a többi címzett címét. A küldési sor címzettenkénti másolatot, próbálkozásszámot és technikai állapotot tárol; a sikeres kiszolgálói átadás nem postaládai kézbesítési igazolás.
+Az értesítés az adott időpontkezelési célhoz tartozik, és annak megfelelő jogalapon történik. A Gmail SMTP használata esetén a levelek a Google levelezési szolgáltatásán is áthaladnak. A kézbesített levél és a külső levelezési napló további megőrzése a tényleges szolgáltatás beállításaitól is függ.
+
+Tárolás, hozzáférők és külső szolgáltatók
+A központi PocketBase-adatbázist a társaság saját szerverén üzemelteti. A megadott telepítési hely: 8105 Pétfürdő, Fazekas M. utca 8/b. Az üzemeltetésért az adatkezelő, technikai közreműködéséért a belső IT-felelős felel.
+A céges partner a saját fiókjához tartozó járművekhez és időpontokhoz fér hozzá. A munkafelvevő, vezető és adminisztrátor a feladatához szükséges időpontadatokat kezeli. Az adminisztrátor más fiókokat és a mentett járműveket is kezelheti. Szerelői vagy külön műhelyszerepkör nincs a webportálon.
+Vercel Inc.: a webes felület és a szerveroldali alkalmazás kiszolgálása. A fiók- és foglalási kérések az alkalmazás szerverén is áthaladnak, ezért a szolgáltatás nem kizárólag statikus fájlok tárhelye. A Vercel által közzétett kapcsolattartási cím: 440 N Barranca Avenue #4133, Covina, CA 91723, USA; privacy@vercel.com.
+Cloudflare, Inc.: hálózati közvetítés, Cloudflare Tunnel, forgalomvédelem és az üzemeltető által beállított védelmi funkciók. Az átmenő kérések és technikai naplók a szolgáltatás beállításai szerint kezelhetők. A dokumentumban megadott cím: 101 Townsend St, San Francisco, CA 94107, USA.
+Google Gmail / Google Workspace: a beállított SMTP-levélküldés szolgáltatója. Az alkalmazandó szerződő fél, a postafiók típusa, megőrzése és adattovábbítási feltételei a ténylegesen használt fióktól függenek; ezeket az adatkezelőnek kell véglegesítenie.
+A szolgáltatók földrajzi régióját, szerződéses adatfeldolgozói szerepét és az esetleges EGT-n kívüli adattovábbítás GDPR V. fejezet szerinti jogalapját, garanciáit az üzemeltetőnek a tényleges fiókok és szerződések alapján kell dokumentálnia. A székhely feltüntetése önmagában nem igazolja az adattárolás helyét vagy a továbbítás jogszerűségét.
+A betűkészleteket a webhely helyben szolgálja ki; Google Fonts-kérés nem történik. Automatikus profilalkotás, kizárólag automatizált joghatású döntés, beépített analitika és hirdetési követés nincs.
+Vercel adatvédelmi tájékoztató: https://vercel.com/legal/privacy-policy
+Cloudflare adatvédelmi tájékoztató: https://www.cloudflare.com/privacypolicy/
+Google adatvédelmi tájékoztató: https://policies.google.com/privacy?hl=hu
+
+Megőrzés, törlés és biztonsági mentések
+További megőrzési idők: Üzemeltetői véglegesítés szükséges az éles használat előtt.
+Véglegesített jogalapok és szolgáltatói feltételek: Üzemeltetői véglegesítés szükséges az éles használat előtt.
+A vendégkérés időzített törlése az aktív webes adatbázisra, a hozzá tartozó állapotelőzményekre és értesítési sorokra vonatkozik. A korábban lezárt, hiteles lezárási előzmény nélküli vendégkérésnél a törlési határidő bevezetésétől számított türelmi időt alkalmazunk; nem következtetünk a lezárásra a létrehozás dátumából.
+A hozzáférési süti lejárata és az adatok megőrzése különböző fogalom. A munkamenetsüti legfeljebb 8 órás; a vendég hozzáférési sütije legfeljebb 120 napos, a foglaló használata megújíthatja. A lezárt vendégkérés adatai ettől függetlenül a rövidebb törlési szabály szerint szűnnek meg.
+A biztonsági mentésekben az adatok a mentési rotáció végéig szerepelhetnek. A mentések hozzáférését, megőrzését és visszaállításkor az időközben esedékessé vált törlések ismételt végrehajtását az üzemeltetőnek kell biztosítania. A fiókos kérések, függő ügyek, naplók és mentések pontos megőrzési idejét az alábbi adatmezőben kell véglegesíteni.
+A külön szervizprogramban, számlázásban és hatósági vizsgáztatásban keletkező iratok nem azonosak a webes időpontkéréssel. A jogszabály alapján megőrzendő számviteli bizonylatokra, illetve vizsgairatokra a rájuk irányadó szabályok vonatkoznak; ez nem ad általános jogalapot minden portáladat korlátlan tárolására.
+
+Sütik és helyi beállítások
+A bejelentkezéshez és a kért vendégfoglalási funkcióhoz szükséges, HttpOnly hozzáférési sütiket használunk. A világos vagy sötét téma a felhasználó választása után helyi tárhelyen marad meg. Opcionális analitikai vagy marketingkövetést a portál nem használ; ilyen célú hozzájárulást jelenleg nem kér.
+A szükséges funkcionális tárolásra nem kérünk általános elfogadó hozzájárulást. A Cloudflare által ténylegesen alkalmazott biztonsági sütik célját és időtartamát az üzemeltetőnek a bekapcsolt szolgáltatások alapján kell nyilvántartania. Új, hozzájárulást igénylő követés csak annak külön kezelése után vezethető be.
+Részletes süti- és tárhelytájékoztató: /suti-tajekoztato
+
+Az érintettek jogai és kérelmeik
+Kérelmet a kborsos@fairauto.eu címen vagy a székhelyre küldött levélben lehet benyújtani. Az alkalmazandó feltételek szerint hozzáférést, helyesbítést, törlést és korlátozást kérhetsz; megfelelő esetben adathordozhatósági jogod van. Jogos érdeken alapuló adatkezelés ellen tiltakozhatsz. Hozzájáruláson alapuló kezelésnél a hozzájárulást a jövőre nézve visszavonhatod.
+A kérelmeket indokolatlan késedelem nélkül, főszabály szerint egy hónapon belül kell megválaszolni. A GDPR feltételeivel legfeljebb további két hónap hosszabbítás lehetséges; az okokról és a hosszabbításról az első hónapon belül tájékoztatást kell adni. Csak indokolt és szükséges azonosítási adat kérhető. A törlés jogszabályi megőrzés vagy más alkalmazandó kivétel miatt korlátozható, erről az adatkezelő tájékoztatást ad.
+A saját profiladatok és járművek a felületen kezelhetők. Fióktörléshez és a már külön rögzített időpontmásolatok törléséhez az adatkezelő segítsége szükséges; a fiókhoz tartozó kapcsolat megszüntetése önmagában nem jelenti minden másolat anonimizálását.
+
+Jogorvoslati lehetőségek
+Felügyeleti hatóság: Nemzeti Adatvédelmi és Információszabadság Hatóság (NAIH)
+Cím: 1055 Budapest, Falk Miksa utca 9–11.
+Levelezési cím: 1363 Budapest, Pf. 9.
+E-mail: ugyfelszolgalat@naih.hu
+Panaszt tehetsz a felügyeleti hatóságnál, és a GDPR szerint bírósági jogorvoslattal is élhetsz, többek között a szokásos tartózkodási helyed szerinti tagállam illetékes bírósága előtt.
+NAIH – hivatalos ügyfélszolgálat: https://naih.hu/ugyfelszolgalat-kapcsolat
+GDPR – az (EU) 2016/679 rendelet: https://eur-lex.europa.eu/eli/reg/2016/679/oj

@@ -14,7 +14,8 @@ import {
   SlidersHorizontal,
   Wrench,
 } from "lucide-react";
-import { accountRequest } from "@/lib/accounts";
+import { accountRequest, AccountRequestError } from "@/lib/accounts";
+import { useLiveRefresh } from "@/lib/use-live-refresh";
 import {
   addDays,
   dateLabel,
@@ -101,53 +102,55 @@ export default function AppointmentList({
     if (identifier && /^[a-z0-9]{15}$/.test(identifier))
       setSelected(identifier);
   }, [internal, user?.id]);
-  useEffect(() => {
-    if (!permitted) return;
-    const controller = new AbortController();
-    setListing({ key, data: null, error: "", loading: true });
-    const params = new URLSearchParams({
-      scope: internal ? "staff" : "own",
-      page: String(page),
-      q: search,
-      filter: internal ? "all" : filter,
-    });
-    if (internal && mode !== "report" && filter === "day")
-      params.set("date", day);
-    if (internal && filter === "requests") params.set("status", "requested");
-    else if (status) params.set("status", status);
-    if (from) params.set("from", from);
-    if (to) params.set("to", to);
-    accountRequest<AppointmentPage>(
-      "/api/appointments?" + params,
-      "GET",
-      undefined,
-      controller.signal,
-    )
-      .then((result) => {
-        if (controller.signal.aborted) return;
+  const params = new URLSearchParams({
+    scope: internal ? "staff" : "own",
+    page: String(page),
+    q: search,
+    filter: internal ? "all" : filter,
+  });
+  if (internal && mode !== "report" && filter === "day")
+    params.set("date", day);
+  if (internal && filter === "requests") params.set("status", "requested");
+  else if (status) params.set("status", status);
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const path = "/api/appointments?" + params;
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      setListing((old) =>
+        old.key === key && old.data
+          ? old
+          : { key, data: null, error: "", loading: true },
+      );
+      try {
+        const result = await accountRequest<AppointmentPage>(
+          path,
+          "GET",
+          undefined,
+          signal,
+        );
+        if (signal.aborted) return;
         if (page > 1 && page > Math.max(1, result.totalPages)) {
           setPage(Math.max(1, result.totalPages));
           return;
         }
         setListing({ key, data: result, error: "", loading: false });
-      })
-      .catch((e) => {
-        if (!controller.signal.aborted)
-          setListing({
-            key,
-            data: null,
-            error:
-              e instanceof Error ? e.message : "A foglalások nem tölthetők be.",
-            loading: false,
-          });
-      });
-    return () => controller.abort();
-  }, [key, permitted]);
-  useEffect(() => {
-    const refresh = () => setRevision((value) => value + 1);
-    window.addEventListener("fairauto-appointments", refresh);
-    return () => window.removeEventListener("fairauto-appointments", refresh);
-  }, []);
+      } catch (e) {
+        if (signal.aborted) return;
+        const revoked =
+          e instanceof AccountRequestError && [401, 403].includes(e.status);
+        setListing((old) => ({
+          key,
+          data: !revoked && old.key === key ? old.data : null,
+          error:
+            e instanceof Error ? e.message : "A foglalások nem tölthetők be.",
+          loading: false,
+        }));
+      }
+    },
+    [key, page, path],
+  );
+  useLiveRefresh(load, permitted);
   if (!permitted)
     return (
       <>
@@ -337,11 +340,16 @@ export default function AppointmentList({
           </label>
         )}
       </form>
+      {error && data && (
+        <p className="info-box" role="status">
+          {error}
+        </p>
+      )}
       {loading ? (
         <p role="status" className="muted">
           Időpontkérések betöltése…
         </p>
-      ) : error ? (
+      ) : error && !data ? (
         <div className="info-box" role="alert">
           <p>{error}</p>
           <button

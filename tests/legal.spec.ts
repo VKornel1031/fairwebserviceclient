@@ -14,9 +14,7 @@ test("all public footer documents load without an account and link back home", a
     await expect(
       page.getByRole("heading", { level: 1, name: doc.label, exact: true }),
     ).toBeVisible();
-    await expect(page.locator(".legal-draft")).toHaveText(
-      "Szerkeszthető minta",
-    );
+    await expect(page.locator(".legal-draft")).toHaveCount(0);
     await expect(page.locator(".legal-article")).toBeVisible();
     await page
       .getByRole("link", { name: "Vissza a főoldalra", exact: true })

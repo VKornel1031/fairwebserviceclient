@@ -236,6 +236,8 @@ with tempfile.TemporaryDirectory(prefix="fair-migration-check-") as directory:
             binary = str(Path(os.environ["PB_UPGRADE_BINARY"]).resolve())
         migration = source / "1793628000_security_hardening.js"
         shutil.copyfile(migration, migrations / migration.name)
+        document_migration = source / "1793721600_appointment_documents.js"
+        shutil.copyfile(document_migration, migrations / document_migration.name)
         subprocess.run([binary, "migrate", "up", *options], check=True, stdout=subprocess.DEVNULL)
         # Reapplying the same release must skip its recorded migrations.
         subprocess.run([binary, "migrate", "up", *options], check=True, stdout=subprocess.DEVNULL)
@@ -257,6 +259,7 @@ onBootstrap((e) => { e.next(); cronAdd("fairauto-guest-retention", "* * * * *", 
         assert after_settings["rateLimits"]["enabled"] and not after_settings["batch"]["enabled"]
         assert next(r for r in after_settings["rateLimits"]["rules"] if r["label"] == "users:authWithPassword")["maxRequests"] == 73
         assert api("GET", "/api/fairauto/security-policy")[1] == {"version": 1, "ready": True}
+        assert api("GET", "/api/fairauto/appointments/documents-policy")[1] == {"version": 1, "ready": True, "maxBytes": 3145728}
         status, preserved = api("GET", f'/api/collections/users/records/{customers[0]["id"]}', token=token)
         assert status == 200 and preserved["defaultVehicle"] == car["id"] and not preserved["verified"]
         assert preserved["avatar"] == avatar_name, "Upgrade changed the historical file reference"

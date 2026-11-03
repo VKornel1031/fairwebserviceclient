@@ -19,11 +19,11 @@ export const site = {
   booking: bookingConfiguration.schedule,
   guestRetentionDays: bookingConfiguration.guestRetentionDays,
   legal: {
-    updatedAt: "2026-11-01",
+    updatedAt: "2026-11-03",
     version: bookingConfiguration.termsVersion,
     // A jelenlegi folyamat időpontkérés; online javítási szerződést/fizetést nem valósít meg.
     bookingModel: "appointment-request",
-    // Maradjon true a tényleges működéshez igazítás és ellenőrzés befejezéséig.
+    // Belső ellenőrzési állapot; a nyilvános oldalon nincs mintajelölés.
     isDraft: true,
     companyName: "Fair Autószerviz Fehérvár Kft.",
     // Ezeket a saját hiteles cégadataid alapján töltsd ki; a műhely címe nem feltétlenül székhely.
@@ -47,7 +47,7 @@ export const site = {
     productionDataProcessing: "",
     productionRetention: "",
     reviews: {
-      companyDetails: false,
+      companyDetails: true,
       businessModelAndTerms: false,
       privacyAndProcessors: false,
       accessibilityScope: false,

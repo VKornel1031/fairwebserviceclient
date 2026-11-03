@@ -2,6 +2,9 @@
 routerAdd("GET", "/api/fairauto/appointments/config", (e) =>
   require(__hooks + "/fairauto-appointments.js").configRoute(e),
 );
+routerAdd("GET", "/api/fairauto/appointments/documents-policy", (e) =>
+  require(__hooks + "/fairauto-appointments.js").documentsPolicyRoute(e),
+);
 routerAdd("GET", "/api/fairauto/appointments/availability", (e) =>
   require(__hooks + "/fairauto-appointments.js").availabilityRoute(e),
 );
@@ -54,7 +57,10 @@ routerAdd(
   "PUT",
   "/api/fairauto/appointments/{id}/price",
   (e) => require(__hooks + "/fairauto-appointments.js").priceRoute(e),
-  $apis.bodyLimit(16384),
+  $apis.bodyLimit(3162112),
+);
+routerAdd("GET", "/api/fairauto/appointments/{id}/documents/{document}", (e) =>
+  require(__hooks + "/fairauto-appointments.js").documentRoute(e),
 );
 cronAdd("fairauto-appointment-mail", "* * * * *", () =>
   require(__hooks + "/fairauto-mail.js").process($app),

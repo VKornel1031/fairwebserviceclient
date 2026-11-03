@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Download } from "lucide-react";
 import { accountRequest, AccountRequestError } from "@/lib/accounts";
 import type { LiveAppointment, PriceItem } from "@/lib/live-appointments";
 import { Field } from "./fields";
+import { SERVICE_DOCUMENT_LIMIT } from "@/lib/service-documents";
 const money = (value: number) =>
   new Intl.NumberFormat("hu-HU", {
     style: "currency",
@@ -42,7 +43,9 @@ export default function AppointmentPrice({
     [items, setItems] = useState<PriceItem[]>(
       price?.items.length ? price.items : [blankItem()],
     ),
-    [note, setNote] = useState(price?.note || "");
+    [note, setNote] = useState(price?.note || ""),
+    [document, setDocument] = useState<File | null>(null),
+    [removeDocument, setRemoveDocument] = useState(false);
   const canEdit =
     editable &&
     ["confirmed", "progress", "completed"].includes(appointment.status);
@@ -56,6 +59,8 @@ export default function AppointmentPrice({
     setItems(price?.items.length ? price.items : [blankItem()]);
     setNote(price?.note || "");
     setError("");
+    setDocument(null);
+    setRemoveDocument(false);
     setEditing(true);
   }
   function change(index: number, patch: Partial<PriceItem>) {
@@ -101,6 +106,17 @@ export default function AppointmentPrice({
             </div>
           )}
           {price.note && <p className="price-note">{price.note}</p>}
+          {price.document && (
+            <p>
+              <a
+                className="text-link"
+                href={`/api/appointments/${appointment.id}/documents/${price.document.id}`}
+                download
+              >
+                <Download size={16} /> {price.document.name}
+              </a>
+            </p>
+          )}
           <p className="small muted">
             Frissítve:{" "}
             {new Date(price.updatedAt).toLocaleString("hu-HU", {
@@ -128,15 +144,26 @@ export default function AppointmentPrice({
             setBusy(true);
             setError("");
             try {
-              const result = await accountRequest<{
-                appointment: LiveAppointment;
-              }>(`/api/appointments/${appointment.id}/price`, "PUT", {
+              const payload = {
                 mode,
                 ...(mode === "total" ? { totalHuf: Number(total) } : { items }),
                 note,
                 revision: appointment.revision,
-              });
+                removeDocument,
+              };
+              let data: FormData | typeof payload = payload;
+              if (document) {
+                if (document.size < 1 || document.size > SERVICE_DOCUMENT_LIMIT)
+                  throw new Error("A melléklet legfeljebb 3 MB lehet.");
+                data = new FormData();
+                data.set("payload", JSON.stringify(payload));
+                data.set("document", document);
+              }
+              const result = await accountRequest<{
+                appointment: LiveAppointment;
+              }>(`/api/appointments/${appointment.id}/price`, "PUT", data);
               onSaved(result.appointment);
+              setDocument(null);
               setEditing(false);
             } catch (e) {
               if (e instanceof AccountRequestError && e.status === 409)
@@ -160,6 +187,26 @@ export default function AppointmentPrice({
                 <option value="itemized">Tételes részletezés</option>
               </select>
             </label>
+            <Field
+              label="Számla vagy más dokumentum (nem kötelező)"
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              hint="Egy PDF, JPG vagy PNG, legfeljebb 3 MB. Bekapcsolt értesítéseknél az árfrissítés e-mailjéhez mellékeljük. Új feltöltés a jelenlegi mellékletet váltja fel."
+              onChange={(event) => {
+                setDocument(event.target.files?.[0] || null);
+                setRemoveDocument(false);
+              }}
+            />
+            {price?.document && !document && (
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={removeDocument}
+                  onChange={(event) => setRemoveDocument(event.target.checked)}
+                />
+                Jelenlegi melléklet eltávolítása: {price.document.name}
+              </label>
+            )}
             {mode === "total" ? (
               <Field
                 label="Bruttó ár (Ft)"

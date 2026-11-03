@@ -3953,6 +3953,12 @@ select {
   margin: 0;
   font-size: 15px;
 }
+.appointment-price a {
+  overflow-wrap: anywhere;
+}
+.price-editor input[type="file"] {
+  max-width: 100%;
+}
 .price-total {
   display: flex;
   flex-wrap: wrap;

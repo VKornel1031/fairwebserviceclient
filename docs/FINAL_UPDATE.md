@@ -2,11 +2,11 @@
 
 **Aktuális kiadás:** meglévő telepítés frissítéséhez a [biztonsági frissítés teljes eljárását](./SECURITY_UPDATE.md) használd. Az alábbi bemásolható blokk ugyanezt a teljes frissítőt használja, beleértve a hiányzó migrációkat és az új biztonsági szabályokat.
 
-A változat tartalmazza a megadott két dokumentum webes és szerkeszthető Word-változatát, az e-mailes fiókkezelést és a vendégadatok törlését. A közös dokumentumverzió **`2026-11-01.6-draft`**. A már működő céges SMTP-feladót és jelszavát a frissítés megőrzi; új API-kulcs vagy Vercel-secret nem kell.
+A változat tartalmazza a megadott két dokumentum webes és szerkeszthető Word-változatát, az e-mailes fiókkezelést és a vendégadatok törlését. A közös dokumentumverzió **`2026-11-03.1`**. A már működő céges SMTP-feladót és jelszavát a frissítés megőrzi; új API-kulcs vagy Vercel-secret nem kell.
 
 ## A meglévő CasaOS PocketBase frissítése
 
-A teljes aktuális frissítő telepíti a 0.40.6-os PocketBase-binárist, az új biztonsági migrációt, a még hiányzó négy e-mail-/adatmegőrzési migrációt és az összes hozzájuk tartozó hookot. Ellenőrzött offline mentést készít a módosítások előtt, megőrzi a működő SMTP-beállításokat, és ellenőrzi az új backend készenlétét. A korábbi fiók-, jármű- és időpontkezelő alapséma előfeltétel.
+A telepítésed már PocketBase 0.40.6-ot futtat. A teljes aktuális frissítő 0.40.6-on tartja a binárist, és telepíti az új biztonsági és privát dokumentumfeltöltési migrációkat, a még hiányzó négy e-mail-/adatmegőrzési migrációt és az összes hozzájuk tartozó hookot. Ellenőrzött offline mentést készít a módosítások előtt, megőrzi a működő SMTP-beállításokat, és ellenőrzi az új backend készenlétét. A korábbi fiók-, jármű- és időpontkezelő alapséma előfeltétel.
 
 A Debian/Ubuntu alapú CasaOS gép host termináljába másold be az egész blokkot. Semmit nem kell benne átírnod:
 

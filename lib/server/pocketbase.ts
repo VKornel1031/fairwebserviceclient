@@ -211,6 +211,36 @@ export async function pbImage(path: string): Promise<Response> {
     );
   return response;
 }
+export async function pbDocument(
+  path: string,
+  token?: string,
+  guestToken?: string,
+) {
+  const response = await pocketbaseResponse(
+    path,
+    "GET",
+    undefined,
+    token,
+    "application/pdf,image/jpeg,image/png",
+    guestToken,
+  );
+  if (!response.ok) {
+    if ([401, 403, 404].includes(response.status))
+      throw new PocketBaseError(response.status);
+    throw new AccountError(503, "A melléklet most nem tölthető le.");
+  }
+  const media = response.headers
+    .get("content-type")
+    ?.split(";")[0]
+    .trim()
+    .toLowerCase();
+  if (!media || !["application/pdf", "image/jpeg", "image/png"].includes(media))
+    throw new AccountError(
+      503,
+      "A melléklet szolgáltatása hibás választ adott.",
+    );
+  return response;
+}
 export function account(record: Record<string, unknown>): Account {
   if (
     !record ||
@@ -292,14 +322,20 @@ export async function authenticate(
   identity: string,
   password: string,
 ): Promise<Session> {
-  await requireSecuritySetup();
   try {
-    return authenticated(
-      await pb("/api/collections/users/auth-with-password", "POST", {
-        identity,
-        password,
-      }),
-    );
+    // Both checks must succeed, but neither depends on the other's response.
+    const [, result] = await Promise.all([
+      requireSecuritySetup(),
+      pb<{ token: string; record: Record<string, unknown> }>(
+        "/api/collections/users/auth-with-password",
+        "POST",
+        {
+          identity,
+          password,
+        },
+      ),
+    ]);
+    return authenticated(result);
   } catch (error) {
     if (
       error instanceof PocketBaseError ||
@@ -316,16 +352,17 @@ export async function currentSession(): Promise<Session | null> {
   const token = (await cookies()).get(sessionCookie)?.value;
   if (!token) return null;
   if (!/^[A-Za-z0-9._-]{16,4096}$/.test(token)) return null;
-  await requireSecuritySetup();
   try {
-    const fresh = authenticated(
-      await pb<{ token: string; record: Record<string, unknown> }>(
+    const [, result] = await Promise.all([
+      requireSecuritySetup(),
+      pb<{ token: string; record: Record<string, unknown> }>(
         "/api/collections/users/auth-refresh",
         "POST",
         undefined,
         token,
       ),
-    );
+    ]);
+    const fresh = authenticated(result);
     // Validate against PocketBase each time; keep the original token's expiry.
     return { token, user: fresh.user };
   } catch (error) {

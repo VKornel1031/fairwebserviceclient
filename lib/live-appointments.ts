@@ -1,6 +1,7 @@
 import type booking from "@/content/booking.json";
 import type { Appointment, Profile } from "./demo";
 import { accountRequest } from "./accounts";
+import type { ServiceDocument } from "./service-documents";
 export type BookingConfiguration = typeof booking;
 export type BookingContext = {
   config: BookingConfiguration;
@@ -19,6 +20,7 @@ export type AppointmentPrice = {
   items: PriceItem[];
   note: string;
   updatedAt: string;
+  document?: ServiceDocument | null;
 };
 export type LiveAppointment = Appointment & {
   bookingFor: "self" | "customer";

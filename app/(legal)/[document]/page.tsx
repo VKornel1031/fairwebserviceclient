@@ -6,7 +6,6 @@ import { legalDocuments } from "@/content/legal";
 import { site } from "@/content/site";
 import LegalLinks from "@/components/legal-links";
 import ThemeToggle from "@/components/theme-toggle";
-import { legalSetupIssues } from "@/lib/legal";
 import { currentWordCopy } from "@/lib/legal-downloads";
 
 export function generateStaticParams() {
@@ -33,7 +32,6 @@ export default async function LegalPage({
   const { document } = await params;
   const doc = legalDocuments.find((d) => d.slug === document);
   if (!doc) notFound();
-  const draft = legalSetupIssues().length > 0;
   const wordCopy = currentWordCopy(doc);
   const updated = new Date(
     `${site.legal.updatedAt}T12:00:00`,
@@ -76,16 +74,8 @@ export default async function LegalPage({
             <span>
               Frissítve: <time dateTime={site.legal.updatedAt}>{updated}</time>
             </span>
-            {draft && <span className="legal-draft">Szerkeszthető minta</span>}
           </div>
         </div>
-        {draft && (
-          <p className="legal-draft-note">
-            A dokumentum üzemeltetői felülvizsgálata folyamatban van. Az éles
-            használat előtt a jelzett adatokat és működési feltételeket
-            véglegesíteni és ellenőrizni kell.
-          </p>
-        )}
         <div className="legal-layout">
           <aside className="legal-navigation">
             <p className="eyebrow">DOKUMENTUMOK</p>

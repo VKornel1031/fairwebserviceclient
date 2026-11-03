@@ -3,6 +3,26 @@ import { readFile } from "node:fs/promises";
 import { site } from "../content/site";
 import { legalSetupIssues } from "../lib/legal";
 
+test("ASZF describes the live appointment and document flow without public template labels", async ({
+  page,
+}) => {
+  await page.goto("/aszf");
+  const text = await page.locator(".legal-article").innerText();
+  expect(text).toContain(site.legal.companyName);
+  expect(text).toContain("3 MB");
+  expect(text).toContain("e-mailjéhez");
+  expect(text).toContain("nem jelent javítási megrendelést");
+  expect(text).not.toMatch(
+    /szerkeszthető minta|kitöltés szükséges|prototípus/i,
+  );
+  await expect(page.locator(".legal-draft, .legal-draft-note")).toHaveCount(0);
+  const download = await page.request.get("/dokumentumok/aszf.txt");
+  const source = await download.text();
+  expect(source).toContain(site.legal.version);
+  expect(source).toMatch(/szervizdokumentum/i);
+  expect(source).not.toContain("Szerkeszthető dokumentum");
+});
+
 test("hiding the draft flag cannot hide missing company and operational requirements", () => {
   const altered = { ...site.legal, registeredOffice: "", isDraft: false };
   const issues = legalSetupIssues(altered);

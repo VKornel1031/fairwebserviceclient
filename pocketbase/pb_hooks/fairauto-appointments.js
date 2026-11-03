@@ -1138,10 +1138,40 @@ exports.dashboardRoute = (e) => {
   });
 };
 
+exports.documentsPolicyRoute = (e) => {
+  setup($app);
+  require(__hooks + "/fairauto-documents.js").setup($app);
+  return e.json(200, { ready: true, version: 1, maxBytes: 3145728 });
+};
+
 exports.priceRoute = (e) => {
   setup($app);
-  guard($app, e, true);
-  const data = body(e, ["mode", "totalHuf", "items", "note", "revision"]);
+  staff(guard($app, e, true));
+  const documents = require(__hooks + "/fairauto-documents.js");
+  documents.setup($app);
+  const keys = [
+    "mode",
+    "totalHuf",
+    "items",
+    "note",
+    "revision",
+    "removeDocument",
+  ];
+  const multipart =
+    (e.request.header.get("Content-Type") || "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase() === "multipart/form-data";
+  const input = multipart
+    ? documents.input(e)
+    : { data: body(e, keys), upload: null };
+  const data = object(input.data, keys);
+  if (
+    data.removeDocument !== undefined &&
+    typeof data.removeDocument !== "boolean"
+  )
+    fail(400, "invalid_details");
+  if (data.removeDocument && input.upload) fail(400, "invalid_details");
   let result;
   $app.runInTransaction((tx) => {
     const actor = identity(tx, e);
@@ -1201,13 +1231,20 @@ exports.priceRoute = (e) => {
         items.reduce((sum, line) => sum + line.quantity * line.unitPriceHuf, 0),
       );
     } else fail(400, "invalid_details");
+    const note = txt(data.note || "", 1000, 0, true);
+    const previous = json(record, "price");
+    const document = input.upload
+      ? documents.save(tx, record, input.upload)
+      : data.removeDocument
+        ? null
+        : previous?.document || null;
     const clean = {
       mode: data.mode,
       totalHuf: total,
       items,
-      note: txt(data.note || "", 1000, 0, true),
+      note,
+      document,
     };
-    const previous = json(record, "price");
     const fingerprint = (value) =>
       JSON.stringify({
         mode: value.mode,
@@ -1219,6 +1256,7 @@ exports.priceRoute = (e) => {
           unitPriceHuf: line.unitPriceHuf,
         })),
         note: value.note,
+        document: value.document || null,
       });
     if (
       previous &&
@@ -1241,6 +1279,40 @@ exports.priceRoute = (e) => {
     result = dto(record, actor);
   });
   return e.json(200, { appointment: result });
+};
+
+exports.documentRoute = (e) => {
+  setup($app);
+  const actor = guard($app, e, false);
+  const appointment = accessible($app, actor, e.request.pathValue("id"));
+  const documents = require(__hooks + "/fairauto-documents.js");
+  const document = documents.find(
+    $app,
+    appointment,
+    e.request.pathValue("document"),
+  );
+  const fs = $app.newFilesystem();
+  let reader;
+  try {
+    reader = fs.getReader(documents.key(document));
+    const bytes = toBytes(reader, 3145729);
+    if (bytes.length !== document.getInt("size") || bytes.length > 3145728)
+      fail(503, "document_unavailable");
+    const headers = e.response.header();
+    headers.set(
+      "Content-Disposition",
+      'attachment; filename="' +
+        document.getString("name").replace(/[^a-zA-Z0-9._ -]/g, "_") +
+        '"',
+    );
+    headers.set("Cache-Control", "private, no-store, max-age=0");
+    headers.set("X-Content-Type-Options", "nosniff");
+    headers.set("Content-Security-Policy", "default-src 'none'; sandbox");
+    return e.blob(200, document.getString("mediaType"), bytes);
+  } finally {
+    if (reader) reader.close();
+    fs.close();
+  }
 };
 
 exports.mailStatusRoute = (e) => {

@@ -54,6 +54,7 @@ migrate((app) => {
   c.fields.add(new TextField({ name: "recipient", max: 254 }));
   c.fields.add(new TextField({ name: "subject", max: 500 }));
   c.fields.add(new TextField({ name: "html", max: 50000 }));
+  c.fields.add(new JSONField({ name: "attachments", maxSize: 10000 }));
   c.fields.add(new AutodateField({ name: "created", onCreate: true }));
   app.save(c);
   const legacy = new Record(app.findCollectionByNameOrId("users"));
@@ -70,6 +71,12 @@ onMailerSend((e) => {
   if ($app.store().get("fairauto_test_mail_failure") && e.message.subject.indexOf("Fair Autószerviz · FA-") === 0) throw new Error("Simulated transport failure");
   const r = new Record($app.findCollectionByNameOrId("test_mail_capture"));
   r.set("recipient", e.message.to[0].address); r.set("subject", e.message.subject); r.set("html", e.message.html);
+  const attachments = [];
+  for (const name of Object.keys(e.message.attachments || {})) {
+    const bytes = toBytes(e.message.attachments[name], 3145729);
+    attachments.push({name, size: bytes.length, sha256: $security.sha256(toString(bytes))});
+  }
+  r.set("attachments", attachments);
   $app.save(r);
   // Intentionally do not call e.next(): this fixture never sends email.
 });

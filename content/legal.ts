@@ -1,6 +1,7 @@
 /** A jogi oldalak szerkeszthető szövege. A PocketBase-fiókokat, járműveket és időpontkéréseket írja le.
  * Levelezés vagy analitika bekötésekor a tényleges adatfolyamokkal együtt frissítsd. */
 import { address, site, legalNavigation, contactPhoneLabel } from "./site";
+import { termsDocument } from "./terms";
 import { consumerDocument } from "./consumer";
 import { privacyDocument } from "./privacy";
 import { dataSecurityDocument } from "./data-security";
@@ -24,123 +25,7 @@ const missing = (value: string) =>
   value || "Kitöltés szükséges az éles használat előtt";
 export const legalDocuments: LegalDocument[] = [
   privacyDocument,
-  {
-    ...legalNavigation[1],
-    download: {
-      filename: "aszf.txt",
-      label: "ÁSZF letöltése szöveges fájlként",
-    },
-    title: "Tiszta feltételek, az első lépéstől.",
-    description:
-      "A portál használatának és az online időpontkérésnek az alapvető feltételei.",
-    sections: [
-      {
-        id: "szolgaltato",
-        title: "A szolgáltató",
-        facts: [
-          { label: "Cégnév", value: site.legal.companyName },
-          { label: "Székhely", value: site.legal.registeredOffice },
-          { label: "Cégjegyzékszám", value: site.legal.registrationNumber },
-          { label: "Adószám", value: site.legal.taxNumber },
-          { label: "Képviselő", value: site.legal.representative },
-          { label: "Műhely", value: address },
-          { label: "Telefon", value: contactPhoneLabel },
-          { label: "E-mail", value: site.contact.email },
-        ],
-      },
-      {
-        id: "hataly",
-        title: "A dokumentum hatálya",
-        paragraphs: [
-          "Ez a szerkeszthető minta a portál időpontkérő működését írja le. A fiók létrehozása és az időpontkérés nem hoz létre javítási megrendelést. A kérés a szerviz adatbázisába kerül, a kiválasztott időpontot telefonos visszaigazolás biztosítja. A szolgáltatás feltételeit a tényleges működéshez és a kötelező jogszabályokhoz kell igazítani.",
-        ],
-      },
-      {
-        id: "idopontkeres",
-        title: "Az időpontkérés menete",
-        items: [
-          `Műszaki vizsgára kizárólag telefonon, a ${contactPhoneLabel} telefonszámokon egyeztethető időpont. A többi, onlineként megjelenő szolgáltatás a foglalóban választható.`,
-          "Válaszd ki a szolgáltatást és egy elérhető napot, illetve érkezési időpontot.",
-          "Add meg a kapcsolattartási és járműadatokat, majd ellenőrizd az összesítést.",
-          "Az elküldött kérés a szerviz rendszerében telefonos egyeztetésre vár. A kért időpontot a telefonos visszaigazolás biztosítja; az elküldés önmagában nem foglal műhelykapacitást és nem hoz létre javítási megrendelést.",
-        ],
-      },
-      {
-        id: "elektronikus-ugyintezes",
-        title: "Elektronikus ügyintézés és a szerződés határa",
-        facts: [
-          {
-            label: "Magatartási kódex / alkalmazhatóság",
-            value: missing(site.legal.codeOfConduct),
-          },
-        ],
-        paragraphs: [
-          "A portál nyelve magyar. A szolgáltatás és időpont kiválasztását adatmegadás és áttekintés követi. Az adatbeviteli hibák a végleges elküldés előtt a visszalépési és módosítási lehetőségekkel javíthatók.",
-          "A jelenlegi modellben időpontkérés történik; a javítás tartalmát és végleges árát külön kell egyeztetni. A portál nem köt és nem iktat írásbeli javítási szerződést. A sikeres beérkezést az oldalon megjelenő azonosító és összesítés jelzi; a kérés a Foglalásaim oldalon visszaidézhető. Ha az üzemeltető bekapcsolja a levelezést, az időpontkérésről, telefonos visszaigazolásról, átütemezésről, lemondásról, árváltozásról és elkészült munkáról külön szolgáltatási értesítés küldhető. A webes mentés sikere nem igazolja a levél kézbesítését.",
-          "Éles elektronikus megrendelés esetén a 2001. évi CVIII. törvény szerinti beérkezési visszaigazolást és a szerződéses folyamatot ténylegesen biztosítani kell; az automatikus átvételi visszaigazolás és a megrendelés elfogadása nem feltétlenül ugyanaz. Az elküldött megrendelés visszaigazolásának elmaradásához a törvény főszabály szerint legfeljebb 48 órán belüli jogkövetkezményt kapcsol. A pontos alkalmazhatóságot a megvalósított üzleti modell szerint kell ellenőrizni.",
-          "A feltételek megismerhetők és az oldalról szöveges fájlként letölthetők. A regisztrációnál és az időpontkérésnél a szerver PocketBase-ben rögzíti az elfogadott feltételverziót és időpontot. A korábbi hatályos dokumentumváltozatok megőrzését az üzemeltetőnek biztosítania kell.",
-        ],
-      },
-      {
-        id: "arak",
-        title: "Munka, időtartam és ár",
-        facts: [
-          {
-            label: "Árfeltüntetés és árképzés",
-            value: missing(site.legal.pricingDisclosure),
-          },
-        ],
-        paragraphs: [
-          site.booking.requestNotice,
-          "A szolgáltatás mellett esetleg feltüntetett ár nem válik az időpontkérés elküldésével elfogadott javítási árajánlattá. A kijelzett összegnél egyértelműen jelezni kell, hogy meghatározott tartalmú fix bruttó díj, induló (–tól) ár vagy becslés, mit tartalmaz, és milyen további költség merülhet fel. Fogyasztói árnál az áfát és az elkerülhetetlen díjakat tartalmazó összeget kell világosan feltüntetni. A tényleges árképzési tájékoztatást a fenti adatmezőben, a konkrét szolgáltatásokhoz igazítva kell kitölteni.",
-          "Telefonos visszaigazolás után a munkafelvevő, vezető vagy adminisztrátor bruttó forintban árbecslést rögzíthet, egy összegben vagy alkatrész-, munkadíj- és egyéb tételekre bontva. A saját időpont részleteiben az ügyfél is látja. Átütemezéskor a korábbi becslés érvényét veszti. Ez nem számla, elfogadott javítási ajánlat vagy fizetési kötelezettséget létrehozó megrendelés.",
-          "A felületen megadott időtartamok tájékoztató becslések. A javítási megrendelés és az esetleges többletmunka feltételeit külön kell egyeztetni. A prototípus nem kezel fizetést, számlázást vagy árajánlat-elfogadást.",
-        ],
-      },
-      {
-        id: "modositas",
-        title: "Módosítás és lemondás",
-        paragraphs: [
-          "A jövőbeni, telefonos egyeztetésre váró vagy visszaigazolt időpontkérés a Foglalásaim oldalon módosítható vagy lemondható. A módosítás új telefonos visszaigazolást igényel, a korábban visszaigazolt kapacitás felszabadul. Folyamatban lévő vagy elkészült munka online már nem mondható le. Vendégként ehhez az adott böngésző hozzáférési sütije szükséges; ennek hiányában telefonon keresd a szervizt.",
-          "Az éles rendszer lemondási határidejét, az esetleges díjakat, a fogyasztói jogokat és a szerződés létrejöttét a tényleges szolgáltatás alapján kell meghatározni; ez a minta nem állapít meg ilyen díjakat vagy jogkorlátozásokat.",
-        ],
-      },
-      {
-        id: "fiok",
-        title: "Fiók és céges használat",
-        paragraphs: [
-          "Nyilvános regisztrációhoz cégnév, magyar adószám és kapcsolattartó szükséges. Az új fiók automatikusan csak céges partner szerepet kap. Vezetői, munkafelvevői és adminisztrátori hozzáférést kizárólag adminisztrátor oszthat ki; az e-mail-cím igazolása nem módosít szerepkört. A Partnerközpontban saját mentett járműpark és a saját időpontok kezelhetők.",
-          "Új céges fiók regisztrációja után a levélben kapott hivatkozással meg kell erősíteni az e-mail-címet; ezután e-mail-címmel és jelszóval lehet belépni. A korábbi fiókok hozzáférése megmarad; az átállás nem minősíti automatikusan igazoltnak címüket. A saját kapcsolattartási és céges profiladatok, valamint a mentett járművek PocketBase-ben tárolhatók. Az e-mail-cím módosításához a jelenlegi jelszó és az új címre küldött hivatkozás megerősítése szükséges. Jelszó módosítása jelenlegi jelszóval, elfelejtett jelszó helyett új jelszó beállítása pedig az e-mailben kapott, időben korlátozott hivatkozással lehetséges. Az időpontkérések és visszaigazolások a Foglalásaim oldalon követhetők.",
-          "A céges és munkatársi nézetek elérését a PocketBase-ben tárolt szerepkör szabályozza. Új fiókhoz az adminisztrátor adhat bővebb hozzáférést. Az admin kezelheti mások fiókjait és hozzáférését; a saját és a védett alapadmin-fiók törlése vagy lefokozása az alkalmazásban nem engedélyezett.",
-        ],
-      },
-      {
-        id: "adatkezeles-es-biztonsag",
-        title: "Adatkezelés és adatbiztonság",
-        paragraphs: [
-          `A vendég által indított kérés aktív webes adatait és kapcsolódó előzményeit, értesítési másolatait a befejezés vagy lemondás rögzítése után ${site.guestRetentionDays} nap elteltével időzített feladat törli. A még nyitott ügyeket és a fiókos foglalásokat ez a törlés nem érinti. A további megőrzési köröket, jogosultságokat és érintetti jogokat az adatkezelési tájékoztató részletezi.`,
-          "Az adatvédelmi és adatbiztonsági szabályzat a társaság belső hozzáférési, üzemeltetési és incidenskezelési rendjének nyilvános leírása. Megismerése nem általános adatkezelési hozzájárulás, és nem helyettesíti az adatkezelési tájékoztatót.",
-        ],
-        links: [
-          {
-            label: "Adatkezelési Tájékoztató",
-            href: "/adatkezelesi-tajekoztato",
-          },
-          {
-            label: "Adatvédelmi és adatbiztonsági szabályzat",
-            href: "/adatvedelmi-es-adatbiztonsagi-szabalyzat",
-          },
-        ],
-      },
-      {
-        id: "kapcsolat",
-        title: "Kapcsolat és panaszkezelés",
-        paragraphs: [
-          `Kérdéssel vagy panasszal a ${site.contact.email} címen vagy a ${contactPhoneLabel} telefonszámokon keresheted a szervizt. A részletes panaszkezelési, békéltetési, elállási és javítási jótállási szabályokat a lábléc Fogyasztói tájékoztató oldala ismerteti.`,
-        ],
-      },
-    ],
-  },
+  termsDocument,
   {
     ...legalNavigation[2],
     title: "Mi marad a böngésződben?",

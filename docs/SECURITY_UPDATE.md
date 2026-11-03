@@ -1,4 +1,4 @@
-# Security update · 2 November 2026
+# Security and service-document update · 3 November 2026
 
 This release hardens the website and PocketBase together. Install the backend update in a short maintenance window, then sign in again. The website refuses authenticated operations against an older or incomplete backend security policy.
 
@@ -16,9 +16,11 @@ sudo docker exec pocketbase /pocketbase/pocketbase --version &&
 sudo docker exec pocketbase /bin/sh -c 'wget -qO- http://127.0.0.1:8090/api/fairauto/security-policy'
 ```
 
+Your installation is already on **PocketBase 0.40.6** following the earlier update. Run this block to install the new document feature and matching configuration on that existing installation. The binary stays on 0.40.6; the container is preserved. Older 0.26.3/0.26.6 versions are accepted only for installations that have not yet applied the earlier update.
+
 Enter your normal CasaOS/Linux sudo password if the terminal asks. The repository is public, so GitHub login is unnecessary. The SHA-256 check must print `OK` before the updater runs. The download and its installed assets are pinned to the reviewed backend release, even if this documentation is updated later.
 
-The block installs the required host utilities and `tzdata`, checks compatibility, downloads and verifies the release, stops the existing container, saves a verified offline backup, upgrades PocketBase to **0.40.6**, installs the matching hooks and configuration, starts the same container, and checks security readiness. It copies the distribution-managed Budapest timezone data into the container so booking can validate winter and summer time. Pending included migrations run automatically at startup; applied migrations are skipped. You do not need a separate `migrate up` or restart command.
+The block installs the required host utilities and `tzdata`, checks compatibility, downloads and verifies the release, stops the existing container, saves a verified offline backup, upgrades PocketBase to **0.40.6**, installs the matching hooks and configuration, starts the same container, and checks security readiness. It copies the distribution-managed Budapest timezone data into the container so booking can validate winter and summer time. The new private service-document migration and pending included migrations run automatically at startup; applied migrations are skipped. You do not need a separate `migrate up` or restart command.
 
 Success ends with `pocketbase version 0.40.6` and a JSON response containing `"ready":true` and `"version":1`. The updater prints the offline backup path under `/DATA/AppData/pocketbase/backups/`. Download that backup to a separate machine and sign in to the website again.
 
@@ -61,6 +63,10 @@ Your earlier output established the container paths, not the current health of t
 
 ## What changed
 
+- Reception, admin and owner/manager can attach a PDF, JPG or PNG up to 3 MB when saving a price. Private, immutable document records preserve each queued email’s attachment. Downloads recheck the current appointment permissions. The new migration is `1793721600_appointment_documents.js`; the updater checks document readiness after starting PocketBase.
+- Website login/session readiness checks run alongside authentication instead of adding a sequential network round trip. Vercel functions are placed in Frankfurt. Booking lists and management counts refresh every five seconds while visible, preserving filters and dialogs. These changes retain native account revalidation and no-store responses.
+- The Hungarian ÁSZF describes the implemented appointment-request model and document flow. The public template badge is removed; unconfirmed operator declarations remain in the internal legal checklist.
+
 - User and superuser password failures are counted atomically in PocketBase's SQLite database: eight attempts per address and auth collection in 15 minutes. Success clears that address's failures. Refreshing a session does not use the failure budget. Counts survive restarts and apply across frontend instances, collection names/IDs and forged forwarding headers. An application user cannot exhaust a same-address superuser's separate budget.
 - Verification, recovery and email-change requests share a persistent per-address budget. Nonexistent addresses receive the same limits. Private counters contain hashes and expire automatically.
 - Native password-change proofs have their own persistent per-account failure budget. The retired direct email-change route returns 410 without checking any password, closing a separate password-checking oracle.
@@ -82,7 +88,7 @@ All downloads finish first. The container is stopped, and the actual database, u
 
 The update overlays code and booking configuration, retaining `fairauto-mail.json` and sendmail. Applied migrations are skipped; recent email/retention migrations are included if pending. The earlier account, vehicle and appointment schema must already be installed. PocketBase upgrades its core schema when the new executable starts.
 
-Success requires executable version 0.40.6, local security policy `{"ready":true,"version":1}`, and working appointment configuration. Download failures leave the running installation alone. Backup/installation failures leave the container stopped and print the completed backup location when one exists. Do not recreate the container to resolve an error.
+Success requires executable version 0.40.6, local security policy `{"ready":true,"version":1}`, working appointment configuration, and the private service-document policy. Download failures leave the running installation alone. Backup/installation failures leave the container stopped and print the completed backup location when one exists. Do not recreate the container to resolve an error.
 
 Read-only checks after success:
 

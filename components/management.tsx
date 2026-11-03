@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { site } from "@/content/site";
 import {
@@ -12,7 +12,8 @@ import {
   Search,
 } from "lucide-react";
 import { usePortal } from "./provider";
-import { accountRequest } from "@/lib/accounts";
+import { accountRequest, AccountRequestError } from "@/lib/accounts";
+import { useLiveRefresh } from "@/lib/use-live-refresh";
 import type { AppointmentDashboard } from "@/lib/live-appointments";
 import AppointmentList from "./appointment-list";
 import { PageHeading } from "./ui";
@@ -40,36 +41,34 @@ export default function Management() {
     });
   const key =
     (user?.id || "") + ":" + (user?.role || "") + ":" + period + ":" + revision;
-  useEffect(() => {
-    if (!canViewReports(user?.role)) return;
-    const controller = new AbortController();
-    accountRequest<AppointmentDashboard>(
-      "/api/appointments/dashboard?days=" + period,
-      "GET",
-      undefined,
-      controller.signal,
-    )
-      .then((data) => {
-        if (!controller.signal.aborted) setState({ key, data, error: "" });
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted)
-          setState({
-            key,
-            data: null,
-            error:
-              error instanceof Error
-                ? error.message
-                : "A riport nem tölthető be.",
-          });
-      });
-    return () => controller.abort();
-  }, [key]);
-  useEffect(() => {
-    const refresh = () => setRevision((value) => value + 1);
-    window.addEventListener("fairauto-appointments", refresh);
-    return () => window.removeEventListener("fairauto-appointments", refresh);
-  }, []);
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      try {
+        const data = await accountRequest<AppointmentDashboard>(
+          "/api/appointments/dashboard?days=" + period,
+          "GET",
+          undefined,
+          signal,
+        );
+        if (!signal.aborted) setState({ key, data, error: "" });
+      } catch (error) {
+        if (signal.aborted) return;
+        const revoked =
+          error instanceof AccountRequestError &&
+          [401, 403].includes(error.status);
+        setState((old) => ({
+          key,
+          data: !revoked && old.key === key ? old.data : null,
+          error:
+            error instanceof Error
+              ? error.message
+              : "A riport nem tölthető be.",
+        }));
+      }
+    },
+    [key, period],
+  );
+  useLiveRefresh(load, canViewReports(user?.role));
   if (!canViewReports(user?.role))
     return (
       <>
@@ -143,6 +142,11 @@ export default function Management() {
           </Link>
         }
       />
+      {state.key === key && state.error && (
+        <p className="info-box" role="status">
+          {state.error}
+        </p>
+      )}
       <div className="management-toolbar">
         <span>
           {dateLabel(start, { month: "long", day: "numeric" })} –{" "}

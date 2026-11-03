@@ -65,6 +65,15 @@ export const privacyDocument: LegalDocument = {
       ],
     },
     {
+      id: "szervizdokumentumok",
+      title: "Az árhoz mellékelt szervizdokumentumok",
+      paragraphs: [
+        "A munkafelvevő, tulajdonos/vezető vagy adminisztrátor az időpont árbecsléséhez külön kiállított számlát vagy más szervizdokumentumot tölthet fel. A dokumentum neve, típusa, mérete, feltöltési ideje és az időponthoz rendelése is tárolódik. A dokumentum tartalma az ügyintézéshez, a szolgáltatás egyeztetéséhez és az ahhoz kapcsolódó kötelezettségek teljesítéséhez szükséges adatokat tartalmazhatja; szükségtelen személyes vagy különleges adatot ne tölts fel.",
+        "A melléklethez a kapcsolódó időpontot elérő jogosult ügyfél, annak partnerfiókja és az aktív jogosult munkatárs fér hozzá. Vendégként a hozzáférést az adott böngésző érvényes vendégsütije biztosítja. A fájlok nem nyilvános letöltések. Bekapcsolt levelezésnél az árfrissítéshez tartozó dokumentum a kapcsolattartó és a beállított belső címzettek külön értesítéseinek melléklete is lehet; így a dokumentum a levelezési szolgáltatón és a címzett postafiókján is áthalad.",
+        "Az új melléklet a portál aktuális árnézetében a korábbit váltja fel. A korábbi árértesítések és az időpont változástörténete a hozzájuk tartozó dokumentumot őrzik, hogy egy késleltetett vagy újrapróbált értesítés a megfelelő változatot küldje. Az időpont törlése a hozzá tartozó dokumentumokat is törli az aktív tárhelyről. A saját vendégkérés lezárását követő automatikus megőrzési szabály a dokumentumokra is kiterjed. A fiókos és munkatárs által rögzített ügyek megőrzését, a jogszabályi bizonylatmegőrzést, a biztonsági mentések és a külső postafiókok törlését a szolgáltató külön kezeli; a portál nem helyettesíti a számviteli archiválást.",
+      ],
+    },
+    {
       id: "adatfeldolgozok",
       title: "Tárolás, hozzáférők és külső szolgáltatók",
       paragraphs: [

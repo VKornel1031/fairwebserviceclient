@@ -2,7 +2,7 @@
 
 Forrásellenőrzés dátuma: **2026. október 30.**
 
-Technikai frissítés (2026. november 1.): a fiókok, autók és időpontkérések PocketBase-t használnak. A tájékoztató a szerveroldali tárolást, az állapotelőzményeket, a telefonos megerősítést, a munkamenet- és vendég-hozzáférési sütit, valamint az alapból kikapcsolt, külön aktiválható szolgáltatási értesítéseket is leírja. A frissítés alvázszámot és bruttó árbecslés-részletezést is kezel. Az üzemeltetőnek a tényleges adattárolás előtt ki kell töltenie a megőrzést, szolgáltatókat és hivatalos cégadatokat; a mintajelölés továbbra is érvényes.
+Technikai frissítés (2026. november 1.): a fiókok, autók és időpontkérések PocketBase-t használnak. A tájékoztató a szerveroldali tárolást, az állapotelőzményeket, a telefonos megerősítést, a munkamenet- és vendég-hozzáférési sütit, valamint az alapból kikapcsolt, külön aktiválható szolgáltatási értesítéseket is leírja. A frissítés alvázszámot és bruttó árbecslés-részletezést is kezel. Az üzemeltetőnek a tényleges adattárolás előtt ki kell töltenie a megőrzést, szolgáltatókat és hivatalos cégadatokat; a nyitott üzemeltetői ellenőrzéseket ez a belső ellenőrzőlista követi.
 
 A felhasználó által megerősített és jelenleg megvalósított modell: **a weboldal csak időpontot kér; a javítás tartalmát és végleges árát külön egyeztetik.** Ár megjelenítése önmagában nem dönti el, hogy létrejön-e javítási szerződés: a teljes folyamatot, a gombok és nyilatkozatok tartalmát kell vizsgálni. A rögzített árú online megrendelési modellre való átállást külön tisztázni és megvalósítani kell. A portál valós időpontkérést rögzít, de nem köt javítási szerződést és nem fizettet. Az itt leírt módosítások jogi és technikai előkészítést jelentenek; nem tanúsítják egy későbbi éles vállalkozás teljes jogszabályi megfelelőségét.
 
@@ -13,7 +13,7 @@ A dokumentumok a saját működéshez szerkeszthetők. A hiányzó hiteles céga
 | Dokumentum / funkció                            | Szerkeszthető forrás                   | Rendeltetés                                                                       |
 | ----------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------- |
 | Adatkezelési Tájékoztató                        | `content/legal.ts`                     | GDPR-tájékoztatás, érintetti jogok, fiók-, jármű- és foglalási adatfolyamok       |
-| ÁSZF                                            | `content/legal.ts`                     | Időpontkérés menete, javítható adatbevitel, nyelv, szerződéses határ, lemondás    |
+| ÁSZF                                            | `content/terms.ts`                     | Időpontkérés menete, javítható adatbevitel, nyelv, szerződéses határ, lemondás    |
 | Süti- és tárhelytájékoztató                     | `content/legal.ts`                     | Helyi tárolás és tényleges külső kapcsolatok                                      |
 | Impresszum                                      | `content/legal.ts`, `content/site.ts`  | Üzemeltető, cégadatok és tárhelyadatok                                            |
 | Fogyasztói tájékoztató                          | `content/consumer.ts`                  | Panaszkezelés, békéltetés, feltételes elállás/felmondás, javítási jótállás        |
@@ -105,7 +105,7 @@ Nem állítunk nem vizsgált WCAG-megfelelést, és nem teszünk ki közszférá
 npm run legal:check
 ```
 
-A parancs jelenleg szándékosan hibakóddal jelzi a ténylegesen hiányzó adatokat és felülvizsgálatokat. Ez nem a prototípus buildhibája. Az `isDraft = false` önmagában nem tünteti el a mintaállapotot, ha hiányzó kötelező adatok vagy nyitott felülvizsgálatok maradnak. A parancs sikeres eredménye is csak kitöltöttséget jelez, nem jogi megfelelőséget.
+A parancs jelenleg szándékosan hibakóddal jelzi a ténylegesen hiányzó adatokat és felülvizsgálatokat. Ez nem a prototípus buildhibája. A nyilvános tájékoztatókon nincs „Szerkeszthető minta” jelölés. Ez megjelenítési döntés: a belső `isDraft` és `reviews` állapotok, valamint a `legal:check` továbbra is jelzik a meg nem erősített üzemeltetői tételeket. A cégadatokat az üzemeltető 2026. november 3-án megerősítette. A parancs sikeres eredménye is csak kitöltöttséget jelez, nem jogi megfelelőséget.
 
 ## 9. Ellenőrzött források
 
@@ -121,3 +121,7 @@ A Nemzeti Jogszabálytár lekérése ebben a környezetben HTTP 503 hibát adott
 - **Békéltetés**: [Fejér Vármegyei Békéltető Testület – kapcsolat](https://www.bekeltetesfejer.hu/kapcsolat/), [országos rendszer](https://bekeltetes.hu/).
 - **Megszűnt ODR**: [Európai Bizottság hivatalos tájékoztatója](https://consumer-redress.ec.europa.eu/site-relocation_en).
 - **Akadálymentesség**: [2022. évi XVII. törvény](https://net.jogtar.hu/jogszabaly?docid=a2200017.tv), különösen 1., 4. és 10–12. §.
+
+## 2026. november 3-i szövegfrissítés
+
+Az ÁSZF külön `content/terms.ts` fájlban a megvalósított időpontkérési modellt, a partnerfiókokat, a telefonos visszaigazolást, a bruttó árbecslést és a privát szervizdokumentumok feltöltését, letöltését és e-mail-mellékletként küldését írja le. A közös verzió `2026-11-03.1`; a korábbi szövegek a `docs/legal-history/2026-11-01.6-draft/` mappában maradtak meg. A korábbi adatbázisbeli elfogadásokat a frissítés nem írja át. A hiányzó engedélyezési, békéltetési, adatfeldolgozói és megőrzési nyilatkozatokat nem töltöttük ki feltételezéssel.

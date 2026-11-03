@@ -1,4 +1,6 @@
 import { rootHeaders, verifyAccount } from "./account-mail-helper";
+import { createHash } from "node:crypto";
+import sharp from "sharp";
 import {
   test,
   expect,
@@ -111,6 +113,522 @@ async function status(
 async function root(api: APIRequestContext) {
   return rootHeaders(api);
 }
+
+const pdf = (text: string) =>
+  Buffer.from(
+    `%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n% ${text}\n%%EOF\n`,
+  );
+function documentUpload(
+  revision: number,
+  bytes: Buffer = pdf("first invoice"),
+  name = "szamla.pdf",
+) {
+  return {
+    payload: JSON.stringify({ mode: "total", totalHuf: 45000, revision }),
+    document: { name, mimeType: "application/pdf", buffer: bytes },
+  };
+}
+
+const documentFixtures = new Set<string>();
+async function createDocumentAppointment(
+  api: APIRequestContext,
+  data: unknown,
+) {
+  const appointment = await create(api, data);
+  documentFixtures.add(appointment.id);
+  return appointment;
+}
+test.afterEach(async ({ request }) => {
+  if (!documentFixtures.size) return;
+  const auth = await root(request);
+  for (const identifier of documentFixtures) {
+    const response = await request.delete(
+      `${backend}/api/collections/appointments/records/${identifier}`,
+      { headers: auth },
+    );
+    expect([204, 404]).toContain(response.status());
+  }
+  documentFixtures.clear();
+});
+
+test("private price documents keep queued email attachments immutable and block unrelated or native access", async ({
+  request,
+  playwright,
+}) => {
+  test.setTimeout(90000);
+  const { email, user } = await customer(request);
+  const auth = await root(request);
+  await request.post(`${backend}/api/fairauto-test/mail`, {
+    headers: auth,
+    data: { clear: true, fail: true },
+  });
+  const staff = await playwright.request.newContext({ baseURL: origin });
+  await login(staff, "reception");
+  const data = await payload(request);
+  data.contact.email = email;
+  let appointment = await createDocumentAppointment(request, data);
+  appointment = (await (await status(staff, appointment, "confirmed")).json())
+    .appointment;
+  const first = pdf("first invoice"),
+    second = pdf("replacement invoice");
+  const save = async (bytes: Buffer, name: string) => {
+    const response = await staff.put(
+      `/api/appointments/${appointment.id}/price`,
+      { headers, multipart: documentUpload(appointment.revision, bytes, name) },
+    );
+    expect(response.status(), await response.text()).toBe(200);
+    appointment = (await response.json()).appointment;
+    return appointment.price!.document!;
+  };
+  const old = await save(first, "elso-szamla.pdf");
+  const current = await save(second, "uj-szamla.pdf");
+  expect(current.id).not.toBe(old.id);
+  const path = `/api/appointments/${appointment.id}/documents/${current.id}`;
+  const download = await request.get(path);
+  expect(download.status(), await download.text()).toBe(200);
+  expect(await download.body()).toEqual(second);
+  expect(download.headers()["content-disposition"]).toContain("attachment;");
+  expect(download.headers()["cache-control"]).toContain("no-store");
+  expect(download.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(download.headers()["content-security-policy"]).toContain("sandbox");
+  const stranger = await playwright.request.newContext({ baseURL: origin });
+  await context(stranger);
+  expect((await stranger.get(path)).status()).toBe(404);
+  await customer(stranger);
+  expect((await stranger.get(path)).status()).toBe(404);
+  expect(
+    (
+      await request.put(`/api/appointments/${appointment.id}/price`, {
+        headers,
+        multipart: documentUpload(appointment.revision),
+      })
+    ).status(),
+  ).toBe(403);
+  const nativeUser = await request.post(
+    `${backend}/api/collections/users/auth-with-password`,
+    { data: { identity: email, password } },
+  );
+  const userToken = (await nativeUser.json()).token;
+  expect(
+    (
+      await request.get(
+        `${backend}/api/collections/appointment_documents/records`,
+        { headers: { Authorization: userToken } },
+      )
+    ).status(),
+  ).toBe(403);
+  const raw = await request.get(
+    `${backend}/api/collections/appointment_documents/records/${current.id}`,
+    { headers: auth },
+  );
+  const record = await raw.json();
+  const token = await request.post(`${backend}/api/files/token`, {
+    headers: { Authorization: userToken },
+  });
+  const fileURL = `${backend}/api/files/${record.collectionId}/${record.id}/${record.file}?token=${(await token.json()).token}`;
+  expect((await stranger.get(fileURL)).status()).toBe(404);
+  // A failed transport may be retried after a newer price/doc was saved.
+  await request.post(`${backend}/api/fairauto-test/mail`, {
+    headers: auth,
+    data: { fail: true },
+  });
+  await staff.dispose();
+  const admin = await playwright.request.newContext({ baseURL: origin });
+  await login(admin, "admin");
+  await admin.post("/api/appointments/mail-retry", { headers, data: {} });
+  for (let batch = 0; batch < 5; batch++) {
+    await request.post(`${backend}/api/fairauto-test/mail`, {
+      headers: auth,
+      data: { fail: false },
+    });
+  }
+  const capture = await request.get(
+    `${backend}/api/collections/test_mail_capture/records?perPage=100`,
+    { headers: auth },
+  );
+  const mails = (await capture.json()).items.filter(
+    (r: { recipient: string; subject: string }) =>
+      r.recipient === email && r.subject.includes(appointment.reference),
+  );
+  const sent = mails.flatMap(
+    (r: { attachments: { name: string; sha256: string; size: number }[] }) =>
+      r.attachments || [],
+  );
+  for (const [name, bytes] of [
+    ["elso-szamla.pdf", first],
+    ["uj-szamla.pdf", second],
+  ] as const)
+    expect(sent).toContainEqual({
+      name,
+      size: bytes.length,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    });
+  const originalDownload = await request.get(
+    `/api/appointments/${appointment.id}/documents/${old.id}`,
+  );
+  expect(await originalDownload.body()).toEqual(first);
+  // Native protection remains effective even for a legitimate owner's file token.
+  expect(
+    (
+      await request.get(
+        `${backend}/api/collections/appointment_documents/records/${current.id}`,
+        { headers: { Authorization: userToken } },
+      )
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await request.patch(
+        `${backend}/api/collections/users/records/${user.id}`,
+        { headers: auth, data: { active: false } },
+      )
+    ).status(),
+  ).toBe(200);
+  expect((await request.get(path)).status()).toBe(401);
+  await stranger.dispose();
+  await admin.dispose();
+});
+
+test("service document uploads reject invalid files and stale revisions without changing prices or creating documents", async ({
+  request,
+  playwright,
+}) => {
+  const policy = await request.get(
+    `${backend}/api/fairauto/appointments/documents-policy`,
+  );
+  expect(policy.status(), await policy.text()).toBe(200);
+  expect(await policy.json()).toEqual({
+    ready: true,
+    version: 1,
+    maxBytes: 3145728,
+  });
+  await context(request);
+  let appointment = await createDocumentAppointment(
+    request,
+    await payload(request),
+  );
+  const staff = await playwright.request.newContext({ baseURL: origin });
+  await login(staff, "manager");
+  appointment = (await (await status(staff, appointment, "confirmed")).json())
+    .appointment;
+  const auth = await root(request);
+  const count = async () =>
+    (
+      await (
+        await request.get(
+          `${backend}/api/collections/appointment_documents/records?perPage=1`,
+          { headers: auth },
+        )
+      ).json()
+    ).totalItems;
+  const before = await count();
+  for (const [bytes, name, statusCode] of [
+    [Buffer.from("<script>alert(1)</script>"), "fake.pdf", 415],
+    [pdf("renamed"), "invoice.html", 415],
+    [Buffer.alloc(3 * 1024 * 1024 + 1), "huge.pdf", 413],
+  ] as const) {
+    const response = await staff.put(
+      `/api/appointments/${appointment.id}/price`,
+      { headers, multipart: documentUpload(appointment.revision, bytes, name) },
+    );
+    expect(response.status(), await response.text()).toBe(statusCode);
+  }
+  const direct = await staff.post(
+    `${backend}/api/collections/users/auth-with-password`,
+    { data: { identity: "manager@fairauto.test", password } },
+  );
+  const nativeHeaders = { Authorization: (await direct.json()).token };
+  const malformed = await staff.put(
+    `${backend}/api/fairauto/appointments/${appointment.id}/price`,
+    {
+      headers: nativeHeaders,
+      multipart: { ...documentUpload(appointment.revision), extra: "rejected" },
+    },
+  );
+  expect(malformed.status(), await malformed.text()).toBe(400);
+  const fake = await staff.put(
+    `${backend}/api/fairauto/appointments/${appointment.id}/price`,
+    {
+      headers: nativeHeaders,
+      multipart: documentUpload(
+        appointment.revision,
+        Buffer.from("<html>fake</html>"),
+      ),
+    },
+  );
+  expect(fake.status(), await fake.text()).toBe(415);
+  const stale = await staff.put(`/api/appointments/${appointment.id}/price`, {
+    headers,
+    multipart: documentUpload(appointment.revision - 1),
+  });
+  expect(stale.status()).toBe(409);
+  expect(await count()).toBe(before);
+  const detail = await request.get(`/api/appointments/${appointment.id}`);
+  expect((await detail.json()).appointment.price).toBeNull();
+  const response = await staff.put(
+    `/api/appointments/${appointment.id}/price`,
+    { headers, multipart: documentUpload(appointment.revision) },
+  );
+  expect(response.status(), await response.text()).toBe(200);
+  appointment = (await response.json()).appointment;
+  // The guest that created the request can download, including after the current link is removed.
+  const doc = appointment.price!.document!;
+  expect(
+    (
+      await request.get(
+        `/api/appointments/${appointment.id}/documents/${doc.id}`,
+      )
+    ).status(),
+  ).toBe(200);
+  const remove = await staff.put(`/api/appointments/${appointment.id}/price`, {
+    headers,
+    data: {
+      revision: appointment.revision,
+      mode: "total",
+      totalHuf: 45000,
+      removeDocument: true,
+    },
+  });
+  expect(remove.status(), await remove.text()).toBe(200);
+  expect((await remove.json()).appointment.price.document).toBeNull();
+  const record = await (
+    await request.get(
+      `${backend}/api/collections/appointment_documents/records/${doc.id}`,
+      { headers: auth },
+    )
+  ).json();
+  const fileToken = await (
+    await request.post(`${backend}/api/files/token`, { headers: auth })
+  ).json();
+  const rawFile = `${backend}/api/files/${record.collectionId}/${record.id}/${record.file}?token=${fileToken.token}`;
+  expect((await request.get(rawFile)).status()).toBe(200);
+  expect(
+    (
+      await request.delete(
+        `${backend}/api/collections/appointments/records/${appointment.id}`,
+        { headers: auth },
+      )
+    ).status(),
+  ).toBe(204);
+  expect(
+    (
+      await request.get(
+        `/api/appointments/${appointment.id}/documents/${doc.id}`,
+      )
+    ).status(),
+  ).toBe(404);
+  expect(
+    (
+      await request.get(
+        `${backend}/api/collections/appointment_documents/records/${doc.id}`,
+        { headers: auth },
+      )
+    ).status(),
+  ).toBe(404);
+  expect((await request.get(rawFile)).status()).toBe(404);
+  await staff.dispose();
+});
+
+test("PNG and JPEG price documents are accepted and downloaded byte for byte", async ({
+  request,
+  playwright,
+}) => {
+  await context(request);
+  let appointment = await createDocumentAppointment(
+    request,
+    await payload(request),
+  );
+  const staff = await playwright.request.newContext({ baseURL: origin });
+  await login(staff, "manager");
+  appointment = (await (await status(staff, appointment, "confirmed")).json())
+    .appointment;
+  for (const format of ["png", "jpeg"] as const) {
+    const bytes = await sharp({
+      create: { width: 10, height: 10, channels: 3, background: "white" },
+    })
+      [format]()
+      .toBuffer();
+    const response = await staff.put(
+      `/api/appointments/${appointment.id}/price`,
+      {
+        headers,
+        multipart: documentUpload(
+          appointment.revision,
+          bytes,
+          "bizonylat." + format,
+        ),
+      },
+    );
+    expect(response.status(), await response.text()).toBe(200);
+    appointment = (await response.json()).appointment;
+    expect(appointment.price!.document!.mediaType).toBe("image/" + format);
+    const download = await request.get(
+      `/api/appointments/${appointment.id}/documents/${appointment.price!.document!.id}`,
+    );
+    expect(await download.body()).toEqual(bytes);
+  }
+  await staff.dispose();
+});
+
+test("staff can upload an invoice beside the price and the customer's detail shows a private download", async ({
+  page,
+  request,
+}) => {
+  await customer(request);
+  let appointment = await createDocumentAppointment(
+    request,
+    await payload(request),
+  );
+  await login(page.request, "admin");
+  appointment = (
+    await (await status(page.request, appointment, "confirmed")).json()
+  ).appointment;
+  await page.goto(`/munkafelvetel?appointment=${appointment.id}`);
+  await page
+    .getByRole("button", { name: "Ár hozzáadása", exact: true })
+    .click();
+  await page
+    .getByRole("spinbutton", { name: "Bruttó ár (Ft)", exact: true })
+    .fill("75000");
+  await page
+    .getByLabel("Számla vagy más dokumentum (nem kötelező)")
+    .setInputFiles({
+      name: "szerviz-szamla.pdf",
+      mimeType: "application/pdf",
+      buffer: pdf("browser invoice"),
+    });
+  await page.getByRole("button", { name: "Ár mentése", exact: true }).click();
+  const link = page.getByRole("link", {
+    name: "szerviz-szamla.pdf",
+    exact: true,
+  });
+  await expect(link).toBeVisible();
+  const url = await link.getAttribute("href");
+  expect(url).toMatch(
+    /^\/api\/appointments\/[a-z0-9]{15}\/documents\/[a-z0-9]{15}$/,
+  );
+  const downloaded = await request.get(url!);
+  expect(downloaded.status(), await downloaded.text()).toBe(200);
+  expect(await downloaded.body()).toEqual(pdf("browser invoice"));
+  await expect(
+    page.getByRole("button", { name: "Ár mentése", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("incoming pending bookings refresh without navigation or losing search drafts and open dialogs", async ({
+  page,
+  request,
+}) => {
+  await login(page.request, "reception");
+  await page.goto("/munkafelvetel?filter=requests");
+  const search = page.getByLabel("Foglalások keresése");
+  await search.fill("LIVE901");
+  await page.getByRole("button", { name: "Keresés", exact: true }).click();
+  await expect(
+    page.getByText("Ebben a nézetben nincs időpontkérés."),
+  ).toBeVisible();
+  await search.fill("Unsubmitted search draft");
+  let navigations = 0;
+  page.on("framenavigated", (frame) => {
+    if (frame === page.mainFrame()) navigations++;
+  });
+  const data = await payload(request);
+  data.vehicle.plate = "LIVE901";
+  const incoming = await create(request, data);
+  const row = page.getByRole("row").filter({ hasText: incoming.reference });
+  await expect(row).toBeVisible({ timeout: 12000 });
+  await expect(search).toHaveValue("Unsubmitted search draft");
+  await expect(
+    page.getByRole("button", { name: "Egyeztetésre vár", exact: true }),
+  ).toHaveClass("active");
+  await row
+    .getByRole("button", { name: `${incoming.reference} kezelése` })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("LIVE901");
+  const refreshed = page.waitForResponse(
+    (r) => r.url().includes("/api/appointments?") && r.status() === 200,
+  );
+  await refreshed;
+  await expect(page.getByRole("dialog")).toContainText("LIVE901");
+  await expect(search).toHaveValue("Unsubmitted search draft");
+  expect(navigations).toBe(0);
+});
+
+test("background booking checks do not overlap and pause while the tab is hidden", async ({
+  page,
+}) => {
+  await login(page.request, "reception");
+  await page.clock.install();
+  let reads = 0;
+  let tracking = false;
+  let release: (() => void) | undefined;
+  await page.route("**/api/appointments?*", async (route) => {
+    if (tracking) reads++;
+    if (tracking && reads === 1)
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    await route.continue();
+  });
+  try {
+    await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/appointments?") &&
+          r.url().includes("status=requested") &&
+          r.status() === 200,
+      ),
+      page.goto("/munkafelvetel?filter=requests"),
+    ]);
+    await expect(page.getByText("Időpontkérések betöltése…")).toHaveCount(0);
+    tracking = true;
+    await page.clock.runFor(5100);
+    await expect.poll(() => !!release).toBe(true);
+    await page.clock.runFor(15000);
+    expect(reads).toBe(1);
+    const completed = page.waitForResponse(
+      (r) => r.url().includes("/api/appointments?") && r.status() === 200,
+    );
+    release!();
+    await completed;
+    await page.evaluate(() =>
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      }),
+    );
+    const before = reads;
+    await page.clock.runFor(15000);
+    expect(reads).toBe(before);
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "visible",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect.poll(() => reads).toBe(before + 1);
+  } finally {
+    release?.();
+  }
+});
+
+test("manager pending counts refresh while the selected report period stays unchanged", async ({
+  page,
+  request,
+}) => {
+  await login(page.request, "manager");
+  await page.goto("/vezetes");
+  await page.getByLabel("Riport időszaka").selectOption("30");
+  const waiting = page.locator(".management-stats a strong");
+  await expect(waiting).toBeVisible();
+  const before = Number(await waiting.innerText());
+  const data = await payload(request);
+  data.vehicle.plate = "LIVE902";
+  await create(request, data);
+  await expect(waiting).toHaveText(String(before + 1), { timeout: 12000 });
+  await expect(page.getByLabel("Riport időszaka")).toHaveValue("30");
+});
 
 test("phone-only inspection and removed tire service reject online requests while old records remain manageable", async ({
   request,

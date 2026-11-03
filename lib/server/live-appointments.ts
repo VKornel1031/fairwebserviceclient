@@ -1,13 +1,16 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import type { BookingConfiguration } from "../live-appointments";
 import { site, serviceOptions, contactPhones } from "@/content/site";
-import { AccountError, body, json, throttle } from "./http";
+import { AccountError, body, json, throttle, readLimitedBody } from "./http";
+import { servicePriceBody } from "./service-documents";
+import { SERVICE_DOCUMENT_LIMIT } from "../service-documents";
 import {
   currentSession,
   pb,
+  pbDocument,
   PocketBaseError,
   sessionCookie,
 } from "./pocketbase";
@@ -18,6 +21,10 @@ const guestCookie =
     : "fairauto_guest";
 const root = "/api/fairauto/appointments";
 const messages: Record<string, string> = {
+  invalid_document:
+    "Egy PDF, JPG vagy PNG melléklet tölthető fel, legfeljebb 3 MB méretben.",
+  documents_setup_required:
+    "A dokumentumfeltöltéshez telepítsd a legújabb PocketBase frissítést.",
   service_unavailable:
     "Ez a szolgáltatás nem foglalható online. Válassz másik szolgáltatást.",
   service_phone_only: `Műszaki vizsgára kizárólag telefonon kérhetsz időpontot: ${contactPhones.map((phone) => phone.label).join(" vagy ")}.`,
@@ -279,15 +286,14 @@ export async function appointmentProxy(
       payload = await body(request, ["status", "revision"]);
       break;
     case "price":
+      if (
+        !auth.session ||
+        !["reception", "manager", "admin"].includes(auth.session.user.role)
+      )
+        throw new AccountError(403, messages.forbidden);
       method = "PUT";
       path = `/${identifier}/price`;
-      payload = await body(request, [
-        "mode",
-        "totalHuf",
-        "items",
-        "note",
-        "revision",
-      ]);
+      payload = await servicePriceBody(request);
       break;
     case "close":
       method = "PUT";
@@ -324,4 +330,50 @@ export async function appointmentProxy(
     await requestPB(path, method, payload, auth),
     action === "create" ? 201 : 200,
   );
+}
+
+export async function appointmentDocument(
+  request: NextRequest,
+  identifier: string,
+  document: string,
+) {
+  if (![identifier, document].every((value) => /^[a-z0-9]{15}$/.test(value)))
+    throw new AccountError(404, messages.appointment_missing);
+  const auth = await actor();
+  throttle(
+    request,
+    "appointment-documents",
+    auth.session?.user.id || auth.guest || "guest",
+    120,
+    1200,
+  );
+  let response: Response;
+  try {
+    response = await pbDocument(
+      `${root}/${identifier}/documents/${document}`,
+      auth.session?.token,
+      auth.guest,
+    );
+  } catch (error) {
+    if (error instanceof PocketBaseError)
+      throw new AccountError(error.status, messages.appointment_missing);
+    throw error;
+  }
+  const bytes = await readLimitedBody(response.body, SERVICE_DOCUMENT_LIMIT);
+  const disposition = response.headers.get("content-disposition") || "";
+  return new NextResponse(new Uint8Array(bytes), {
+    headers: {
+      "Content-Type": response.headers.get("content-type")!,
+      "Content-Disposition":
+        /^attachment; filename="[a-zA-Z0-9._ -]{1,120}"$/.test(disposition)
+          ? disposition
+          : 'attachment; filename="document"',
+      "Cache-Control": "private, no-store, max-age=0",
+      Vary: "Cookie",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; sandbox",
+      "Referrer-Policy": "no-referrer",
+      "Cross-Origin-Resource-Policy": "same-origin",
+    },
+  });
 }

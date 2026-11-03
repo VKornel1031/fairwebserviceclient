@@ -1,0 +1,21 @@
+Süti- és tárhelytájékoztató – Fair Autószerviz Fehérvár
+Változat: 2026-11-01.6-draft
+Frissítve: 2026-11-01
+
+Sütik és localStorage
+A bejelentkezéshez és a kért vendégfoglalás kezeléséhez szükséges hozzáférési adatok HttpOnly sütikben tárolódnak. A valódi fiók- és foglalási adatokat PocketBase tárolja, nem a localStorage. A témabeállítás a localStorage-ot használja. Nincs beépített hirdetési vagy analitikai követés. A tárolási célok Eht. 155. § és alkalmazandó uniós szabályok szerinti besorolását az üzemeltetőnek a tényleges működés alapján kell ellenőriznie.
+
+A jelenlegi mentések
+fairauto-prototype-v1: Korábbi prototípusból visszamaradt helyi mintaadatok. Az új portál nem olvassa és nem importálja őket; a webhelyadatok törléséig maradhatnak meg. Nem biztosítanak bejelentkezést vagy hozzáférést valódi időpontokhoz.
+__Host-fairauto_session (fejlesztéskor: fairauto_session): Belépéskor létrejövő, a kért hitelesítési szolgáltatáshoz szükséges munkamenetsüti. HttpOnly; éles környezetben Secure és SameSite=Lax, legfeljebb 8 óráig érvényes. Kijelentkezés törli a jelen böngészőből. Nem marketingcélú.
+__Host-fairauto_guest (fejlesztéskor: fairauto_guest): A kért vendégfoglalási funkcióhoz létrejövő, véletlen hozzáférési azonosító. HttpOnly, éles környezetben Secure és SameSite=Lax. Legfeljebb 120 napig él, a vendégfoglaló újbóli megnyitása megújíthatja. Nem tartalmaz nevet, e-mailt vagy foglalási adatokat; a szerver csak az azonosító kriptográfiai lenyomatát tárolja. Nem marketingcélú.
+fairauto-theme: A választott világos vagy sötét téma. Megmarad a webhelyadatok törléséig.
+
+A mentések kezelése
+A főoldal és a tájékoztató oldalak nem hoznak létre helyi demóadatbázist. A vendégfoglaló megnyitásakor a kért foglalási funkcióhoz hozzáférési süti jön létre; a témaválasztást a gombbal kért beállítás után jegyezzük meg. Opcionális követést jelenleg nem használunk.
+A böngésző webhelyadatainak törlése eltávolítja a témaválasztást, a régi helyi demóadatokat és a sütiket. Ez nem törli a szerviz adatbázisában lévő kéréseket. A vendégkérésekhez való böngészős hozzáférés ilyenkor elveszik; a szerviz telefonon segíthet. A fiókhoz tartozó kérések új bejelentkezés után ismét elérhetők.
+Privát böngészési módban vagy letiltott sütik mellett a vendégkérésekhez való hozzáférés megőrzése korlátozott lehet. A foglalási azonosítót érdemes elmenteni; önmagában ez nem ad online hozzáférést a személyes adatokhoz.
+
+Külső betűkészletek és későbbi bővítések
+A betűkészletek a webhely saját fájljai közül töltődnek be, külső Google Fonts-kapcsolat nélkül. A tárhelyszolgáltatóhoz a weboldal kiszolgálásával járó technikai kérések természetesen eljutnak.
+Az alkalmazásban nincs analitika, beágyazott térkép vagy hirdetési követés. A tárhely és a Cloudflare Tunnel a fiókszolgáltatás technikai kéréseit is kezeli. Új külső szolgáltatásnál a tájékoztatót és a szükséges hozzájárulás-kezelést a tényleges működéshez kell igazítani.

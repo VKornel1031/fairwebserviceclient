@@ -9,7 +9,6 @@ export function legalDocumentText(doc: LegalDocument) {
     `${doc.label} – ${site.name}`,
     `Változat: ${site.legal.version}`,
     `Frissítve: ${site.legal.updatedAt}`,
-    "Szerkeszthető dokumentum; az üzemeltetői felülvizsgálat állapotát a webhely jelzi.",
     ...doc.sections.flatMap((section) => [
       "",
       section.title,

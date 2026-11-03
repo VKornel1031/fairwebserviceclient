@@ -1,14 +1,14 @@
 [
   {
     "slug": "adatkezelesi-tajekoztato",
-    "version": "2026-11-01.6-draft",
-    "filename": "adatkezelesi-tajekoztato-2026-11-01.6-draft.docx",
-    "sourceSha256": "5fbbe807f56a4e8a30b68842adf49bb9c13210548cc472c5e865678cde1559da"
+    "version": "2026-11-03.1",
+    "filename": "adatkezelesi-tajekoztato-2026-11-03.1.docx",
+    "sourceSha256": "e8cad2b97cf73231a43fbeb6fec0050129c9e0369912f28662b2509e5eaf60e8"
   },
   {
     "slug": "adatvedelmi-es-adatbiztonsagi-szabalyzat",
-    "version": "2026-11-01.6-draft",
-    "filename": "adatvedelmi-es-adatbiztonsagi-szabalyzat-2026-11-01.6-draft.docx",
-    "sourceSha256": "8ef1c738a3c4b432d834e5b86deef0b9c534bee701f7bdc830f376024063deec"
+    "version": "2026-11-03.1",
+    "filename": "adatvedelmi-es-adatbiztonsagi-szabalyzat-2026-11-03.1.docx",
+    "sourceSha256": "5ae6d008647993b37af788f423d692d0ba5b2fcd74cc5417dbe15f40b3a60c0b"
   }
 ]

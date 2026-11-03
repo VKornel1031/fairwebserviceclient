@@ -342,6 +342,8 @@ function message(job, app) {
       ),
     );
     if (a.price.note) lines.push(a.price.note);
+    if (job.event === "price_updated" && a.price.document)
+      lines.push("Mellékelt dokumentum: " + a.price.document.name);
   }
   lines.push(
     "A javítás tartalmát és végleges díját külön egyeztetitek. Ez nem számla vagy online javítási megrendelés.",
@@ -424,6 +426,7 @@ exports.process = (app) => {
       tx.save(record);
       job = {
         id: record.id,
+        appointment: record.getString("appointment"),
         recipient: record.getString("recipient"),
         event: record.getString("event"),
         snapshot: field(record, "snapshot"),
@@ -434,14 +437,33 @@ exports.process = (app) => {
     let success = false,
       errorCode = "transport_failed";
     const allowed = recipientAllowed(job, app);
+    let attachmentReader = null,
+      filesystem = null;
     try {
       if (allowed) {
-        app.newMailClient().send(message(job, app));
+        const mail = message(job, app);
+        const attachment =
+          job.event === "price_updated" && job.snapshot.price?.document;
+        if (attachment) {
+          const documents = require(__hooks + "/fairauto-documents.js");
+          const document = documents.find(
+            app,
+            { id: job.appointment },
+            attachment.id,
+          );
+          filesystem = app.newFilesystem();
+          attachmentReader = filesystem.getReader(documents.key(document));
+          mail.attachments = { [document.getString("name")]: attachmentReader };
+        }
+        app.newMailClient().send(mail);
         success = true;
       }
     } catch (error) {
       errorCode = transportCode(error);
       app.logger().warn("fairauto_mail_handoff_failed", "code", errorCode);
+    } finally {
+      if (attachmentReader) attachmentReader.close();
+      if (filesystem) filesystem.close();
     }
     app.runInTransaction((tx) => {
       let record;

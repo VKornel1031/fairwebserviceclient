@@ -1,6 +1,6 @@
 # A te CasaOS PocketBase-telepítésed
 
-A korábbi terminálkimeneted alapján a konténer neve **`pocketbase`**, a munkakönyvtára **`/pocketbase`**, az indítása `serve --http=0.0.0.0:8090`. A bináris **`/pocketbase/pocketbase`**, a tényleges adatbázis **`/pocketbase/pb_data/data.db`**. A korábbi image `argonptg/pocketbase:0.26.6`; a frissítés ugyanebben a konténerben telepíti a 0.40.6-os binárist.
+A korábbi terminálkimeneted alapján a konténer neve **`pocketbase`**, a munkakönyvtára **`/pocketbase`**, az indítása `serve --http=0.0.0.0:8090`. A bináris **`/pocketbase/pocketbase`**, a tényleges adatbázis **`/pocketbase/pb_data/data.db`**. A korábbi image `argonptg/pocketbase:0.26.6`, de a veled már elvégzett frissítés után a ténylegesen futó PocketBase-verzió **0.40.6**. Ez a blokk a meglévő 0.40.6-os telepítés új hookjait, dokumentummigrációját és konfigurációját telepíti; a bináris verziója 0.40.6 marad.
 
 ## Másold be a teljes frissítési blokkot
 
@@ -18,7 +18,7 @@ sudo docker exec pocketbase /bin/sh -c 'wget -qO- http://127.0.0.1:8090/api/fair
 
 Az ellenőrző összegnél `OK`, a végén **`pocketbase version 0.40.6`** és **`"ready":true`**, **`"version":1`** jelzi a sikert. Utána jelentkezz be újra a weboldalon.
 
-A blokk telepíti a szükséges hosteszközöket, ellenőrzi a telepítést, letölti és ellenőrzi a rögzített kiadást, leállítja a meglévő konténert, majd a valódi adatokról, feltöltésekről, korábbi binárisról, hookokról és migrációkról ellenőrzött offline mentést készít. Ezután telepíti az új binárist, hookokat és konfigurációt, és elindítja ugyanazt a konténert. A mellékelt, még hiányzó migrációk indításkor automatikusan lefutnak; a már alkalmazottak kimaradnak. Külön `migrate up` vagy újraindítás nem kell. A korábbi fiók-, jármű- és időpontkezelő alapséma előfeltétel; ez a működő rendszer frissítése.
+A blokk telepíti a szükséges hosteszközöket, ellenőrzi a telepítést, letölti és ellenőrzi a rögzített kiadást, leállítja a meglévő konténert, majd a valódi adatokról, feltöltésekről, korábbi binárisról, hookokról és migrációkról ellenőrzött offline mentést készít. Ezután telepíti az új binárist, hookokat és konfigurációt, és elindítja ugyanazt a konténert. A privát szervizdokumentumok új migrációja és a mellékelt, még hiányzó migrációk indításkor automatikusan lefutnak; a már alkalmazottak kimaradnak. Külön `migrate up` vagy újraindítás nem kell. A korábbi fiók-, jármű- és időpontkezelő alapséma előfeltétel; ez a működő rendszer frissítése.
 
 A jelenlegi SMTP-hitelesítés, `fairauto-mail.json` és sendmail megmarad. A hostra telepített `tzdata` csomag Budapest-időzónafájlját a konténer is megkapja, így a téli és nyári időszámítást a foglalás helyesen kezeli. Új API-kulcsot vagy superuser-jelszót nem kell megadnod. A mentés a `/DATA/AppData/pocketbase/backups/` alatt készül, a pontos útvonalat a frissítő kiírja. Töltsd le külön gépre, és kezeld bizalmasan.
 
