@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowUpRight, FileText } from "lucide-react";
 import { legalDocuments } from "@/content/legal";
 import { site } from "@/content/site";
 import LegalLinks from "@/components/legal-links";
+import SiteFooter from "@/components/site-footer";
 import ThemeToggle from "@/components/theme-toggle";
 import { currentWordCopy } from "@/lib/legal-downloads";
 
@@ -183,12 +184,7 @@ export default async function LegalPage({
           </article>
         </div>
       </main>
-      <footer className="legal-footer legal-container">
-        <span>
-          © {new Date().getFullYear()} {site.name}
-        </span>
-        <LegalLinks current={doc.slug} />
-      </footer>
+      <SiteFooter className="legal-footer legal-container" current={doc.slug} />
     </div>
   );
 }

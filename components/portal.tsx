@@ -7,7 +7,7 @@ import Administration from "./administration";
 import { AccountAvatar } from "./account-avatar";
 import { canAdminister, canViewReports, roleLabels } from "@/lib/permissions";
 import Link from "next/link";
-import LegalLinks from "./legal-links";
+import SiteFooter from "./site-footer";
 import { site, address, contactPhones } from "@/content/site";
 import {
   ArrowUpRight,
@@ -353,18 +353,11 @@ function Shell({ view }: { view: View }) {
             <Workshop />
           )}
         </main>
-        <footer className="app-footer">
-          <span>
-            © {new Date().getFullYear()} {site.name}
-          </span>
-          <span>
-            <span className="footer-dot" /> Minden kilométeren számíthatsz ránk.
-          </span>
+        <SiteFooter className="app-footer">
           <button onClick={() => setHelp(true)}>
             Kapcsolat <ArrowUpRight size={12} />
           </button>
-          <LegalLinks />
-        </footer>
+        </SiteFooter>
       </div>
       {help && (
         <Modal

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import LegalLinks from "./legal-links";
-import { site, locationLabel, contactPhones } from "@/content/site";
+import SiteFooter from "./site-footer";
+import { site, contactPhones } from "@/content/site";
 import { ArrowUpRight, Moon, Sun } from "lucide-react";
 import { Provider, usePortal } from "./provider";
 
@@ -137,36 +137,21 @@ function Welcome() {
           </li>
         </ol>
       </section>
-      <footer className="home-footer">
-        <div className="home-container">
-          <div className="home-footer-top">
-            <span>{site.name}</span>
-            <p>
-              {locationLabel} <span>·</span> {site.hours.short}
-            </p>
-          </div>
-          <div className="home-footer-links">
-            <nav aria-label="További lehetőségek">
-              <Link href={user ? "/attekintes" : "/fiok?mode=register"}>
-                {user ? "Ügyfélportál megnyitása" : "Céges fiók létrehozása"}
-              </Link>
-              <Link href="/partnerek">Céges partnerek</Link>
-            </nav>
-            <div className="home-contact-phones">
-              {contactPhones.map((phone) => (
-                <a key={phone.href} href={phone.href}>
-                  {phone.label} <ArrowUpRight size={13} />
-                </a>
-              ))}
-            </div>
-          </div>
-          <LegalLinks />
-          <p className="home-demo-note">
-            Az időpontkérés telefonos visszaigazolásra vár. A javításról és a
-            végleges árról külön egyeztetünk.
-          </p>
+      <SiteFooter className="home-footer" contentClassName="home-container">
+        <nav aria-label="További lehetőségek">
+          <Link href={user ? "/attekintes" : "/fiok?mode=register"}>
+            {user ? "Ügyfélportál megnyitása" : "Céges fiók létrehozása"}
+          </Link>
+          <Link href="/partnerek">Céges partnerek</Link>
+        </nav>
+        <div className="home-contact-phones">
+          {contactPhones.map((phone) => (
+            <a key={phone.href} href={phone.href}>
+              {phone.label} <ArrowUpRight size={13} />
+            </a>
+          ))}
         </div>
-      </footer>
+      </SiteFooter>
     </div>
   );
 }

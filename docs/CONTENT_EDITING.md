@@ -27,7 +27,9 @@ A nyitvatartási feliratokat a `site.ts` fájlban is igazítsd a foglalási ór�
 
 - `content/privacy.ts`: a megadott Adatkezelési Tájékoztató webes változata.
 - `content/data-security.ts`: a megadott Adatvédelmi és adatbiztonsági szabályzat webes változata.
-- `content/legal.ts`: ÁSZF, süti- és tárhelytájékoztató, impresszum; a két külön dokumentumot is itt kapcsoljuk a közös megjelenítéshez.
+- `content/terms.ts`: ÁSZF.
+- `content/cookies.ts`: süti- és tárhelytájékoztató, a tényleges tárolók céljával, élettartamával és törlési lehetőségeivel.
+- `content/legal.ts`: impresszum és a külön dokumentumok közös megjelenítésének összekapcsolása.
 - A Word-export és az eredeti fájlok összehasonlítása: [legal-sources/README.md](./legal-sources/README.md).
 
 Az alapdokumentumok minden bekezdése, felsorolása és adatblokkja itt található. A fogyasztói tájékoztató külön a `content/consumer.ts`, a letölthető nyilatkozatok szövege a `content/consumer-forms.ts` fájlban szerkeszthető. A szöveg a PocketBase-fiókkezelést, mentett autókat, időpontkéréseket, telefonos megerősítést és vendég-hozzáférési sütit írja le. Az opcionális időpontértesítés alapból ki van kapcsolva; a helyi `fairauto-mail.json` kapcsolóval indítható, működő levélkiszolgáló ellenőrzése után. Az árkezelés és levélbeállítás részletei: [APPOINTMENT_PRICES_AND_MAIL.md](./APPOINTMENT_PRICES_AND_MAIL.md).
@@ -40,16 +42,18 @@ Az alapdokumentumok minden bekezdése, felsorolása és adatblokkja itt találha
 - `/impresszum`
 - `/fogyasztoi-tajekoztato`
 
-A közös megjelenés az `app/(legal)/[document]/page.tsx` és `app/(legal)/legal.css` fájlokban van. A `components/legal-links.tsx` kezeli a közös lábléclinkeket; ezek a főoldalon és minden portáloldalon megjelennek. A regisztráció és foglalás áttekintése is hivatkozik az adatkezelési és ÁSZF-oldalakra.
+A közös megjelenés az `app/(legal)/[document]/page.tsx` és `app/(legal)/legal.css` fájlokban van. A `components/site-footer.tsx` az egyetlen közös lábléc, benne a „Made by kodi ❤️” készítői jelzéssel. A `components/legal-links.tsx` kezeli a lábléc jogi linkjeit; ezek a főoldalon és minden portáloldalon megjelennek. A regisztráció és foglalás áttekintése is hivatkozik az adatkezelési és ÁSZF-oldalakra.
 
 ## Élesítés előtt kitöltendő
 
 A `site.legal` üres mezőibe a saját hiteles cégadatokat írd: székhely, cégjegyzékszám, adószám, nyilvántartó hatóság, képviselő és a tényleges tárhelyszolgáltató. A műhely címe nem automatikusan a cég székhelye.
 
-A jogi szöveghez a tényleges adatfolyamokat, célonkénti jogalapokat, megőrzést, szolgáltatókat, fogyasztói feltételeket és panaszkezelést is pontosítani kell. A `site.legal.isDraft` csak az ellenőrzés után legyen `false`; a mintajelölés csak a hiányzó adatok és felülvizsgálatok rendezése után tűnhet el. A kapcsoló nem teszi élessé vagy jogilag kész állapotúvá a szolgáltatást. Érdemi szövegváltoztatáskor a `booking.json` fájl `termsVersion` értékét és a `site.legal.updatedAt` dátumot is módosítsd. A korábbi éles verziókat változatlanul meg kell őrizni; a portál letöltése mindig az aktuális szöveget mutatja.
+A jogi szöveghez a tényleges adatfolyamokat, célonkénti jogalapokat, megőrzést, szolgáltatókat, fogyasztói feltételeket és panaszkezelést is pontosítani kell. A `site.legal.isDraft` csak az ellenőrzés után legyen `false`; a nyitott tételeket a belső ellenőrzőlista követi, a nyilvános oldalakon nincs mintajelölés. A kapcsoló nem teszi élessé vagy jogilag kész állapotúvá a szolgáltatást. Érdemi szövegváltoztatáskor a `booking.json` fájl `termsVersion` értékét és a `site.legal.updatedAt` dátumot is módosítsd. A korábbi éles verziókat változatlanul meg kell őrizni; a portál letöltése mindig az aktuális szöveget mutatja.
 
 A betűkészleteket helyben szolgáljuk ki; nincs Google Fonts-lekérés a látogató böngészőjéből. Analitika, marketingeszköz, beágyazás vagy új auth-tárolás bevezetésekor az érintett dokumentumot is frissítsd. A jelenlegi szükséges tároláshoz nem adtunk általános sütibannert; új eszköz bevezetésekor a tényleges hozzájárulási követelményt újra kell értékelni.
 
 PocketBase-fiókkezelés előkészítése: [POCKETBASE_SETUP.md](./POCKETBASE_SETUP.md).
 
 Magyar jogi felkészülési útmutató és források: [HUNGARIAN_LEGAL_READINESS.md](./HUNGARIAN_LEGAL_READINESS.md). Kitöltési ellenőrzés: `npm run legal:check`.
+
+A 2026. november 3-i süti-tájékoztató szerkesztői pontosítása a meglévő működést írja le; nem vezet be új tárolást és nem módosítja a közös backend-feltételverziót. A korábbi szöveg a `docs/legal-history/2026-11-03.1/suti-tajekoztato.before-clarification.txt` fájlban megmaradt.

@@ -5,7 +5,7 @@ import { accountRequest } from "@/lib/accounts";
 import { site } from "@/content/site";
 import { Field } from "./fields";
 import { PageHeading } from "./ui";
-import LegalLinks from "./legal-links";
+import SiteFooter from "./site-footer";
 import ThemeToggle from "./theme-toggle";
 
 type Action = "verify" | "reset" | "email";
@@ -154,10 +154,7 @@ export default function AccountConfirmation() {
           </p>
         </section>
       </main>
-      <footer className="legal-footer legal-container">
-        <span>{site.shortName}</span>
-        <LegalLinks />
-      </footer>
+      <SiteFooter className="legal-footer legal-container" />
     </div>
   );
 }
