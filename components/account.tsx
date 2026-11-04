@@ -259,7 +259,14 @@ export function Account() {
           </p>
         </section>
         <div className="auth-promo">
-          <img src="/images/workshop.jpg" alt="Szervizműhely" />
+          <img
+            src="/images/workshop-inspection.jpg"
+            alt="A Fair Autószerviz Fehérvár műszaki vizsgaállása"
+            width={1368}
+            height={1824}
+            loading="lazy"
+            decoding="async"
+          />
           <div>
             <ShieldCheck size={34} strokeWidth={1.3} />
             <h2>

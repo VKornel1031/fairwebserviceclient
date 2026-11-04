@@ -6,6 +6,9 @@ const password = "Local-integration-only-928374!"; // Disposable loopback databa
 test("admin sidebar navigation preserves the session and never renders customer controls", async ({
   page,
 }) => {
+  // The integration server compiles routes on first use. Keep its compilation
+  // budget separate from the session and authorization assertions below.
+  test.setTimeout(90_000);
   expect(
     (
       await page.request.post("/api/auth/login", {
@@ -59,7 +62,7 @@ test("admin sidebar navigation preserves the session and never renders customer 
       .locator(".sidebar")
       .getByRole("link", { name: label, exact: true })
       .click();
-    await expect(page).toHaveURL(origin + path);
+    await expect(page).toHaveURL(origin + path, { timeout: 15_000 });
     await expect(page.locator(".brand span")).toHaveText("ADMINISZTRÁCIÓ");
   }
   expect(sessionRequests).toBe(1);

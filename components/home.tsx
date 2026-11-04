@@ -33,8 +33,10 @@ function Welcome() {
       <div className="home-opening">
         <img
           className="home-opening-photo"
-          src="/images/workshop.jpg"
+          src="/images/workshop-overview.jpg"
           alt=""
+          width={1824}
+          height={1368}
           fetchPriority="high"
         />
         <div className="home-opening-shade" />
